@@ -86,43 +86,56 @@ export default function Home() {
             </h2>
           </FadeIn>
           
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
             <FadeIn delay={0.1}>
-              <div className="glass-dark rounded-[3rem] p-12 md:p-14 h-full flex flex-col justify-between group hover:border-sunshine/30 transition-colors">
+              <div className="glass-dark rounded-[3rem] p-10 md:p-12 h-full flex flex-col justify-between group hover:border-sunshine/30 transition-colors">
                 <div>
-                  <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs font-ui uppercase tracking-[0.2em] mb-10">Infants</span>
-                  <h3 className="text-6xl md:text-7xl font-display font-light tracking-tighter mb-4 text-white group-hover:text-sunshine transition-colors">{PRICING.infant.label}</h3>
-                  <p className="text-xl text-ocean-light/70 font-light">/ session</p>
+                  <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs font-ui uppercase tracking-[0.2em] mb-8">Infants · with Lukaah</span>
+                  <h3 className="text-5xl md:text-6xl font-display font-light tracking-tighter mb-3 text-white group-hover:text-sunshine transition-colors">{PRICING.infant.label}</h3>
+                  <p className="text-lg text-ocean-light/70 font-light">/ week</p>
                 </div>
-                <div className="mt-16 pt-8 border-t border-white/10">
-                  <p className="text-lg text-white/80 font-light">{PRICING.infant.duration}-minute private sessions</p>
+                <div className="mt-12 pt-6 border-t border-white/10">
+                  <p className="text-base text-white/80 font-light">5 × {PRICING.infant.duration}-minute lessons (Mon–Fri)</p>
                   <p className="text-ocean-light/50 text-sm mt-2">Ages {PRICING.infant.age}</p>
                 </div>
               </div>
             </FadeIn>
             <FadeIn delay={0.2}>
-              <div className="glass-ocean rounded-[3rem] p-12 md:p-14 h-full flex flex-col justify-between group hover:shadow-[0_0_80px_rgba(255,209,102,0.2)] transition-all">
+              <div className="glass-ocean rounded-[3rem] p-10 md:p-12 h-full flex flex-col justify-between group hover:shadow-[0_0_80px_rgba(255,209,102,0.2)] transition-all">
                 <div>
-                  <span className="inline-block px-4 py-1.5 rounded-full bg-white/15 text-white text-xs font-ui uppercase tracking-[0.2em] mb-10">Standard</span>
-                  <h3 className="text-6xl md:text-7xl font-display font-light tracking-tighter mb-4 text-white group-hover:scale-105 origin-left transition-transform duration-500">{PRICING.standard.label}</h3>
-                  <p className="text-xl text-ocean-surf/80 font-light">/ session</p>
+                  <span className="inline-block px-4 py-1.5 rounded-full bg-white/15 text-white text-xs font-ui uppercase tracking-[0.2em] mb-8">Standard · with Lukaah</span>
+                  <h3 className="text-5xl md:text-6xl font-display font-light tracking-tighter mb-3 text-white group-hover:scale-105 origin-left transition-transform duration-500">{PRICING.standard.label}</h3>
+                  <p className="text-lg text-ocean-surf/80 font-light">/ week</p>
                 </div>
-                <div className="mt-16 pt-8 border-t border-white/15">
-                  <p className="text-lg text-white font-light">{PRICING.standard.duration}-minute private sessions</p>
+                <div className="mt-12 pt-6 border-t border-white/15">
+                  <p className="text-base text-white font-light">5 × {PRICING.standard.duration}-minute lessons (Mon–Fri)</p>
                   <p className="text-ocean-surf/60 text-sm mt-2">Ages {PRICING.standard.age}</p>
                 </div>
               </div>
             </FadeIn>
             <FadeIn delay={0.3}>
-              <div className="rounded-[3rem] p-12 md:p-14 h-full flex flex-col justify-between group transition-all border-2 border-sunshine/40 hover:border-sunshine" style={{ background: "linear-gradient(135deg, rgba(255,209,102,0.15), rgba(255,107,107,0.08))" }}>
+              <div className="glass-dark rounded-[3rem] p-10 md:p-12 h-full flex flex-col justify-between group hover:border-coral/30 transition-colors">
                 <div>
-                  <span className="inline-block px-4 py-1.5 rounded-full bg-sunshine/20 text-sunshine text-xs font-ui uppercase tracking-[0.2em] mb-10 font-semibold">Monthly w/ Estee</span>
-                  <h3 className="text-6xl md:text-7xl font-display font-light tracking-tighter mb-4 text-white group-hover:text-sunshine transition-colors">{PRICING.esteeMonthly.label}</h3>
-                  <p className="text-xl text-white/70 font-light">/ month</p>
+                  <span className="inline-block px-4 py-1.5 rounded-full bg-coral/20 text-coral text-xs font-ui uppercase tracking-[0.2em] mb-8 font-semibold">Infants · with Estee</span>
+                  <h3 className="text-5xl md:text-6xl font-display font-light tracking-tighter mb-3 text-white group-hover:text-coral transition-colors">{PRICING.esteeInfantMonthly.label}</h3>
+                  <p className="text-lg text-white/70 font-light">/ month</p>
                 </div>
-                <div className="mt-16 pt-8 border-t border-white/15">
-                  <p className="text-lg text-white/90 font-light">{PRICING.esteeMonthly.lessons} sessions per month</p>
-                  <p className="text-white/50 text-sm mt-2">Wed &amp; Thu available</p>
+                <div className="mt-12 pt-6 border-t border-white/15">
+                  <p className="text-base text-white/80 font-light">4 × 15-minute lessons per month</p>
+                  <p className="text-white/50 text-sm mt-2">Ages 0–3 · Wed &amp; Thu available</p>
+                </div>
+              </div>
+            </FadeIn>
+            <FadeIn delay={0.4}>
+              <div className="rounded-[3rem] p-10 md:p-12 h-full flex flex-col justify-between group transition-all border-2 border-sunshine/40 hover:border-sunshine" style={{ background: "linear-gradient(135deg, rgba(255,209,102,0.15), rgba(255,107,107,0.08))" }}>
+                <div>
+                  <span className="inline-block px-4 py-1.5 rounded-full bg-sunshine/20 text-sunshine text-xs font-ui uppercase tracking-[0.2em] mb-8 font-semibold">Standard · with Estee</span>
+                  <h3 className="text-5xl md:text-6xl font-display font-light tracking-tighter mb-3 text-white group-hover:text-sunshine transition-colors">{PRICING.esteeMonthly.label}</h3>
+                  <p className="text-lg text-white/70 font-light">/ month</p>
+                </div>
+                <div className="mt-12 pt-6 border-t border-white/15">
+                  <p className="text-base text-white/90 font-light">{PRICING.esteeMonthly.lessons} × 30-minute lessons per month</p>
+                  <p className="text-white/50 text-sm mt-2">Ages 4+ · Wed &amp; Thu available</p>
                 </div>
               </div>
             </FadeIn>

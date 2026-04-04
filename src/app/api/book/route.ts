@@ -3,8 +3,35 @@ import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { Resend } from "resend";
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "lukaah.marlowe@gmail.com";
+const LUKAAH_EMAIL = process.env.ADMIN_EMAIL || "lukaah.marlowe@gmail.com";
+const ESTEE_EMAIL = "esteemarlowe@gmail.com";
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "Swim to Surf <onboarding@resend.dev>";
+
+function getAdminEmail(instructor: string): string {
+  return instructor === "estee" ? ESTEE_EMAIL : LUKAAH_EMAIL;
+}
+
+/** Generate an .ics calendar event URL */
+function buildCalendarLink(title: string, startDate: string, time: string, durationMin: number): string {
+  // Parse the date and time
+  const [h, m] = time.split(":").map(Number);
+  const d = new Date(startDate + "T12:00:00");
+  d.setHours(h, m, 0, 0);
+  
+  const start = d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  const endDate = new Date(d.getTime() + durationMin * 60000);
+  const end = endDate.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: title,
+    dates: `${start}/${end}`,
+    details: `Swimming lesson with Swim to Surf. Questions? Email swimtosurfemail@gmail.com or call 385-499-8036.`,
+    location: "American Fork, Utah",
+  });
+  
+  return `https://calendar.google.com/calendar/event?${params.toString()}`;
+}
 
 export async function POST(req: Request) {
   try {
@@ -25,7 +52,7 @@ export async function POST(req: Request) {
 
     const resend = hasResend ? new Resend(process.env.RESEND_API_KEY) : null;
     if (!hasResend) {
-      console.warn("⚠ Resend not configured — no emails will be sent. Set RESEND_API_KEY in .env.local (get one from https://resend.com/api-keys)");
+      console.warn("⚠ Resend not configured — no emails will be sent. Set RESEND_API_KEY in .env.local");
     }
 
     let bookingId = crypto.randomUUID();
@@ -73,21 +100,21 @@ export async function POST(req: Request) {
     // 2. Handle Stripe payments
     if (paymentMethod === "stripe") {
       const hasStripe = process.env.STRIPE_SECRET_KEY 
-        && process.env.STRIPE_SECRET_KEY.startsWith("sk_");
+        && process.env.STRIPE_SECRET_KEY !== "sk_test_placeholder";
 
       if (!hasStripe) {
-        return NextResponse.json({ error: "Card payments are not yet configured. Please use Venmo or Cash." }, { status: 400 });
+        return NextResponse.json({ error: "Card payments not configured. Please use Venmo or Cash." }, { status: 400 });
       }
 
-      // @ts-expect-error - ignoring strict API version type
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" });
       try {
-        const basePriceCents = priceInfo.price;
-        const priceWithFeeCents = Math.round((basePriceCents + 30) / 0.971);
-        const feeAmountCents = priceWithFeeCents - basePriceCents;
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2025-03-31.basil" as Stripe.LatestApiVersion });
+        
+        const feePercent = 0.035; // 3.5% processing fee
+        const feeAmountCents = Math.round(priceInfo.price * feePercent);
+        const priceWithFeeCents = priceInfo.price + feeAmountCents;
 
         const session = await stripe.checkout.sessions.create({
-          payment_method_types: ["card"],
+          mode: "payment",
           line_items: [
             {
               price_data: {
@@ -101,11 +128,9 @@ export async function POST(req: Request) {
               quantity: 1,
             },
           ],
-          mode: "payment",
-          success_url: `${origin}/book/success?bookingId=${bookingId}`,
-          cancel_url: `${origin}/book`,
-          client_reference_id: bookingId,
-          metadata: { bookingId },
+          metadata: { bookingId, instructor },
+          success_url: `${origin}/book?success=true&booking=${bookingId}`,
+          cancel_url: `${origin}/book?canceled=true`,
         });
 
         return NextResponse.json({ url: session.url });
@@ -116,19 +141,52 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3. Build schedule summary for emails
+    // 3. Build schedule details for emails
     const instructorName = instructor === "lukaah" ? "Lukaah" : "Estee";
     let scheduleText = "";
+    let specificDays = "";
+    let calendarLink = "";
+    
     if (schedule.type === "weekly") {
-      scheduleText = `Mon–Fri at ${schedule.time}, week of ${schedule.weekStart}`;
+      const time24 = schedule.time;
+      const timeFormatted = formatTime(time24);
+      const weekStart = schedule.weekStart;
+      scheduleText = `Monday – Friday at ${timeFormatted}`;
+      specificDays = `Week of ${weekStart} (Mon – Fri)`;
+      calendarLink = buildCalendarLink(
+        `🏊 Swim Lesson with ${instructorName}`,
+        weekStart,
+        time24,
+        priceInfo.duration
+      );
     } else {
       const dayName = schedule.primaryDay.charAt(0).toUpperCase() + schedule.primaryDay.slice(1);
-      scheduleText = `Every ${dayName} at ${schedule.primaryTime}, ${schedule.month}`;
+      const timeFormatted = formatTime(schedule.primaryTime);
+      scheduleText = `Every ${dayName} at ${timeFormatted}`;
+      specificDays = `${schedule.month} · Every ${dayName}`;
+      
       if (schedule.secondDay && schedule.secondDayTime) {
         const otherDay = schedule.primaryDay === "wednesday" ? "Thursday" : "Wednesday";
-        scheduleText += ` + ${otherDay} at ${schedule.secondDayTime}`;
+        const otherTimeFormatted = formatTime(schedule.secondDayTime);
+        scheduleText += ` + ${otherDay} at ${otherTimeFormatted}`;
+        specificDays += ` & ${otherDay}`;
       }
+      
+      // Build calendar link for first lesson date
+      const [year, month] = schedule.month.split("-");
+      const firstDay = new Date(Number(year), Number(month) - 1, 1);
+      const targetDow = schedule.primaryDay === "wednesday" ? 3 : 4;
+      while (firstDay.getDay() !== targetDow) firstDay.setDate(firstDay.getDate() + 1);
+      calendarLink = buildCalendarLink(
+        `🏊 Swim Lesson with ${instructorName}`,
+        firstDay.toISOString().split("T")[0],
+        schedule.primaryTime,
+        priceInfo.duration
+      );
     }
+
+    const cancelLink = `${origin}/contact`;
+    const priceFormatted = `$${(priceInfo.price / 100).toFixed(2)}`;
 
     // 4. Send confirmation email to customer
     if (resend && swimmerInfo.parentEmail) {
@@ -136,35 +194,45 @@ export async function POST(req: Request) {
         await resend.emails.send({
           from: FROM_EMAIL,
           to: [swimmerInfo.parentEmail],
-          subject: "Your Swim Session is Booked! 🏊",
+          subject: `Your Swim Lessons are Booked! 🏊`,
           html: `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1D1D1F; max-width: 560px; margin: 0 auto;">
               <div style="padding: 40px 0; text-align: center; border-bottom: 1px solid #E8E8ED;">
                 <h1 style="font-size: 28px; font-weight: 600; margin: 0 0 8px;">You're booked! 🏊</h1>
-                <p style="color: #86868B; font-size: 16px; margin: 0;">Swim to Surf · Order #${bookingId.slice(0, 8).toUpperCase()}</p>
+                <p style="color: #86868B; font-size: 16px; margin: 0;">Swim to Surf · Confirmation #${bookingId.slice(0, 8).toUpperCase()}</p>
               </div>
               
               <div style="padding: 32px 0;">
                 <p style="font-size: 16px; line-height: 1.6;">Hi ${swimmerInfo.parentName || swimmerInfo.swimmerName},</p>
                 <p style="font-size: 16px; line-height: 1.6;">You are officially booked for <strong>${priceInfo.totalLessons} lessons</strong> with <strong>${instructorName}</strong>!</p>
                 
-                <div style="margin: 20px 0; padding: 16px 20px; background: #E8F4FD; border-radius: 12px; border: 1px solid #B8DFF0;">
-                  <p style="margin: 0 0 4px; font-size: 14px; color: #0077B6; font-weight: 600;">📅 Schedule</p>
-                  <p style="margin: 0; font-size: 15px; color: #1D3557;">${scheduleText}</p>
+                <div style="margin: 24px 0; padding: 20px; background: #E8F4FD; border-radius: 16px; border: 1px solid #B8DFF0;">
+                  <p style="margin: 0 0 4px; font-size: 14px; color: #0077B6; font-weight: 700;">📅 YOUR SCHEDULE</p>
+                  <p style="margin: 0 0 8px; font-size: 17px; color: #1D3557; font-weight: 600;">${scheduleText}</p>
+                  <p style="margin: 0 0 4px; font-size: 14px; color: #1D3557;">${specificDays}</p>
+                  <p style="margin: 0; font-size: 14px; color: #1D3557;">${priceInfo.totalLessons} × ${priceInfo.duration}-minute lessons · <strong>${priceFormatted}</strong></p>
+                </div>
+
+                <div style="text-align: center; margin: 24px 0;">
+                  <a href="${calendarLink}" style="display: inline-block; background: #0077B6; color: white; padding: 14px 28px; border-radius: 50px; text-decoration: none; font-size: 15px; font-weight: 600;">📅 Add to Calendar</a>
                 </div>
                 
-                <p style="font-size: 16px; line-height: 1.6;"><strong>Please bring payment (Venmo/Cash) to your first session.</strong></p>
+                ${paymentMethod !== "stripe" ? '<p style="font-size: 16px; line-height: 1.6;"><strong>💳 Payment:</strong> Please bring payment (Venmo or Cash) to your first lesson.</p>' : ''}
               </div>
               
               <div style="margin: 24px 0; padding: 24px; background: #F5F5F7; border-radius: 16px; border: 1px solid #E8E8ED;">
-                <h3 style="margin: 0 0 16px; color: #1D1D1F; font-size: 16px;">⚠️ Important Reminders</h3>
+                <h3 style="margin: 0 0 16px; color: #1D1D1F; font-size: 16px;">⚠️ Important Policies</h3>
                 <ul style="padding-left: 20px; margin: 0; color: #333; line-height: 1.8; font-size: 14px;">
-                  <li><strong>Cancellations:</strong> Full cancellations require 7 days advance notice.</li>
-                  <li><strong>Missed Lessons:</strong> Notify us 24 hours in advance if you need to miss a lesson. Makeup sessions are not guaranteed.</li>
-                  <li><strong>No-shows:</strong> No refunds or makeups for no-shows or late cancellations.</li>
-                  <li><strong>Parking:</strong> Park on the <strong>south side of 1300 N</strong>. Do not block neighbors.</li>
-                  <li><strong>Waiver:</strong> By booking, you signed and agreed to the liability waiver.</li>
+                  <li><strong>Full Cancellation:</strong> 7 days advance notice required for a full refund.</li>
+                  <li><strong>Missed Lesson:</strong> Notify us 24 hours in advance. We'll try to accommodate, but makeups are not guaranteed.</li>
+                  <li><strong>No-shows:</strong> No refunds or rescheduling for no-shows or late cancellations.</li>
+                  <li><strong>Location:</strong> American Fork, Utah. Park on the <strong>south side of 1300 N</strong>.</li>
                 </ul>
+              </div>
+
+              <div style="text-align: center; margin: 24px 0;">
+                <p style="font-size: 14px; color: #86868B; margin-bottom: 12px;">Need to cancel or reschedule?</p>
+                <a href="mailto:swimtosurfemail@gmail.com?subject=Cancel/Reschedule - ${swimmerInfo.swimmerName} (${bookingId.slice(0,8).toUpperCase()})" style="display: inline-block; background: #F5F5F7; color: #1D1D1F; padding: 12px 24px; border-radius: 50px; text-decoration: none; font-size: 14px; font-weight: 600; border: 1px solid #E8E8ED;">Email Us to Cancel / Reschedule</a>
               </div>
               
               <p style="font-size: 16px; line-height: 1.6; margin-top: 24px;">We can't wait to see you in the water! 🌊</p>
@@ -181,18 +249,19 @@ export async function POST(req: Request) {
       }
     }
 
-    // 5. Send admin notification email to Lukaah
+    // 5. Send admin notification email to the correct instructor
     if (resend) {
+      const adminEmail = getAdminEmail(instructor);
       try {
         await resend.emails.send({
           from: FROM_EMAIL,
-          to: [ADMIN_EMAIL],
+          to: [adminEmail],
           subject: `🆕 New Booking: ${swimmerInfo.swimmerName} with ${instructorName}`,
           html: `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1D1D1F; max-width: 560px; margin: 0 auto;">
               <div style="padding: 32px 0; text-align: center; border-bottom: 2px solid #0077B6;">
                 <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 8px; color: #0077B6;">🆕 New Booking Received</h1>
-                <p style="color: #86868B; font-size: 14px; margin: 0;">Order #${bookingId.slice(0, 8).toUpperCase()} · ${paymentMethod === 'stripe' ? '💳 Card' : paymentMethod === 'venmo' ? '📱 Venmo' : '💵 Cash'}</p>
+                <p style="color: #86868B; font-size: 14px; margin: 0;">Confirmation #${bookingId.slice(0, 8).toUpperCase()} · ${paymentMethod === 'stripe' ? '💳 Card' : paymentMethod === 'venmo' ? '📱 Venmo' : '💵 Cash'}</p>
               </div>
               
               <div style="padding: 24px 0;">
@@ -219,7 +288,7 @@ export async function POST(req: Request) {
                   </tr>
                   <tr style="border-bottom: 1px solid #E8E8ED;">
                     <td style="padding: 12px 0; font-weight: 600; color: #86868B;">Schedule</td>
-                    <td style="padding: 12px 0;">${scheduleText}</td>
+                    <td style="padding: 12px 0;">${scheduleText}<br/><span style="color:#86868B;font-size:13px;">${specificDays}</span></td>
                   </tr>
                   <tr style="border-bottom: 1px solid #E8E8ED;">
                     <td style="padding: 12px 0; font-weight: 600; color: #86868B;">Lessons</td>
@@ -227,19 +296,23 @@ export async function POST(req: Request) {
                   </tr>
                   <tr style="border-bottom: 1px solid #E8E8ED;">
                     <td style="padding: 12px 0; font-weight: 600; color: #86868B;">Price</td>
-                    <td style="padding: 12px 0; font-weight: 700; font-size: 18px; color: #0077B6;">$${(priceInfo.price / 100).toFixed(2)}</td>
+                    <td style="padding: 12px 0; font-weight: 700; font-size: 18px; color: #0077B6;">${priceFormatted}</td>
                   </tr>
                   ${swimmerInfo.notes ? `<tr><td style="padding: 12px 0; font-weight: 600; color: #86868B;">Notes</td><td style="padding: 12px 0;">${swimmerInfo.notes}</td></tr>` : ''}
                 </table>
               </div>
               
+              <div style="text-align: center; margin: 20px 0;">
+                <a href="${calendarLink}" style="display: inline-block; background: #0077B6; color: white; padding: 12px 24px; border-radius: 50px; text-decoration: none; font-size: 14px; font-weight: 600;">📅 Add to Your Calendar</a>
+              </div>
+
               <p style="color: #86868B; font-size: 12px; margin-top: 24px; border-top: 1px solid #E8E8ED; padding-top: 16px; text-align: center;">
                 Swim to Surf Admin Notification · Booking ID: ${bookingId}
               </p>
             </div>
           `,
         });
-        console.log("✅ Admin notification email sent to:", ADMIN_EMAIL);
+        console.log("✅ Admin notification email sent to:", adminEmail);
       } catch (e) {
         console.error("Resend Error (admin):", e);
       }
@@ -251,4 +324,11 @@ export async function POST(req: Request) {
     console.error("Booking handler error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
+}
+
+function formatTime(time24: string): string {
+  const [h, m] = time24.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
 }

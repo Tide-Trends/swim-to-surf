@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import type { BookingState, ScheduleSelection, SwimmerInfo } from "@/lib/booking-schema";
-import { getPricingForAge } from "@/lib/constants";
+import { getPricingForAge, getEsteePricingForAge } from "@/lib/constants";
 import { StepInstructor } from "@/components/booking/step-instructor";
 import { StepSwimmerInfo } from "@/components/booking/step-swimmer-info";
 import { StepSchedule } from "@/components/booking/step-schedule";
@@ -65,7 +65,10 @@ export function BookingWizard() {
     if (!state.instructor || !state.swimmerInfo || !state.schedule) return;
     setSubmitting(true);
 
-    const pricing = getPricingForAge(state.swimmerInfo.swimmerAge);
+    const isEstee = state.instructor === "estee";
+    const pricing = isEstee 
+      ? getEsteePricingForAge(state.swimmerInfo.swimmerAge) 
+      : getPricingForAge(state.swimmerInfo.swimmerAge);
     let totalLessons: number;
     let price: number;
 
@@ -185,6 +188,7 @@ export function BookingWizard() {
               {state.step === 0 && <StepInstructor onSelect={selectInstructor} />}
               {state.step === 1 && (
                 <StepSwimmerInfo
+                  instructor={state.instructor || "lukaah"}
                   defaultValues={state.swimmerInfo || undefined}
                   onSubmit={setSwimmerInfo}
                   onBack={goBack}

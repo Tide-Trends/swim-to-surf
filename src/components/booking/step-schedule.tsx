@@ -7,7 +7,7 @@ import {
   addDays,
 } from "date-fns";
 import type { ScheduleSelection, LukaahSchedule, EsteeSchedule } from "@/lib/booking-schema";
-import { getPricingForAge, formatPrice, INSTRUCTORS, PRICING, getEsteeDatesForMonth } from "@/lib/constants";
+import { getPricingForAge, getEsteePricingForAge, formatPrice, INSTRUCTORS, PRICING, getEsteeDatesForMonth } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { TimeSlotGrid } from "@/components/booking/time-slot-grid";
@@ -44,7 +44,9 @@ function getSummerMonths(): { value: string; label: string }[] {
 }
 
 export function StepSchedule({ instructor, swimmerAge, onSelect, onBack }: Props) {
-  const pricing = getPricingForAge(swimmerAge);
+  const pricing = instructor === "estee" 
+    ? getEsteePricingForAge(swimmerAge) 
+    : getPricingForAge(swimmerAge);
   const duration = pricing.duration;
 
   if (instructor === "lukaah") {
@@ -68,7 +70,7 @@ export function StepSchedule({ instructor, swimmerAge, onSelect, onBack }: Props
   );
 }
 
-type PricingTier = { age: string; duration: number; price: number; label: string };
+type PricingTier = { age?: string; duration: number; price: number; label: string };
 
 function LukaahScheduleStep({
   duration,
@@ -272,8 +274,8 @@ function EsteeScheduleStep({
 
   const otherDay = primaryDay === "wednesday" ? "thursday" : "wednesday";
   
-  // Use Estee's monthly pricing ($120/month for 4 lessons with one day)
-  const monthlyPrice = PRICING.esteeMonthly.price;
+  // Use Estee's monthly pricing ($120/month for 4 lessons with one day, $60/month for infants)
+  const monthlyPrice = pricing.price;
   const totalLessons = secondDay ? 8 : 4;
   const totalPrice = secondDay ? monthlyPrice * 2 : monthlyPrice;
 
@@ -333,7 +335,7 @@ function EsteeScheduleStep({
         <div id="day-selection" className="animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both space-y-10">
           {/* Show specific dates for this month */}
           <div className="bg-ocean-surf/30 border border-ocean-light/30 rounded-[1.5rem] p-6">
-            <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-3">Session Dates</p>
+            <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-3">Lesson Dates</p>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <p className="font-ui text-xs text-[#86868B] mb-2">Wednesdays</p>

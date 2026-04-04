@@ -35,12 +35,18 @@ export function Testimonials() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const updateScrollState = () => {
     if (!scrollRef.current) return;
     const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
     setCanScrollLeft(scrollLeft > 0);
     setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+    
+    // Calculate active dot based on scroll position
+    const cardWidth = clientWidth * 0.85 + 24; // 85vw card + gap on mobile, approximate
+    const idx = Math.round(scrollLeft / cardWidth);
+    setActiveIndex(Math.min(idx, reviews.length - 1));
   };
 
   useEffect(() => {
@@ -58,6 +64,15 @@ export function Testimonials() {
     });
   };
 
+  const scrollToIndex = (index: number) => {
+    if (!scrollRef.current) return;
+    const cardWidth = scrollRef.current.clientWidth * 0.85 + 24;
+    scrollRef.current.scrollTo({
+      left: cardWidth * index,
+      behavior: "smooth",
+    });
+  };
+
   return (
     <div className="py-24 md:py-32 bg-[#F5F5F7] relative border-y border-black/5">
       <div className="mx-auto max-w-7xl px-6 md:px-8">
@@ -71,7 +86,7 @@ export function Testimonials() {
                 Stories of <span className="text-[#86868B]">confidence.</span>
               </h2>
             </div>
-            <div className="hidden md:flex gap-4">
+            <div className="flex gap-4">
               <button
                 onClick={() => scroll("left")}
                 disabled={!canScrollLeft}
@@ -98,10 +113,25 @@ export function Testimonials() {
       </div>
 
       <div className="relative">
+        {/* Swipe hint - fades in on mobile */}
+        <div className="md:hidden absolute top-1/2 right-4 -translate-y-1/2 z-10 pointer-events-none">
+          <motion.div
+            initial={{ opacity: 0.8, x: 0 }}
+            animate={{ opacity: [0.8, 0.3, 0.8], x: [0, 8, 0] }}
+            transition={{ duration: 2, repeat: 3, ease: "easeInOut" }}
+            className="flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white text-xs font-ui px-3 py-1.5 rounded-full"
+          >
+            Swipe
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </motion.div>
+        </div>
+
         <div
           ref={scrollRef}
           onScroll={updateScrollState}
-          className="flex gap-6 md:gap-8 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-12 px-6 md:px-8 xl:px-[calc((100vw-1280px)/2+32px)]"
+          className="flex gap-6 md:gap-8 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4 px-6 md:px-8 xl:px-[calc((100vw-1280px)/2+32px)]"
         >
           {reviews.map((review, i) => (
             <motion.div
@@ -131,6 +161,22 @@ export function Testimonials() {
                 </div>
               </div>
             </motion.div>
+          ))}
+        </div>
+
+        {/* Scroll indicator dots */}
+        <div className="flex justify-center gap-2 mt-6">
+          {reviews.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => scrollToIndex(i)}
+              aria-label={`Go to review ${i + 1}`}
+              className={`rounded-full transition-all duration-300 cursor-pointer ${
+                i === activeIndex
+                  ? "w-8 h-2.5 bg-[#1D1D1F]"
+                  : "w-2.5 h-2.5 bg-[#1D1D1F]/20 hover:bg-[#1D1D1F]/40"
+              }`}
+            />
           ))}
         </div>
       </div>

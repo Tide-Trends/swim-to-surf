@@ -43,9 +43,12 @@ export const INSTRUCTORS = {
 } as const;
 
 export const PRICING = {
-  infant: { age: "0–3", duration: 15, price: 7500, label: "$75" },
-  standard: { age: "4+", duration: 30, price: 15000, label: "$150" },
-  esteeMonthly: { price: 12000, label: "$120", lessons: 4 },
+  // Lukaah: per-week pricing (Mon-Fri, 5 lessons)
+  infant: { age: "0–3", duration: 15, price: 7500, label: "$75", lessons: 5 },
+  standard: { age: "4+", duration: 30, price: 15000, label: "$150", lessons: 5 },
+  // Estee: per-month pricing (1 day/week = 4 lessons)
+  esteeMonthly: { price: 12000, label: "$120", lessons: 4, duration: 30 },
+  esteeInfantMonthly: { price: 6000, label: "$60", lessons: 4, duration: 15 },
 } as const;
 
 // Specific dates for each month - Estee's W/Th schedule
@@ -78,6 +81,11 @@ export function getEsteeDatesForMonth(monthValue: string): { wednesdays: string[
 
 export function getPricingForAge(age: number) {
   return age <= 3 ? PRICING.infant : PRICING.standard;
+}
+
+/** Get Estee's flat monthly price based on swimmer age */
+export function getEsteePricingForAge(age: number) {
+  return age <= 3 ? PRICING.esteeInfantMonthly : PRICING.esteeMonthly;
 }
 
 export function formatPrice(cents: number) {

@@ -3,18 +3,19 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { swimmerInfoSchema, type SwimmerInfo } from "@/lib/booking-schema";
-import { getPricingForAge } from "@/lib/constants";
+import { getPricingForAge, getEsteePricingForAge } from "@/lib/constants";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
 interface Props {
+  instructor: "lukaah" | "estee";
   defaultValues?: SwimmerInfo;
   onSubmit: (data: SwimmerInfo) => void;
   onBack: () => void;
 }
 
-export function StepSwimmerInfo({ defaultValues, onSubmit, onBack }: Props) {
+export function StepSwimmerInfo({ instructor, defaultValues, onSubmit, onBack }: Props) {
   const {
     register,
     handleSubmit,
@@ -36,7 +37,9 @@ export function StepSwimmerInfo({ defaultValues, onSubmit, onBack }: Props) {
   const age = watch("swimmerAge");
   const months = watch("swimmerMonths");
   const isValidAge = typeof age === "number" && age >= 0 && age <= 99;
-  const pricing = isValidAge ? getPricingForAge(age) : null;
+  const pricing = isValidAge 
+    ? (instructor === "estee" ? getEsteePricingForAge(age) : getPricingForAge(age))
+    : null;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
@@ -80,7 +83,7 @@ export function StepSwimmerInfo({ defaultValues, onSubmit, onBack }: Props) {
               <span className="font-semibold text-[#1D1D1F]">
                 {pricing.duration === 15 ? "Infant lessons" : "Standard lessons"}
               </span>{" "}
-              &middot; {pricing.duration}-minute private lessons &middot; {pricing.label}
+              &middot; {pricing.duration}-minute private lessons with {instructor === "lukaah" ? "Lukaah" : "Estee"} &middot; {pricing.label}{instructor === "lukaah" ? "/week (5 lessons)" : "/month (4 lessons)"}
               {age === 0 && typeof months === "number" && ` (${months} months old)`}
             </p>
           </div>

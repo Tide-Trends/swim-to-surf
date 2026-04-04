@@ -21,20 +21,22 @@ export function StepInstructor({ onSelect }: Props) {
             onClick={() => onSelect("lukaah")}
             className="text-left rounded-2xl bg-white p-6 shadow-sm border border-black/5 hover:border-black/20 hover:shadow-md transition-all cursor-pointer"
           >
-            <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-[#86868B] mb-3">Lukaah</p>
+            <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-[#86868B] mb-3">With Lukaah</p>
             <p className="font-body text-[#1D1D1F] leading-relaxed">
-              Choose one time slot that repeats Monday-Friday for one single week (5 lessons total).
+              5 lessons per week (Mon–Fri), one time slot that repeats daily.
             </p>
+            <p className="font-ui text-xs text-[#86868B] mt-2">From $75/week (infants) · $150/week (ages 4+)</p>
           </button>
           <button 
             type="button"
             onClick={() => onSelect("estee")}
             className="text-left rounded-2xl bg-white p-6 shadow-sm border border-black/5 hover:border-black/20 hover:shadow-md transition-all cursor-pointer"
           >
-            <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-[#86868B] mb-3">Estee</p>
+            <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-[#86868B] mb-3">With Estee</p>
             <p className="font-body text-[#1D1D1F] leading-relaxed">
-              Choose one weekly slot for the month (4 lessons), with an option to add a second weekly slot (8 lessons).
+              4 lessons per month (1 day/week), with the option to add a 2nd day for 8 total.
             </p>
+            <p className="font-ui text-xs text-[#86868B] mt-2">From $60/month (infants) · $120/month (ages 4+)</p>
           </button>
         </div>
       </div>
