@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { Resend } from "resend";
+import { getPrepEmailContent } from "@/lib/email-templates";
 
 const LUKAAH_EMAIL = process.env.ADMIN_EMAIL || "lukaah.marlowe@gmail.com";
 const ESTEE_EMAIL = "esteemarlowe@gmail.com";
@@ -220,19 +221,17 @@ export async function POST(req: Request) {
                 ${paymentMethod !== "stripe" ? '<p style="font-size: 16px; line-height: 1.6;"><strong>💳 Payment:</strong> Please bring payment (Venmo or Cash) to your first lesson.</p>' : ''}
               </div>
               
+              <div style="margin: 24px 0; padding: 24px; background: #FFF; border-radius: 16px; border: 1px solid #E8E8ED;">
+                ${getPrepEmailContent(swimmerInfo.parentName || swimmerInfo.swimmerName, instructorName, scheduleText, specificDays, bookingId, origin)}
+              </div>
+              
               <div style="margin: 24px 0; padding: 24px; background: #F5F5F7; border-radius: 16px; border: 1px solid #E8E8ED;">
-                <h3 style="margin: 0 0 16px; color: #1D1D1F; font-size: 16px;">⚠️ Important Policies</h3>
+                <h3 style="margin: 0 0 16px; color: #1D1D1F; font-size: 16px;">⚠️ Additional Policies</h3>
                 <ul style="padding-left: 20px; margin: 0; color: #333; line-height: 1.8; font-size: 14px;">
                   <li><strong>Full Cancellation:</strong> 7 days advance notice required for a full refund.</li>
                   <li><strong>Missed Lesson:</strong> Notify us 24 hours in advance. We'll try to accommodate, but makeups are not guaranteed.</li>
                   <li><strong>No-shows:</strong> No refunds or rescheduling for no-shows or late cancellations.</li>
-                  <li><strong>Location:</strong> American Fork, Utah. Park on the <strong>south side of 1300 N</strong>.</li>
                 </ul>
-              </div>
-
-              <div style="text-align: center; margin: 24px 0;">
-                <p style="font-size: 14px; color: #86868B; margin-bottom: 12px;">Need to cancel or reschedule?</p>
-                <a href="mailto:swimtosurfemail@gmail.com?subject=Cancel/Reschedule - ${swimmerInfo.swimmerName} (${bookingId.slice(0,8).toUpperCase()})" style="display: inline-block; background: #F5F5F7; color: #1D1D1F; padding: 12px 24px; border-radius: 50px; text-decoration: none; font-size: 14px; font-weight: 600; border: 1px solid #E8E8ED;">Email Us to Cancel / Reschedule</a>
               </div>
               
               <p style="font-size: 16px; line-height: 1.6; margin-top: 24px;">We can't wait to see you in the water! 🌊</p>

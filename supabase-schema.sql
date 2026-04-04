@@ -18,6 +18,7 @@ create table if not exists public.bookings (
   total_lessons integer not null,
   price integer not null,
   status text not null default 'confirmed' check (status in ('confirmed', 'cancelled')),
+  reminder_sent boolean not null default false,
   created_at timestamptz default now()
 );
 
