@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #0077B6;
+  --color-primary-light: #0096C7;
+  --color-secondary: #FFD166;
+  --color-accent: #00B4D8;
+  --color-accent-hover: #0096C7;
+  --color-dark: #1D3557;
+  --color-warm-white: #FFFDF7;
+  --color-sand: #FFF8ED;
+  --color-muted: #6B7B8D;
+  --color-success: #06D6A0;
+  --color-error: #EF476F;
+
+  --color-ocean-deep: #0077B6;
+  --color-ocean-mid: #00B4D8;
+  --color-ocean-light: #90E0EF;
+  --color-ocean-surf: #CAF0F8;
+
+  --color-sunshine: #FFD166;
+  --color-coral: #FF6B6B;
+  --color-mint: #06D6A0;
+
+  --font-display: "Manrope", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-ui: "Inter", sans-serif;
+
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+  --radius-3xl: 3rem;
+  --radius-full: 9999px;
+}
+
+html {
+  scroll-behavior: auto;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-dark);
+  background-color: var(--color-warm-white);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 300;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+strong, .font-semibold {
+  font-weight: 500;
+}
+
+button, input, select, textarea, label {
+  font-family: var(--font-ui);
+}
+
+::selection {
+  background-color: var(--color-sunshine);
+  color: var(--color-dark);
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Bright, cheerful cards */
+.glass {
+  background: white;
+  border: 1px solid rgba(0, 180, 216, 0.12);
+  box-shadow: 0 4px 20px rgba(0, 119, 182, 0.06);
+}
+
+.glass-dark {
+  background: var(--color-ocean-deep);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.glass-ocean {
+  background: linear-gradient(135deg, var(--color-ocean-mid), var(--color-primary));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Bright colored text */
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-sunshine), var(--color-coral));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-dark {
+  color: var(--color-primary);
+}
