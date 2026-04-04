@@ -31,17 +31,19 @@ export default function AdminPage() {
   }, [router]);
 
   const fetchBookings = useCallback(async () => {
-    let query = getSupabase()
-      .from("bookings")
-      .select("*")
-      .order("created_at", { ascending: false });
-
+    let url = "/api/admin/bookings";
     if (filter !== "all") {
-      query = query.eq("instructor", filter);
+      url += `?instructor=${filter}`;
     }
 
-    const { data } = await query;
-    setBookings((data as Booking[]) || []);
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+      setBookings((data as Booking[]) || []);
+    } catch (err) {
+      console.error("Fetch error:", err);
+    }
   }, [filter]);
 
   useEffect(() => {
@@ -50,8 +52,20 @@ export default function AdminPage() {
 
   async function cancelBooking(id: string) {
     if (!confirm("Cancel this booking? The parent will be notified.")) return;
-    await getSupabase().from("bookings").update({ status: "cancelled" }).eq("id", id);
-    fetchBookings();
+    
+    try {
+      const res = await fetch("/api/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      
+      if (!res.ok) throw new Error("Failed to cancel");
+      fetchBookings();
+    } catch (err) {
+      console.error("Cancel error:", err);
+      alert("Failed to cancel booking.");
+    }
   }
 
   async function handleLogout() {
