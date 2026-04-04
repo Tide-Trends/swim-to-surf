@@ -14,39 +14,43 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const lenis = new Lenis({
-      duration: 1.6,
-      easing: (t) => 1 - Math.pow(1 - t, 4),
-      orientation: "vertical",
-      gestureOrientation: "vertical",
+      duration: 1.0, 
+      lerp: 0.1,
       smoothWheel: true,
-      lerp: 0.08,
-      wheelMultiplier: 0.8,
+      wheelMultiplier: 1,
       touchMultiplier: 1.5,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // Standard buttery easing
     });
 
     lenisRef.current = lenis;
 
+    let rafId: number;
     function raf(time: number) {
       lenis.raf(time);
-      requestAnimationFrame(raf);
+      rafId = requestAnimationFrame(raf);
     }
 
-    requestAnimationFrame(raf);
+    rafId = requestAnimationFrame(raf);
 
-    // Stop Lenis when ANY modal/overlay is open (detected by [data-lenis-prevent] or fixed overlays)
-    const observer = new MutationObserver(() => {
+    // More efficient check for modals: only check when visibility changes or on clicks/keys
+    // instead of a full subtree mutation observer on every attribute change.
+    const checkModal = () => {
       const hasModal = document.querySelector('[data-lenis-prevent]');
-      if (hasModal) {
-        lenis.stop();
-      } else {
-        lenis.start();
-      }
-    });
+      if (hasModal) lenis.stop();
+      else lenis.start();
+    };
 
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+    // Use a lighter observer that only looks at direct children of body (where modals are usually appended)
+    const observer = new MutationObserver(checkModal);
+    observer.observe(document.body, { childList: true });
+    
+    // Also check on click events as a fallback
+    window.addEventListener('click', checkModal);
 
     return () => {
+      cancelAnimationFrame(rafId);
       observer.disconnect();
+      window.removeEventListener('click', checkModal);
       lenis.destroy();
     };
   }, []);
