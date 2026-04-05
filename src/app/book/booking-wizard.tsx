@@ -25,11 +25,11 @@ const quickFaqs = [
   },
   {
     q: "How does booking with Lukaah work?",
-    a: "Choose one time and it repeats Monday-Friday for one week only (5 total lessons per swimmer). Multiple kids on one booking get back-to-back start times automatically.",
+    a: "Pick one summer week, then each swimmer chooses their own daily start time (same time Mon–Fri for that swimmer). 5 lessons per swimmer for the week.",
   },
   {
     q: "How does booking with Estee work?",
-    a: "Choose one weekly slot (Wednesday or Thursday) for the month (4 lessons per swimmer), with optional second weekly slot (8 lessons). Multiple kids get staggered times on the same days.",
+    a: "Pick the month and primary weekday, then each swimmer picks their own start times (and optional second weekday). 4 or 8 lessons per swimmer depending on whether you add the second day.",
   },
   {
     q: "Do you offer group lessons?",
@@ -48,7 +48,7 @@ export function BookingWizard() {
     step: 0,
     instructor: null,
     swimmers: null,
-    schedule: null,
+    swimmerSchedules: null,
   });
 
   const [bookingId, setBookingId] = useState<string | null>(null);
@@ -72,8 +72,8 @@ export function BookingWizard() {
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   }
 
-  function setSchedule(schedule: ScheduleSelection) {
-    setState((s) => ({ ...s, schedule, step: 3 }));
+  function setSwimmerSchedules(swimmerSchedules: ScheduleSelection[]) {
+    setState((s) => ({ ...s, swimmerSchedules, step: 3 }));
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   }
 
@@ -83,22 +83,24 @@ export function BookingWizard() {
   }
 
   async function confirmBooking(paymentMethod: "stripe" | "venmo") {
-    if (!state.instructor || !state.swimmers?.length || !state.schedule) return;
+    if (!state.instructor || !state.swimmers?.length || !state.swimmerSchedules?.length) return;
     setSubmitting(true);
 
     const swimmers = state.swimmers;
+    const schedules = state.swimmerSchedules;
+    const firstSch = schedules[0]!;
     const isEstee = state.instructor === "estee";
     const tier = effectiveLessonTier(swimmers[0]!.swimmerAge, swimmers[0]!.lessonTier ?? "auto");
     const unitPricing = isEstee ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
     let totalLessons: number;
     let unitPrice: number;
 
-    if (state.schedule.type === "weekly") {
+    if (firstSch.type === "weekly") {
       totalLessons = 5;
       unitPrice = unitPricing.price;
     } else {
-      totalLessons = state.schedule.secondDay ? 8 : 4;
-      unitPrice = state.schedule.secondDay ? unitPricing.price * 2 : unitPricing.price;
+      totalLessons = firstSch.secondDay ? 8 : 4;
+      unitPrice = firstSch.secondDay ? unitPricing.price * 2 : unitPricing.price;
     }
 
     const price = unitPrice * swimmers.length;
@@ -106,7 +108,7 @@ export function BookingWizard() {
     const body = {
       instructor: state.instructor,
       swimmers,
-      schedule: state.schedule,
+      schedules,
       priceInfo: {
         duration: unitPricing.duration,
         price,
@@ -150,7 +152,7 @@ export function BookingWizard() {
     }
   }
 
-  if (bookingId && state.swimmers?.length && state.schedule && state.instructor) {
+  if (bookingId && state.swimmers?.length && state.swimmerSchedules?.length && state.instructor) {
     const tier = effectiveLessonTier(state.swimmers[0]!.swimmerAge, state.swimmers[0]!.lessonTier ?? "auto");
     const pricing =
       state.instructor === "estee" ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
@@ -159,7 +161,7 @@ export function BookingWizard() {
         bookingId={bookingId}
         instructor={state.instructor}
         swimmers={state.swimmers}
-        schedule={state.schedule}
+        schedules={state.swimmerSchedules}
         pricing={pricing}
         emailDelivery={emailDelivery}
       />
@@ -240,20 +242,14 @@ export function BookingWizard() {
                   onBack={goBack}
                 />
               )}
-              {state.step === 2 && state.instructor && state.swimmers?.[0] && (
-                <StepSchedule
-                  instructor={state.instructor}
-                  swimmerAge={state.swimmers[0].swimmerAge}
-                  lessonTier={state.swimmers[0].lessonTier ?? "auto"}
-                  onSelect={setSchedule}
-                  onBack={goBack}
-                />
+              {state.step === 2 && state.instructor && state.swimmers?.length && (
+                <StepSchedule instructor={state.instructor} swimmers={state.swimmers} onSelect={setSwimmerSchedules} onBack={goBack} />
               )}
-              {state.step === 3 && state.instructor && state.swimmers?.length && state.schedule && (
+              {state.step === 3 && state.instructor && state.swimmers?.length && state.swimmerSchedules && (
                 <StepConfirm
                   instructor={state.instructor}
                   swimmers={state.swimmers}
-                  schedule={state.schedule}
+                  schedules={state.swimmerSchedules}
                   onConfirm={(m) => {
                     void confirmBooking(m);
                   }}
@@ -264,9 +260,9 @@ export function BookingWizard() {
             </motion.div>
           </AnimatePresence>
 
-          <div className="mx-auto max-w-2xl pb-16 px-2">
+          <div className="mx-auto max-w-2xl pb-16 px-2 min-h-[26rem] md:min-h-[28rem]">
             <p className="font-ui text-xs font-semibold uppercase tracking-widest text-[#86868B] mb-4">Quick answers</p>
-            <div className="space-y-4">
+            <div className="space-y-4 min-h-[22rem] md:min-h-[24rem]">
               {quickFaqs.map((f) => (
                 <details
                   key={f.q}

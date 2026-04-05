@@ -41,7 +41,7 @@ export function CalendarDownload({ instructor, swimmerName, schedule, duration }
       <div className="relative z-10">
         <h3 className="font-display text-2xl font-bold text-[#1D1D1F] mb-3">Add to your calendar</h3>
         <p className="text-sm text-[#86868B] font-body max-w-sm leading-relaxed mb-6">
-          Download the calendar file or add directly to Google Calendar to keep your lessons organized.
+          Add to Apple Calendar from the .ics file, or open in Google Calendar. Multiple swimmers? This file matches the first swimmer; check your email for everyone else.
         </p>
         <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
           <Button
@@ -51,7 +51,7 @@ export function CalendarDownload({ instructor, swimmerName, schedule, duration }
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            Download .ics (Apple / Outlook)
+            Add to Apple Calendar
           </Button>
           {googleUrl && (
             <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="flex-1">

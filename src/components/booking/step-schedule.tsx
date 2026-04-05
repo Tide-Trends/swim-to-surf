@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { format, addWeeks, addDays } from "date-fns";
-import type { ScheduleSelection, LukaahSchedule, EsteeSchedule } from "@/lib/booking-schema";
+import type { ScheduleSelection, LukaahSchedule, EsteeSchedule, SwimmerInfo } from "@/lib/booking-schema";
 import {
   effectiveLessonTier,
   formatPrice,
@@ -11,7 +11,12 @@ import {
   INSTRUCTORS,
   getEsteeDatesForMonth,
 } from "@/lib/constants";
-import { esteeUnavailableStartsForDay, lukaahUnavailableStarts } from "@/lib/booking-slots";
+import {
+  esteeUnavailableStartsForDay,
+  lukaahUnavailableStarts,
+  coerceBookingSlotRows,
+  type BookingSlotRow,
+} from "@/lib/booking-slots";
 import { formatLessonTimeHm, timezoneBookingHint } from "@/lib/timezone";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
@@ -19,15 +24,14 @@ import { generateSlotStartTimes, TimeSlotGrid } from "@/components/booking/time-
 
 interface Props {
   instructor: "lukaah" | "estee";
-  swimmerAge: number;
-  lessonTier?: "auto" | "infant" | "standard";
-  onSelect: (schedule: ScheduleSelection) => void;
+  swimmers: SwimmerInfo[];
+  onSelect: (schedules: ScheduleSelection[]) => void;
   onBack: () => void;
 }
 
 function getSummerWeeks(): { start: Date; label: string }[] {
   const year = new Date().getFullYear() < 2026 ? 2026 : new Date().getFullYear();
-  let current = new Date(`${year}-06-01T12:00:00Z`); // Roughly June 1st Monday
+  let current = new Date(`${year}-06-01T12:00:00Z`);
   const weeks: { start: Date; label: string }[] = [];
   while (current <= new Date(`${year}-08-10T12:00:00Z`)) {
     const endFriday = addDays(current, 4);
@@ -49,14 +53,16 @@ function getSummerMonths(): { value: string; label: string }[] {
   ];
 }
 
-export function StepSchedule({ instructor, swimmerAge, lessonTier = "auto", onSelect, onBack }: Props) {
-  const tier = effectiveLessonTier(swimmerAge, lessonTier);
+export function StepSchedule({ instructor, swimmers, onSelect, onBack }: Props) {
+  const first = swimmers[0]!;
+  const tier = effectiveLessonTier(first.swimmerAge, first.lessonTier ?? "auto");
   const pricing = instructor === "estee" ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
   const duration = pricing.duration;
 
   if (instructor === "lukaah") {
     return (
       <LukaahScheduleStep
+        swimmers={swimmers}
         duration={duration}
         pricing={pricing}
         onSelect={onSelect}
@@ -67,6 +73,7 @@ export function StepSchedule({ instructor, swimmerAge, lessonTier = "auto", onSe
 
   return (
     <EsteeScheduleStep
+      swimmers={swimmers}
       duration={duration}
       pricing={pricing}
       onSelect={onSelect}
@@ -77,73 +84,165 @@ export function StepSchedule({ instructor, swimmerAge, lessonTier = "auto", onSe
 
 type PricingTier = { age?: string; duration: number; price: number; label: string };
 
+function siblingLukaahRows(
+  weekStart: string,
+  duration: number,
+  times: (string | null)[],
+  beforeIndex: number
+): BookingSlotRow[] {
+  const rows: BookingSlotRow[] = [];
+  for (let j = 0; j < beforeIndex; j++) {
+    const t = times[j];
+    if (!t) continue;
+    rows.push({
+      lesson_time: t,
+      week_start: weekStart,
+      lesson_duration: duration,
+      day_of_week: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+      second_day_time: null,
+    });
+  }
+  return rows;
+}
+
+function esteeSyntheticRow(
+  month: string,
+  primaryDay: "wednesday" | "thursday",
+  secondDay: boolean,
+  primaryTime: string,
+  secondDayTime: string | null,
+  duration: number
+): BookingSlotRow {
+  const other: "wednesday" | "thursday" = primaryDay === "wednesday" ? "thursday" : "wednesday";
+  return {
+    lesson_time: primaryTime,
+    second_day_time: secondDay && secondDayTime ? secondDayTime : null,
+    day_of_week: secondDay && secondDayTime ? [primaryDay, other] : [primaryDay],
+    month,
+    lesson_duration: duration,
+  };
+}
+
+function siblingEsteeComplete(
+  month: string,
+  primaryDay: "wednesday" | "thursday",
+  secondDay: boolean,
+  primaryTimes: (string | null)[],
+  secondTimes: (string | null)[],
+  duration: number,
+  beforeIndex: number
+): BookingSlotRow[] {
+  const out: BookingSlotRow[] = [];
+  for (let j = 0; j < beforeIndex; j++) {
+    const p = primaryTimes[j];
+    if (!p) continue;
+    if (secondDay) {
+      const sec = secondTimes[j];
+      if (!sec) continue;
+      out.push(esteeSyntheticRow(month, primaryDay, true, p, sec, duration));
+    } else {
+      out.push(esteeSyntheticRow(month, primaryDay, false, p, null, duration));
+    }
+  }
+  return out;
+}
+
 function LukaahScheduleStep({
+  swimmers,
   duration,
   pricing,
   onSelect,
   onBack,
 }: {
+  swimmers: SwimmerInfo[];
   duration: number;
   pricing: PricingTier;
-  onSelect: (s: ScheduleSelection) => void;
+  onSelect: (schedules: ScheduleSelection[]) => void;
   onBack: () => void;
 }) {
   const weeks = getSummerWeeks();
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [takenSlots, setTakenSlots] = useState<string[]>([]);
+  const [selectedTimes, setSelectedTimes] = useState<(string | null)[]>(() => swimmers.map(() => null));
+  const [dbRows, setDbRows] = useState<BookingSlotRow[]>([]);
 
   const inst = INSTRUCTORS.lukaah;
 
-  const fetchTaken = useCallback(async (weekStart: string) => {
-    try {
-      const res = await fetch(
-        `/api/bookings?instructor=lukaah&week_start=${weekStart}&status=confirmed`
-      );
-      if (res.ok) {
-        const data = await res.json();
-        const candidates = generateSlotStartTimes(
-          inst.startHour,
-          inst.startMinute,
-          inst.endHour,
-          inst.endMinute,
-          duration,
-          15
-        );
-        setTakenSlots(lukaahUnavailableStarts(data, weekStart, duration, candidates));
+  useEffect(() => {
+    setSelectedTimes((prev) => swimmers.map((_, i) => prev[i] ?? null));
+  }, [swimmers.length]);
+
+  const candidates = useMemo(
+    () =>
+      generateSlotStartTimes(
+        inst.startHour,
+        inst.startMinute,
+        inst.endHour,
+        inst.endMinute,
+        duration,
+        15
+      ),
+    [duration, inst.endHour, inst.endMinute, inst.startHour, inst.startMinute]
+  );
+
+  const fetchTaken = useCallback(
+    async (weekStart: string) => {
+      try {
+        const res = await fetch(`/api/bookings?instructor=lukaah&week_start=${weekStart}&status=confirmed`);
+        if (res.ok) {
+          const data = await res.json();
+          setDbRows(coerceBookingSlotRows(data));
+        } else {
+          setDbRows([]);
+        }
+      } catch {
+        setDbRows([]);
       }
-    } catch {
-      setTakenSlots([]);
-    }
-  }, [duration, inst.endHour, inst.endMinute, inst.startHour, inst.startMinute]);
+    },
+    []
+  );
 
   useEffect(() => {
     if (selectedWeek) {
-      fetchTaken(selectedWeek);
-      setSelectedTime(null);
+      void fetchTaken(selectedWeek);
+      setSelectedTimes(swimmers.map(() => null));
     }
-  }, [selectedWeek, fetchTaken]);
+  }, [selectedWeek, fetchTaken, swimmers.length]);
+
+  function setTimeAt(index: number, t: string) {
+    setSelectedTimes((arr) => {
+      const n = [...arr];
+      n[index] = t;
+      return n;
+    });
+  }
 
   function handleContinue() {
-    if (!selectedWeek || !selectedTime) return;
-    const schedule: LukaahSchedule = {
-      type: "weekly",
-      weekStart: selectedWeek,
-      time: selectedTime,
-    };
-    onSelect(schedule);
+    if (!selectedWeek || selectedTimes.some((x) => !x)) return;
+    onSelect(
+      swimmers.map((_, i) => ({
+        type: "weekly" as const,
+        weekStart: selectedWeek,
+        time: selectedTimes[i]!,
+      }))
+    );
   }
 
   const selectedWeekObj = weeks.find((w) => format(w.start, "yyyy-MM-dd") === selectedWeek);
+  const allPicked = Boolean(selectedWeek && selectedTimes.every(Boolean));
 
   return (
     <div className="space-y-10">
       <p className="rounded-xl border border-black/5 bg-[#F5F5F7] px-4 py-3 font-ui text-xs leading-relaxed text-[#1D1D1F]/80">
         {timezoneBookingHint()}
       </p>
-      {/* Week picker */}
+
       <div>
         <h3 className="font-display text-3xl font-medium tracking-tight mb-6">Choose your week</h3>
+        <p className="text-[#86868B] text-sm mb-4 font-body">
+          {swimmers.length > 1
+            ? "Everyone shares this week; each swimmer picks their own daily start time below."
+            : "Pick the week for your Mon–Fri lessons."}
+        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {weeks.map((w) => {
             const val = format(w.start, "yyyy-MM-dd");
@@ -151,6 +250,7 @@ function LukaahScheduleStep({
             return (
               <button
                 key={val}
+                type="button"
                 onClick={() => {
                   setSelectedWeek(val);
                   setTimeout(() => {
@@ -163,50 +263,67 @@ function LukaahScheduleStep({
                     : "border-black/5 bg-white hover:border-black/10 hover:shadow-md"
                 }`}
               >
-                <div className={`font-ui text-xs uppercase tracking-[0.2em] mb-2 ${active ? "text-[#1D1D1F] font-semibold" : "text-[#86868B] font-medium"}`}>Week of</div>
-                <div className={`font-display text-xl ${active ? "text-[#1D1D1F]" : "text-[#1D1D1F]"}`}>{w.label}</div>
+                <div
+                  className={`font-ui text-xs uppercase tracking-[0.2em] mb-2 ${active ? "text-[#1D1D1F] font-semibold" : "text-[#86868B] font-medium"}`}
+                >
+                  Week of
+                </div>
+                <div className="font-display text-xl text-[#1D1D1F]">{w.label}</div>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Time slot grid */}
       {selectedWeek && (
-        <div id="time-selection" className="animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both border-t border-black/5 pt-10">
-          <h3 className="font-display text-3xl font-medium tracking-tight mb-3">Choose your time</h3>
-          <p className="text-[#86868B] font-body text-sm mb-8">
-            This time repeats Monday – Friday for the entire week.
-          </p>
-          <TimeSlotGrid
-            startHour={inst.startHour}
-            startMinute={inst.startMinute}
-            endHour={inst.endHour}
-            endMinute={inst.endMinute}
-            duration={duration}
-            selected={selectedTime}
-            takenSlots={takenSlots}
-            onSelect={setSelectedTime}
-            showTimezoneHint
-          />
+        <div
+          id="time-selection"
+          className="animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both border-t border-black/5 pt-10 space-y-12"
+        >
+          <h3 className="font-display text-3xl font-medium tracking-tight">Choose times</h3>
+          {swimmers.map((sw, i) => {
+            const pool = [...dbRows, ...siblingLukaahRows(selectedWeek, duration, selectedTimes, i)];
+            const taken = lukaahUnavailableStarts(pool, selectedWeek, duration, candidates);
+            return (
+              <div key={sw.swimmerName + i} className="space-y-4">
+                <div>
+                  <h4 className="font-display text-xl font-medium text-[#1D1D1F]">{sw.swimmerName}</h4>
+                  <p className="text-[#86868B] font-body text-sm">
+                    Same time Monday – Friday for this week ({duration} min lessons).
+                  </p>
+                </div>
+                <TimeSlotGrid
+                  startHour={inst.startHour}
+                  startMinute={inst.startMinute}
+                  endHour={inst.endHour}
+                  endMinute={inst.endMinute}
+                  duration={duration}
+                  selected={selectedTimes[i] ?? null}
+                  takenSlots={taken}
+                  onSelect={(t) => setTimeAt(i, t)}
+                  showTimezoneHint={i === 0}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* Summary */}
-      {selectedWeek && selectedTime && selectedWeekObj && (
-        <div className="animate-in fade-in zoom-in-95 duration-500 fill-mode-both bg-[#F5F5F7] border border-black/5 rounded-[2rem] p-8 shadow-sm">
-          <span className="font-ui text-xs font-semibold text-[#86868B] uppercase tracking-[0.2em] mb-4 block">
-            Your Schedule
-          </span>
-          <p className="font-display text-3xl font-medium text-[#1D1D1F] mb-3">
-            Mon – Fri at {formatLessonTimeHm(selectedTime)}
-          </p>
-          <p className="font-ui text-sm text-[#86868B] mb-8">
-            Week of {selectedWeekObj.label} &middot; 5 lessons &middot; {duration} min each
-          </p>
+      {selectedWeek && allPicked && selectedWeekObj && (
+        <div className="animate-in fade-in zoom-in-95 duration-500 fill-mode-both bg-[#F5F5F7] border border-black/5 rounded-[2rem] p-8 shadow-sm space-y-4">
+          <span className="font-ui text-xs font-semibold text-[#86868B] uppercase tracking-[0.2em] block">Your schedule</span>
+          {swimmers.map((sw, i) => (
+            <p key={i} className="font-display text-xl text-[#1D1D1F]">
+              <span className="font-ui text-sm text-[#86868B] block">{sw.swimmerName}</span>
+              Mon – Fri at {formatLessonTimeHm(selectedTimes[i]!)} · {duration} min
+            </p>
+          ))}
+          <p className="font-ui text-sm text-[#86868B]">Week of {selectedWeekObj.label}</p>
           <div className="flex items-end justify-between border-t border-black/5 pt-6">
             <span className="font-ui text-xs font-semibold text-[#86868B] uppercase tracking-widest">Total</span>
-            <span className="font-display text-4xl text-[#1D1D1F] tracking-tighter">{pricing.label}</span>
+            <span className="font-display text-4xl text-[#1D1D1F] tracking-tighter">
+              {formatPrice(pricing.price * swimmers.length)}
+            </span>
           </div>
         </div>
       )}
@@ -217,7 +334,7 @@ function LukaahScheduleStep({
         </Button>
         <Button
           onClick={handleContinue}
-          disabled={!selectedWeek || !selectedTime}
+          disabled={!selectedWeek || !allPicked}
           className="flex-1 order-1 sm:order-2 rounded-full py-6 bg-[#1D1D1F] text-white hover:bg-black"
         >
           Continue to Review
@@ -228,111 +345,135 @@ function LukaahScheduleStep({
 }
 
 function EsteeScheduleStep({
+  swimmers,
   duration,
   pricing,
   onSelect,
   onBack,
 }: {
+  swimmers: SwimmerInfo[];
   duration: number;
   pricing: PricingTier;
-  onSelect: (s: ScheduleSelection) => void;
+  onSelect: (schedules: ScheduleSelection[]) => void;
   onBack: () => void;
 }) {
   const months = getSummerMonths();
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [primaryDay, setPrimaryDay] = useState<"wednesday" | "thursday">("wednesday");
-  const [primaryTime, setPrimaryTime] = useState<string | null>(null);
   const [secondDay, setSecondDay] = useState(false);
-  const [secondDayTime, setSecondDayTime] = useState<string | null>(null);
-  const [takenWed, setTakenWed] = useState<string[]>([]);
-  const [takenThu, setTakenThu] = useState<string[]>([]);
+  const [primaryTimes, setPrimaryTimes] = useState<(string | null)[]>(() => swimmers.map(() => null));
+  const [secondTimes, setSecondTimes] = useState<(string | null)[]>(() => swimmers.map(() => null));
+  const [dbRows, setDbRows] = useState<BookingSlotRow[]>([]);
 
   const schedule = INSTRUCTORS.estee.schedule;
   const amBlock = schedule.wednesday.am;
   const pmBlock = schedule.wednesday.pm;
 
-  // Get specific dates for the selected month
   const monthDates = selectedMonth ? getEsteeDatesForMonth(selectedMonth) : null;
+
+  useEffect(() => {
+    setPrimaryTimes((p) => swimmers.map((_, i) => p[i] ?? null));
+    setSecondTimes((p) => swimmers.map((_, i) => p[i] ?? null));
+  }, [swimmers.length]);
+
+  const candAm = useMemo(
+    () =>
+      generateSlotStartTimes(amBlock.startHour, amBlock.startMinute, amBlock.endHour, amBlock.endMinute, duration, 15),
+    [amBlock.endHour, amBlock.endMinute, amBlock.startHour, amBlock.startMinute, duration]
+  );
+  const candPm = useMemo(
+    () =>
+      generateSlotStartTimes(pmBlock.startHour, pmBlock.startMinute, pmBlock.endHour, pmBlock.endMinute, duration, 15),
+    [duration, pmBlock.endHour, pmBlock.endMinute, pmBlock.startHour, pmBlock.startMinute]
+  );
 
   const fetchTaken = useCallback(async (month: string) => {
     try {
-      const res = await fetch(
-        `/api/bookings?instructor=estee&month=${month}&status=confirmed`
-      );
+      const res = await fetch(`/api/bookings?instructor=estee&month=${month}&status=confirmed`);
       if (res.ok) {
         const data = await res.json();
-        const candAm = generateSlotStartTimes(
-          amBlock.startHour,
-          amBlock.startMinute,
-          amBlock.endHour,
-          amBlock.endMinute,
-          duration,
-          15
-        );
-        const candPm = generateSlotStartTimes(
-          pmBlock.startHour,
-          pmBlock.startMinute,
-          pmBlock.endHour,
-          pmBlock.endMinute,
-          duration,
-          15
-        );
-        const blockedWed = new Set([
-          ...esteeUnavailableStartsForDay(data, "wednesday", duration, candAm),
-          ...esteeUnavailableStartsForDay(data, "wednesday", duration, candPm),
-        ]);
-        const blockedThu = new Set([
-          ...esteeUnavailableStartsForDay(data, "thursday", duration, candAm),
-          ...esteeUnavailableStartsForDay(data, "thursday", duration, candPm),
-        ]);
-        setTakenWed([...blockedWed]);
-        setTakenThu([...blockedThu]);
+        setDbRows(coerceBookingSlotRows(data));
+      } else {
+        setDbRows([]);
       }
     } catch {
-      setTakenWed([]);
-      setTakenThu([]);
+      setDbRows([]);
     }
-  }, [duration, amBlock, pmBlock]);
+  }, []);
 
   useEffect(() => {
     if (selectedMonth) {
-      fetchTaken(selectedMonth);
-      setPrimaryTime(null);
-      setSecondDayTime(null);
+      void fetchTaken(selectedMonth);
+      setPrimaryTimes(swimmers.map(() => null));
+      setSecondTimes(swimmers.map(() => null));
     }
-  }, [selectedMonth, fetchTaken]);
+  }, [selectedMonth, fetchTaken, swimmers.length]);
 
   useEffect(() => {
-    setPrimaryTime(null);
-  }, [primaryDay]);
+    setPrimaryTimes(swimmers.map(() => null));
+  }, [primaryDay, swimmers.length]);
 
   const otherDay = primaryDay === "wednesday" ? "thursday" : "wednesday";
-
-  // Use Estee's monthly pricing ($120/month for 4 lessons with one day, $60/month for infants)
   const monthlyPrice = pricing.price;
   const totalLessons = secondDay ? 8 : 4;
   const totalPrice = secondDay ? monthlyPrice * 2 : monthlyPrice;
 
-  function handleContinue() {
-    if (!selectedMonth || !primaryTime) return;
-    if (secondDay && !secondDayTime) return;
-    const s: EsteeSchedule = {
-      type: "monthly",
-      month: selectedMonth,
-      primaryDay,
-      primaryTime,
-      secondDay,
-      secondDayTime: secondDay ? secondDayTime : null,
-    };
-    onSelect(s);
+  function takenPrimaryForSwimmer(i: number, part: "am" | "pm") {
+    if (!selectedMonth) return [];
+    const pool = [...dbRows, ...siblingEsteeComplete(selectedMonth, primaryDay, secondDay, primaryTimes, secondTimes, duration, i)];
+    const cand = part === "am" ? candAm : candPm;
+    return esteeUnavailableStartsForDay(pool, selectedMonth, primaryDay, duration, cand);
   }
+
+  function takenSecondForSwimmer(i: number, part: "am" | "pm") {
+    if (!selectedMonth) return [];
+    const pool = [...dbRows, ...siblingEsteeComplete(selectedMonth, primaryDay, secondDay, primaryTimes, secondTimes, duration, i)];
+    const cand = part === "am" ? candAm : candPm;
+    return esteeUnavailableStartsForDay(pool, selectedMonth, otherDay, duration, cand);
+  }
+
+  function setPrimaryAt(index: number, t: string) {
+    setPrimaryTimes((arr) => {
+      const n = [...arr];
+      n[index] = t;
+      return n;
+    });
+  }
+
+  function setSecondAt(index: number, t: string) {
+    setSecondTimes((arr) => {
+      const n = [...arr];
+      n[index] = t;
+      return n;
+    });
+  }
+
+  function handleContinue() {
+    if (!selectedMonth) return;
+    if (primaryTimes.some((x) => !x)) return;
+    if (secondDay && secondTimes.some((x) => !x)) return;
+    onSelect(
+      swimmers.map((_, i) => ({
+        type: "monthly" as const,
+        month: selectedMonth,
+        primaryDay,
+        primaryTime: primaryTimes[i]!,
+        secondDay,
+        secondDayTime: secondDay ? secondTimes[i]! : null,
+      }))
+    );
+  }
+
+  const primaryComplete = Boolean(selectedMonth && primaryTimes.every(Boolean));
+  const secondComplete = !secondDay || secondTimes.every(Boolean);
+  const canSubmit = primaryComplete && secondComplete;
 
   return (
     <div className="space-y-10">
       <p className="rounded-xl border border-black/5 bg-[#F5F5F7] px-4 py-3 font-ui text-xs leading-relaxed text-[#1D1D1F]/80">
         {timezoneBookingHint()}
       </p>
-      {/* Month picker */}
+
       <div>
         <h3 className="font-display text-3xl font-medium tracking-tight mb-6">Choose a month</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -342,8 +483,9 @@ function EsteeScheduleStep({
             return (
               <button
                 key={m.value}
+                type="button"
                 onClick={() => {
-                  setSelectedMonth(m.value)
+                  setSelectedMonth(m.value);
                   setTimeout(() => {
                     document.getElementById("day-selection")?.scrollIntoView({ behavior: "smooth", block: "start" });
                   }, 100);
@@ -366,15 +508,17 @@ function EsteeScheduleStep({
 
       {selectedMonth && monthDates && (
         <div id="day-selection" className="animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both space-y-10">
-          {/* Show specific dates for this month */}
           <div className="bg-ocean-surf/30 border border-ocean-light/30 rounded-[1.5rem] p-6">
-            <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-3">Lesson Dates</p>
+            <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-3">Lesson dates</p>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <p className="font-ui text-xs text-[#86868B] mb-2">Wednesdays</p>
                 <div className="flex flex-wrap gap-2">
                   {monthDates.wednesdays.map((d) => (
-                    <span key={d} className="inline-block px-3 py-1.5 rounded-full bg-white text-xs font-ui font-medium text-[#1D1D1F] border border-black/5">
+                    <span
+                      key={d}
+                      className="inline-block px-3 py-1.5 rounded-full bg-white text-xs font-ui font-medium text-[#1D1D1F] border border-black/5"
+                    >
                       {format(new Date(d + "T12:00:00"), "MMM d")}
                     </span>
                   ))}
@@ -384,7 +528,10 @@ function EsteeScheduleStep({
                 <p className="font-ui text-xs text-[#86868B] mb-2">Thursdays</p>
                 <div className="flex flex-wrap gap-2">
                   {monthDates.thursdays.map((d) => (
-                    <span key={d} className="inline-block px-3 py-1.5 rounded-full bg-white text-xs font-ui font-medium text-[#1D1D1F] border border-black/5">
+                    <span
+                      key={d}
+                      className="inline-block px-3 py-1.5 rounded-full bg-white text-xs font-ui font-medium text-[#1D1D1F] border border-black/5"
+                    >
                       {format(new Date(d + "T12:00:00"), "MMM d")}
                     </span>
                   ))}
@@ -393,7 +540,6 @@ function EsteeScheduleStep({
             </div>
           </div>
 
-          {/* Day selection */}
           <div className="border-t border-black/5 pt-10">
             <h3 className="font-display text-3xl font-medium tracking-tight mb-6">Choose your primary day</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -403,8 +549,9 @@ function EsteeScheduleStep({
                 return (
                   <button
                     key={day}
+                    type="button"
                     onClick={() => {
-                      setPrimaryDay(day)
+                      setPrimaryDay(day);
                       setTimeout(() => {
                         document.getElementById("primary-time-selection")?.scrollIntoView({ behavior: "smooth", block: "center" });
                       }, 100);
@@ -415,7 +562,7 @@ function EsteeScheduleStep({
                         : "border-black/5 bg-white hover:border-black/10 hover:shadow-md"
                     }`}
                   >
-                    <span className={`capitalize font-display text-xl mb-2 block ${active ? "text-[#1D1D1F]" : "text-[#1D1D1F]"}`}>{day}</span>
+                    <span className="capitalize font-display text-xl mb-2 block text-[#1D1D1F]">{day}</span>
                     <span className={`text-xs font-ui ${active ? "text-[#1D1D1F]/80 font-medium" : "text-[#86868B]"}`}>
                       8:00 AM – 11:30 AM & 12:30 PM – 4:00 PM
                     </span>
@@ -428,45 +575,54 @@ function EsteeScheduleStep({
             </div>
           </div>
 
-          {/* Primary time slot - Morning block */}
-          <div id="primary-time-selection">
-            <h3 className="font-display text-3xl font-medium tracking-tight mb-3">
-              Choose your <span className="capitalize">{primaryDay}</span> time
-            </h3>
-            <p className="text-[#86868B] font-body text-sm mb-8">
-              Same time every <span className="capitalize">{primaryDay}</span> for the month.
-            </p>
-            
-            {/* Morning Block */}
-            <div className="mb-6">
-              <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-4">☀️ Morning Block (8:00 AM – 11:30 AM)</p>
-              <TimeSlotGrid
-                startHour={amBlock.startHour}
-                startMinute={amBlock.startMinute}
-                endHour={amBlock.endHour}
-                endMinute={amBlock.endMinute}
-                duration={duration}
-                selected={primaryTime}
-                takenSlots={primaryDay === "wednesday" ? takenWed : takenThu}
-                onSelect={setPrimaryTime}
-                showTimezoneHint
-              />
+          <div id="primary-time-selection" className="space-y-12 border-t border-black/5 pt-10">
+            <div>
+              <h3 className="font-display text-3xl font-medium tracking-tight mb-2">
+                Primary day: <span className="capitalize">{primaryDay}</span>
+              </h3>
+              <p className="text-[#86868B] font-body text-sm mb-6">
+                {swimmers.length > 1
+                  ? "Pick a start time on this weekday for each swimmer (they can differ)."
+                  : `Same time every ${primaryDay} for the month.`}
+              </p>
             </div>
 
-            {/* Afternoon Block */}
-            <div>
-              <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-4">🌤️ Afternoon Block (12:30 PM – 4:00 PM)</p>
-              <TimeSlotGrid
-                startHour={pmBlock.startHour}
-                startMinute={pmBlock.startMinute}
-                endHour={pmBlock.endHour}
-                endMinute={pmBlock.endMinute}
-                duration={duration}
-                selected={primaryTime}
-                takenSlots={primaryDay === "wednesday" ? takenWed : takenThu}
-                onSelect={setPrimaryTime}
-              />
-            </div>
+            {swimmers.map((sw, i) => (
+              <div key={sw.swimmerName + i} className="space-y-6 pb-8 border-b border-black/5 last:border-0">
+                <h4 className="font-display text-xl font-medium text-[#1D1D1F]">{sw.swimmerName}</h4>
+                <div>
+                  <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-4">
+                    Morning (8:00 AM – 11:30 AM)
+                  </p>
+                  <TimeSlotGrid
+                    startHour={amBlock.startHour}
+                    startMinute={amBlock.startMinute}
+                    endHour={amBlock.endHour}
+                    endMinute={amBlock.endMinute}
+                    duration={duration}
+                    selected={primaryTimes[i] ?? null}
+                    takenSlots={takenPrimaryForSwimmer(i, "am")}
+                    onSelect={(t) => setPrimaryAt(i, t)}
+                    showTimezoneHint={i === 0}
+                  />
+                </div>
+                <div>
+                  <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-4">
+                    Afternoon (12:30 PM – 4:00 PM)
+                  </p>
+                  <TimeSlotGrid
+                    startHour={pmBlock.startHour}
+                    startMinute={pmBlock.startMinute}
+                    endHour={pmBlock.endHour}
+                    endMinute={pmBlock.endMinute}
+                    duration={duration}
+                    selected={primaryTimes[i] ?? null}
+                    takenSlots={takenPrimaryForSwimmer(i, "pm")}
+                    onSelect={(t) => setPrimaryAt(i, t)}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="bg-[#F5F5F7] rounded-[2rem] p-8 md:p-10 border border-black/5 shadow-sm">
@@ -480,79 +636,84 @@ function EsteeScheduleStep({
                   }, 100);
                 }
               }}
-              label={`Add a second day each week (+${formatPrice(monthlyPrice)})`}
+              label={`Add a second day each week (+${formatPrice(monthlyPrice)} per swimmer)`}
               description={
-                secondDay 
-                ? `Awesome! You've added ${otherDay.charAt(0).toUpperCase() + otherDay.slice(1)}s. You are now booking 8 total lessons this month for ${formatPrice(totalPrice)}.`
-                : `Currently booking 4 lessons for ${formatPrice(monthlyPrice)}. Toggle to add 4 more lessons on ${otherDay.charAt(0).toUpperCase() + otherDay.slice(1)}s.`
+                secondDay
+                  ? `Each swimmer adds ${otherDay.charAt(0).toUpperCase() + otherDay.slice(1)}s — 8 lessons per swimmer this month.`
+                  : `4 lessons per swimmer on your primary day. Toggle to add 4 more on ${otherDay.charAt(0).toUpperCase() + otherDay.slice(1)}s.`
               }
             />
           </div>
 
-          {/* Second day time slot */}
           {secondDay && (
-            <div id="second-time-selection" className="animate-in fade-in slide-in-from-top-4 duration-500 fill-mode-both border-t border-black/5 pt-10">
-              <h3 className="font-display text-3xl font-medium tracking-tight mb-8">
-                Choose your <span className="capitalize">{otherDay}</span> time
+            <div id="second-time-selection" className="animate-in fade-in slide-in-from-top-4 duration-500 fill-mode-both border-t border-black/5 pt-10 space-y-12">
+              <h3 className="font-display text-3xl font-medium tracking-tight">
+                Second day: <span className="capitalize">{otherDay}</span>
               </h3>
-              
-              {/* Morning Block */}
-              <div className="mb-6">
-                <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-4">☀️ Morning Block (8:00 AM – 11:30 AM)</p>
-                <TimeSlotGrid
-                  startHour={amBlock.startHour}
-                  startMinute={amBlock.startMinute}
-                  endHour={amBlock.endHour}
-                  endMinute={amBlock.endMinute}
-                  duration={duration}
-                  selected={secondDayTime}
-                  takenSlots={otherDay === "wednesday" ? takenWed : takenThu}
-                  onSelect={setSecondDayTime}
-                  showTimezoneHint
-                />
-              </div>
-
-              {/* Afternoon Block */}
-              <div>
-                <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-4">🌤️ Afternoon Block (12:30 PM – 4:00 PM)</p>
-                <TimeSlotGrid
-                  startHour={pmBlock.startHour}
-                  startMinute={pmBlock.startMinute}
-                  endHour={pmBlock.endHour}
-                  endMinute={pmBlock.endMinute}
-                  duration={duration}
-                  selected={secondDayTime}
-                  takenSlots={otherDay === "wednesday" ? takenWed : takenThu}
-                  onSelect={setSecondDayTime}
-                />
-              </div>
+              {swimmers.map((sw, i) => (
+                <div key={sw.swimmerName + "-2-" + i} className="space-y-6 pb-8 border-b border-black/5 last:border-0">
+                  <h4 className="font-display text-xl font-medium text-[#1D1D1F]">{sw.swimmerName}</h4>
+                  <div>
+                    <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-4">
+                      Morning (8:00 AM – 11:30 AM)
+                    </p>
+                    <TimeSlotGrid
+                      startHour={amBlock.startHour}
+                      startMinute={amBlock.startMinute}
+                      endHour={amBlock.endHour}
+                      endMinute={amBlock.endMinute}
+                      duration={duration}
+                      selected={secondTimes[i] ?? null}
+                      takenSlots={takenSecondForSwimmer(i, "am")}
+                      onSelect={(t) => setSecondAt(i, t)}
+                      showTimezoneHint={false}
+                    />
+                  </div>
+                  <div>
+                    <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-4">
+                      Afternoon (12:30 PM – 4:00 PM)
+                    </p>
+                    <TimeSlotGrid
+                      startHour={pmBlock.startHour}
+                      startMinute={pmBlock.startMinute}
+                      endHour={pmBlock.endHour}
+                      endMinute={pmBlock.endMinute}
+                      duration={duration}
+                      selected={secondTimes[i] ?? null}
+                      takenSlots={takenSecondForSwimmer(i, "pm")}
+                      onSelect={(t) => setSecondAt(i, t)}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
-          {/* Summary */}
-          {primaryTime && (
-            <div className="animate-in fade-in zoom-in-95 duration-500 fill-mode-both bg-[#F5F5F7] border border-black/5 rounded-[2rem] p-8 shadow-sm">
-              <span className="font-ui text-xs font-semibold text-[#86868B] uppercase tracking-[0.2em] mb-4 block">
-                Your Schedule
-              </span>
-              <p className="font-display text-3xl font-medium text-[#1D1D1F] mb-3">
-                Every <span className="capitalize">{primaryDay}</span> at {formatLessonTimeHm(primaryTime)}
-                {secondDay && secondDayTime && (
-                  <>
-                    <br />
-                    <span className="mt-2 block text-2xl text-[#1D1D1F]/80">
-                      + <span className="capitalize">{otherDay}</span> at {formatLessonTimeHm(secondDayTime)}
-                    </span>
-                  </>
-                )}
-              </p>
-              <p className="font-ui text-sm text-[#86868B] mb-8">
-                {months.find((m) => m.value === selectedMonth)?.label} &middot;{" "}
-                {totalLessons} lessons &middot; {duration} min each
+          {primaryComplete && (
+            <div className="animate-in fade-in zoom-in-95 duration-500 fill-mode-both bg-[#F5F5F7] border border-black/5 rounded-[2rem] p-8 shadow-sm space-y-4">
+              <span className="font-ui text-xs font-semibold text-[#86868B] uppercase tracking-[0.2em] block">Your schedule</span>
+              {swimmers.map((sw, i) => (
+                <div key={i} className="font-body text-[#1D1D1F]">
+                  <p className="font-ui text-xs text-[#86868B]">{sw.swimmerName}</p>
+                  <p className="font-display text-lg">
+                    Every <span className="capitalize">{primaryDay}</span> at {formatLessonTimeHm(primaryTimes[i]!)}
+                    {secondDay && secondTimes[i] && (
+                      <span className="block text-base mt-1 text-[#1D1D1F]/85">
+                        + <span className="capitalize">{otherDay}</span> at {formatLessonTimeHm(secondTimes[i]!)}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              ))}
+              <p className="font-ui text-sm text-[#86868B]">
+                {months.find((m) => m.value === selectedMonth)?.label} &middot; {totalLessons} lessons per swimmer &middot;{" "}
+                {duration} min
               </p>
               <div className="flex items-end justify-between border-t border-black/5 pt-6">
                 <span className="font-ui text-xs font-semibold text-[#86868B] uppercase tracking-widest">Total</span>
-                <span className="font-display text-4xl text-[#1D1D1F] tracking-tighter">{formatPrice(totalPrice)}</span>
+                <span className="font-display text-4xl text-[#1D1D1F] tracking-tighter">
+                  {formatPrice(totalPrice * swimmers.length)}
+                </span>
               </div>
             </div>
           )}
@@ -563,7 +724,7 @@ function EsteeScheduleStep({
             </Button>
             <Button
               onClick={handleContinue}
-              disabled={!primaryTime || (secondDay && !secondDayTime)}
+              disabled={!canSubmit}
               className="flex-1 order-1 sm:order-2 rounded-full py-6 bg-[#1D1D1F] text-white hover:bg-black"
             >
               Continue to Review

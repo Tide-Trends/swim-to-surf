@@ -115,9 +115,18 @@ export function ManageBookingClient({ booking }: { booking: any }) {
         <h2 className="text-3xl font-display font-medium mb-8 tracking-tight">Pick a New Schedule</h2>
         <StepSchedule
           instructor={booking.instructor}
-          swimmerAge={booking.swimmer_age}
+          swimmers={[
+            {
+              swimmerName: String(booking.swimmer_name ?? "Swimmer"),
+              swimmerAge: Number(booking.swimmer_age),
+              lessonTier: "auto",
+            },
+          ]}
           onBack={() => setMode("view")}
-          onSelect={handleReschedule}
+          onSelect={(schedules) => {
+            const sel = schedules[0];
+            if (sel) void handleReschedule(sel);
+          }}
         />
       </div>
     );

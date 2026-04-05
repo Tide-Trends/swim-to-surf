@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
+import { getSupabaseServerClient } from "@/lib/supabase-server";
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "Swim to Surf <onboarding@resend.dev>";
 
@@ -10,10 +10,15 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     const body = await req.json();
     const { action, scheduleText, specificDays, newData } = body;
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = getSupabaseServerClient();
+    if (!supabase) {
+      return NextResponse.json(
+        { error: "Database not configured. Add Supabase keys on the server." },
+        { status: 503 }
+      );
+    }
+
+    const usingServiceRole = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
 
     // Fetch existing
     const { data: booking, error: fetchErr } = await supabase
@@ -27,6 +32,15 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     }
 
     if (action === "cancel") {
+      if (!usingServiceRole) {
+        return NextResponse.json(
+          {
+            error:
+              "Cancel/reschedule requires SUPABASE_SERVICE_ROLE_KEY on the server (anon clients cannot update bookings). Add it in Vercel → Environment Variables.",
+          },
+          { status: 503 }
+        );
+      }
       await supabase.from("bookings").update({ status: "cancelled" }).eq("id", id);
 
       // Email instructor
@@ -53,6 +67,15 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     }
 
     if (action === "reschedule") {
+      if (!usingServiceRole) {
+        return NextResponse.json(
+          {
+            error:
+              "Reschedule requires SUPABASE_SERVICE_ROLE_KEY on the server. Add it in Vercel → Environment Variables.",
+          },
+          { status: 503 }
+        );
+      }
       // Validate slot availability
       let query = supabase.from("bookings").select("id").eq("status", "confirmed").eq("instructor", booking.instructor);
       if (booking.instructor === "lukaah") {

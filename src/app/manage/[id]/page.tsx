@@ -1,6 +1,6 @@
 import { Metadata } from "next";
-import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
+import { getSupabaseServerClient } from "@/lib/supabase-server";
 import { ManageBookingClient } from "./client";
 
 export const metadata: Metadata = {
@@ -18,18 +18,18 @@ export default async function ManageBookingPage({ params }: { params: Promise<{ 
   }
 
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const adminSupabase = getSupabaseServerClient();
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!adminSupabase) {
       return (
-        <div className="min-h-screen flex items-center justify-center p-6">
-          <p className="text-red-500 font-ui">Server misconfigured: Missing database keys.</p>
+        <div className="min-h-screen flex items-center justify-center p-6 px-4 text-center">
+          <p className="text-red-500 font-ui max-w-md">
+            Server misconfigured: add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (or SUPABASE_SERVICE_ROLE_KEY)
+            so this page can load your booking.
+          </p>
         </div>
       );
     }
-
-    const adminSupabase = createClient(supabaseUrl, supabaseKey);
 
     const { data: booking, error } = await adminSupabase
       .from("bookings")

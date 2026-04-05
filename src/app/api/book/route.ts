@@ -4,12 +4,6 @@ import { Resend } from "resend";
 import { getArrivalDetailsHtml, getManageBookingLinkHtml } from "@/lib/email-templates";
 import type { ScheduleSelection } from "@/lib/booking-schema";
 import { getSupabaseServerClient } from "@/lib/supabase-server";
-import {
-  staggeredTimeFromBase,
-  lukaahStaggerFits,
-  esteeStaggerFits,
-  esteeScheduleForChild,
-} from "@/lib/booking-stagger";
 import { formatLessonTimeHm, lessonLocalToUtcIso } from "@/lib/timezone";
 import {
   effectiveLessonTier,
@@ -408,12 +402,22 @@ export async function POST(req: Request) {
         parentPhone?: string;
         notes?: string;
       };
-      schedule: ScheduleSelection;
+      /** One schedule per swimmer (same week/month/day options; times may differ). */
+      schedules?: ScheduleSelection[];
+      /** @deprecated single-schedule; use schedules */
+      schedule?: ScheduleSelection;
       priceInfo: { duration: number; price: number; totalLessons: number };
       paymentMethod: string;
     };
 
-    const { instructor, schedule, priceInfo, paymentMethod } = body;
+    const { instructor, priceInfo, paymentMethod } = body;
+
+    const schedulesList: ScheduleSelection[] =
+      Array.isArray(body.schedules) && body.schedules.length > 0
+        ? body.schedules
+        : body.schedule
+          ? [body.schedule]
+          : [];
 
     const swimmersList =
       Array.isArray(body.swimmers) && body.swimmers.length > 0
@@ -424,6 +428,35 @@ export async function POST(req: Request) {
 
     if (swimmersList.length === 0) {
       return NextResponse.json({ error: "Swimmer details are required." }, { status: 400 });
+    }
+
+    if (schedulesList.length !== swimmersList.length) {
+      return NextResponse.json(
+        { error: "Each swimmer needs a schedule (times can differ). Please go back to the schedule step." },
+        { status: 400 }
+      );
+    }
+
+    const firstSch = schedulesList[0]!;
+    function schedulesAligned(): boolean {
+      for (const s of schedulesList) {
+        if (s.type !== firstSch.type) return false;
+        if (s.type === "weekly" && firstSch.type === "weekly") {
+          if (s.weekStart !== firstSch.weekStart) return false;
+        }
+        if (s.type === "monthly" && firstSch.type === "monthly") {
+          if (s.month !== firstSch.month || s.primaryDay !== firstSch.primaryDay || s.secondDay !== firstSch.secondDay) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+    if (!schedulesAligned()) {
+      return NextResponse.json(
+        { error: "All swimmers must share the same week (Lukaah) or month and day pattern (Estee). Only the times may differ." },
+        { status: 400 }
+      );
     }
 
     const host = req.headers.get("host") || "localhost:3000";
@@ -455,12 +488,12 @@ export async function POST(req: Request) {
       const base = instructor === "estee" ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
       durationsSet.add(base.duration);
       let perSwimmerPrice: number;
-      if (schedule.type === "weekly") {
+      if (firstSch.type === "weekly") {
         expectedLessonsPerSwimmer = 5;
         perSwimmerPrice = base.price;
       } else {
-        expectedLessonsPerSwimmer = schedule.secondDay ? 8 : 4;
-        perSwimmerPrice = schedule.secondDay ? base.price * 2 : base.price;
+        expectedLessonsPerSwimmer = firstSch.secondDay ? 8 : 4;
+        perSwimmerPrice = firstSch.secondDay ? base.price * 2 : base.price;
       }
       expectedTotalCents += perSwimmerPrice;
     }
@@ -491,33 +524,11 @@ export async function POST(req: Request) {
       );
     }
 
-    if (schedule.type === "weekly" && instructor !== "lukaah") {
+    if (firstSch.type === "weekly" && instructor !== "lukaah") {
       return NextResponse.json({ error: "Invalid instructor for weekly booking." }, { status: 400 });
     }
-    if (schedule.type === "monthly" && instructor !== "estee") {
+    if (firstSch.type === "monthly" && instructor !== "estee") {
       return NextResponse.json({ error: "Invalid instructor for monthly booking." }, { status: 400 });
-    }
-
-    if (schedule.type === "weekly") {
-      if (!lukaahStaggerFits(schedule.time, priceInfo.duration, n)) {
-        return NextResponse.json(
-          {
-            error:
-              "Not enough consecutive time slots before the end of the morning block for everyone. Pick an earlier start time or complete two separate bookings.",
-          },
-          { status: 400 }
-        );
-      }
-    } else {
-      if (!esteeStaggerFits(schedule, priceInfo.duration, n)) {
-        return NextResponse.json(
-          {
-            error:
-              "Not enough consecutive time slots in that part of the day for everyone. Pick earlier start times or book in two groups.",
-          },
-          { status: 400 }
-        );
-      }
     }
 
     let bookingIds: string[] = [];
@@ -525,12 +536,12 @@ export async function POST(req: Request) {
     if (canPersist && supabase) {
       let existing: BookingSlotRow[] = [];
 
-      if (schedule.type === "weekly") {
+      if (firstSch.type === "weekly") {
         const { data, error: exErr } = await supabase
           .from("bookings")
           .select("lesson_time, week_start, lesson_duration")
           .eq("instructor", instructor)
-          .eq("week_start", schedule.weekStart)
+          .eq("week_start", firstSch.weekStart)
           .eq("status", "confirmed");
         if (exErr) {
           console.error("Slot check error:", exErr);
@@ -540,9 +551,9 @@ export async function POST(req: Request) {
       } else {
         const { data, error: exErr } = await supabase
           .from("bookings")
-          .select("lesson_time, second_day_time, day_of_week, lesson_duration")
+          .select("lesson_time, second_day_time, day_of_week, lesson_duration, month")
           .eq("instructor", "estee")
-          .eq("month", schedule.month)
+          .eq("month", firstSch.month)
           .eq("status", "confirmed");
         if (exErr) {
           console.error("Slot check error:", exErr);
@@ -554,37 +565,36 @@ export async function POST(req: Request) {
       const pool: BookingSlotRow[] = [...existing];
 
       for (let i = 0; i < n; i++) {
-        if (schedule.type === "weekly") {
-          const lessonTime = staggeredTimeFromBase(schedule.time, priceInfo.duration, i);
-          if (lukaahProposalConflicts(pool, schedule.weekStart, lessonTime, priceInfo.duration)) {
+        const sch = schedulesList[i]!;
+        if (sch.type === "weekly") {
+          if (lukaahProposalConflicts(pool, sch.weekStart, sch.time, priceInfo.duration)) {
             return NextResponse.json(
               { error: "That time slot was just booked for this week. Please pick another time." },
               { status: 409 }
             );
           }
           pool.push({
-            lesson_time: lessonTime,
-            week_start: schedule.weekStart,
+            lesson_time: sch.time,
+            week_start: sch.weekStart,
             lesson_duration: priceInfo.duration,
             day_of_week: ["monday", "tuesday", "wednesday", "thursday", "friday"],
             second_day_time: null,
           });
         } else {
-          const sub = esteeScheduleForChild(schedule, i, priceInfo.duration);
-          if (esteeProposalConflicts(pool, sub, priceInfo.duration)) {
+          if (esteeProposalConflicts(pool, sch, priceInfo.duration)) {
             return NextResponse.json(
               { error: "One of those times is no longer available this month. Please choose different times." },
               { status: 409 }
             );
           }
           pool.push({
-            lesson_time: sub.primaryTime,
-            second_day_time: sub.secondDayTime,
+            lesson_time: sch.primaryTime,
+            second_day_time: sch.secondDay && sch.secondDayTime ? sch.secondDayTime : null,
             day_of_week:
-              sub.secondDay && sub.secondDayTime
-                ? [sub.primaryDay, sub.primaryDay === "wednesday" ? "thursday" : "wednesday"]
-                : [sub.primaryDay],
-            month: sub.month,
+              sch.secondDay && sch.secondDayTime
+                ? [sch.primaryDay, sch.primaryDay === "wednesday" ? "thursday" : "wednesday"]
+                : [sch.primaryDay],
+            month: sch.month,
             lesson_duration: priceInfo.duration,
           });
         }
@@ -592,6 +602,7 @@ export async function POST(req: Request) {
 
       for (let i = 0; i < n; i++) {
         const s = swimmersList[i]!;
+        const sch = schedulesList[i]!;
         const tier = effectiveLessonTier(s.swimmerAge, s.lessonTier ?? "auto");
         const tierNote =
           s.lessonTier && s.lessonTier !== "auto" ? `Lesson tier: ${tier} (manual: ${s.lessonTier})` : "";
@@ -606,18 +617,12 @@ export async function POST(req: Request) {
             .filter(Boolean)
             .join(" | ") || null;
 
-        const lessonTime =
-          schedule.type === "weekly"
-            ? staggeredTimeFromBase(schedule.time, priceInfo.duration, i)
-            : esteeScheduleForChild(schedule, i, priceInfo.duration).primaryTime;
-        const secondT =
-          schedule.type === "monthly"
-            ? esteeScheduleForChild(schedule, i, priceInfo.duration).secondDayTime
-            : null;
+        const lessonTime = sch.type === "weekly" ? sch.time : sch.primaryTime;
+        const secondT = sch.type === "monthly" && sch.secondDay && sch.secondDayTime ? sch.secondDayTime : null;
 
         const base = instructor === "estee" ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
         const perSwimmerPrice =
-          schedule.type === "weekly" ? base.price : schedule.secondDay ? base.price * 2 : base.price;
+          sch.type === "weekly" ? base.price : sch.secondDay ? base.price * 2 : base.price;
 
         const { data: booking, error: dbError } = await supabase
           .from("bookings")
@@ -633,14 +638,14 @@ export async function POST(req: Request) {
             status: "confirmed",
             price: perSwimmerPrice,
             total_lessons: expectedLessonsPerSwimmer,
-            month: schedule.type === "monthly" ? schedule.month : null,
-            week_start: schedule.type === "weekly" ? schedule.weekStart : null,
+            month: sch.type === "monthly" ? sch.month : null,
+            week_start: sch.type === "weekly" ? sch.weekStart : null,
             day_of_week:
-              schedule.type === "weekly"
+              sch.type === "weekly"
                 ? ["monday", "tuesday", "wednesday", "thursday", "friday"]
-                : schedule.secondDay
-                  ? [schedule.primaryDay, schedule.primaryDay === "wednesday" ? "thursday" : "wednesday"]
-                  : [schedule.primaryDay],
+                : sch.secondDay
+                  ? [sch.primaryDay, sch.primaryDay === "wednesday" ? "thursday" : "wednesday"]
+                  : [sch.primaryDay],
             lesson_time: lessonTime,
             second_day_time: secondT,
           })
@@ -678,7 +683,7 @@ export async function POST(req: Request) {
 
     const { instructorName, scheduleText, specificDays, calendarLink } = computeScheduleEmailFields(
       instructor as "lukaah" | "estee",
-      schedule as ScheduleSelection,
+      firstSch as ScheduleSelection,
       priceInfo
     );
     const priceFormatted = `$${(priceInfo.price / 100).toFixed(2)}`;

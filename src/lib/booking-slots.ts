@@ -11,6 +11,57 @@ export type BookingSlotRow = {
   lesson_duration?: number;
 };
 
+/** Postgres date / ISO string → YYYY-MM-DD for comparisons. */
+export function normalizeWeekStartIso(d: string | null | undefined): string {
+  if (!d) return "";
+  const s = String(d).trim();
+  return s.length >= 10 ? s.slice(0, 10) : s;
+}
+
+export function normalizeMonthYm(m: string | null | undefined): string {
+  if (!m) return "";
+  return String(m).trim();
+}
+
+/** Coerce Supabase/PostgREST day_of_week (array, string, or Postgres array text) to lowercase strings. */
+export function parseDayOfWeek(raw: unknown): string[] {
+  if (raw == null) return [];
+  if (Array.isArray(raw)) {
+    return raw.map((x) => String(x).trim().toLowerCase()).filter(Boolean);
+  }
+  if (typeof raw === "string") {
+    const t = raw.trim();
+    if (t.startsWith("{") && t.endsWith("}")) {
+      return t
+        .slice(1, -1)
+        .split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
+        .map((s) => s.replace(/^"|"$/g, "").trim().toLowerCase())
+        .filter(Boolean);
+    }
+    if (t.includes(",")) {
+      return t.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+    }
+    return t ? [t.toLowerCase()] : [];
+  }
+  return [];
+}
+
+/** Normalize API JSON rows for overlap math (handles missing keys and odd day_of_week shapes). */
+export function coerceBookingSlotRows(data: unknown): BookingSlotRow[] {
+  if (!Array.isArray(data)) return [];
+  return data.map((raw) => {
+    const r = raw as Record<string, unknown>;
+    return {
+      lesson_time: String(r.lesson_time ?? ""),
+      second_day_time: r.second_day_time != null && r.second_day_time !== "" ? String(r.second_day_time) : null,
+      day_of_week: parseDayOfWeek(r.day_of_week),
+      week_start: r.week_start != null ? String(r.week_start) : null,
+      month: r.month != null ? String(r.month) : null,
+      lesson_duration: typeof r.lesson_duration === "number" ? r.lesson_duration : undefined,
+    };
+  });
+}
+
 export function normalizeHm(t: string | null | undefined): string {
   if (!t) return "";
   const s = t.trim();
@@ -40,7 +91,7 @@ function defaultDuration(row: BookingSlotRow): number {
 
 /** Start minute + duration for one day on a booking row (Estee / multi-day). */
 function intervalForDay(booking: BookingSlotRow, day: "wednesday" | "thursday"): { start: number; dur: number } | null {
-  const days = booking.day_of_week || [];
+  const days = parseDayOfWeek(booking.day_of_week);
   const i = days.indexOf(day);
   if (i < 0) return null;
   const hm = i === 0 ? normalizeHm(booking.lesson_time) : normalizeHm(booking.second_day_time);
@@ -69,7 +120,8 @@ export function lukaahUnavailableStarts(
   lessonDuration: number,
   candidateStarts: string[]
 ): string[] {
-  const existing = bookings.filter((b) => b.week_start === weekStart);
+  const ws = normalizeWeekStartIso(weekStart);
+  const existing = bookings.filter((b) => normalizeWeekStartIso(b.week_start) === ws);
   return candidateStarts.filter((startHm) => {
     const s = hmToMinutes(startHm);
     if (s < 0) return true;
@@ -87,14 +139,17 @@ export function lukaahUnavailableStarts(
  */
 export function esteeUnavailableStartsForDay(
   bookings: BookingSlotRow[],
+  month: string,
   day: "wednesday" | "thursday",
   lessonDuration: number,
   candidateStarts: string[]
 ): string[] {
+  const m = normalizeMonthYm(month);
+  const scoped = m ? bookings.filter((b) => normalizeMonthYm(b.month) === m) : bookings;
   return candidateStarts.filter((startHm) => {
     const s = hmToMinutes(startHm);
     if (s < 0) return true;
-    for (const b of bookings) {
+    for (const b of scoped) {
       const iv = intervalForDay(b, day);
       if (!iv) continue;
       if (intervalsOverlapMinutes(s, lessonDuration, iv.start, iv.dur)) return true;
@@ -112,8 +167,9 @@ export function lukaahProposalConflicts(
 ): boolean {
   const s = hmToMinutes(lessonTime);
   if (s < 0) return true;
+  const ws = normalizeWeekStartIso(weekStart);
   for (const b of existing) {
-    if (b.week_start !== weekStart) continue;
+    if (normalizeWeekStartIso(b.week_start) !== ws) continue;
     const iv = lukaahBookingInterval(b);
     if (!iv) continue;
     if (intervalsOverlapMinutes(s, proposedDurationMinutes, iv.start, iv.dur)) return true;

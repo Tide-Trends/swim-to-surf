@@ -11,7 +11,8 @@ interface Props {
   bookingId: string;
   instructor: "lukaah" | "estee";
   swimmers: SwimmerInfo[];
-  schedule: ScheduleSelection;
+  /** Calendar file uses the first swimmer’s schedule; others are in your confirmation email. */
+  schedules: ScheduleSelection[];
   pricing: { duration: number; price: number; label: string };
   emailDelivery?: { customer: boolean; admin: boolean } | null;
 }
@@ -20,11 +21,12 @@ export function BookingSuccess({
   bookingId,
   instructor,
   swimmers,
-  schedule,
+  schedules,
   pricing,
   emailDelivery,
 }: Props) {
   const primary = swimmers[0]!;
+  const calendarSchedule = schedules[0]!;
   const calendarName = swimmers.map((s) => s.swimmerName).join(" & ");
 
   useEffect(() => {
@@ -108,7 +110,7 @@ export function BookingSuccess({
             <CalendarDownload
               instructor={instructor}
               swimmerName={calendarName}
-              schedule={schedule}
+              schedule={calendarSchedule}
               duration={pricing.duration}
             />
           </motion.div>

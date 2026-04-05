@@ -112,7 +112,7 @@ export function StepSwimmers({ instructor, defaultPrimary, defaultExtras, onSubm
       <div>
         <h3 className="font-display text-3xl font-medium tracking-tight text-[#1D1D1F] mb-2">Swimmers</h3>
         <p className="font-ui text-sm text-[#86868B] mb-8 max-w-xl leading-relaxed">
-          Add every child (or adult) who will take this same session block. Times are booked back-to-back automatically.
+          Add every child (or adult) on this booking. On the next step you’ll pick the same week or month for everyone, then each swimmer chooses their own lesson times.
         </p>
 
         <div className="rounded-2xl border border-ocean-deep/20 bg-ocean-surf/20 px-4 py-3 mb-8">
@@ -329,6 +329,36 @@ export function StepSwimmers({ instructor, defaultPrimary, defaultExtras, onSubm
                   </button>
                 ))}
               </div>
+              {(() => {
+                const validAge = typeof row.swimmerAge === "number" && row.swimmerAge >= 0 && row.swimmerAge <= 99;
+                const exTier = validAge ? effectiveLessonTier(row.swimmerAge, row.lessonTier ?? "auto") : null;
+                const exPricing =
+                  validAge && exTier
+                    ? instructor === "estee"
+                      ? getEsteePricingForTier(exTier)
+                      : getLukaahPricingForTier(exTier)
+                    : null;
+                if (!exPricing) return null;
+                const autoNote =
+                  (row.lessonTier ?? "auto") === "auto" && row.swimmerAge === 0 && typeof row.swimmerMonths === "number"
+                    ? ` (${row.swimmerMonths} mo)`
+                    : "";
+                return (
+                  <div className="rounded-2xl px-4 py-3 bg-[#F5F5F7] border border-black/5 text-sm font-ui flex items-start gap-3 shadow-sm">
+                    <div className="w-2 h-2 rounded-full bg-[#1D1D1F] mt-1.5 shrink-0" />
+                    <p className="text-[#86868B] leading-relaxed">
+                      <span className="font-semibold text-[#1D1D1F]">
+                        {exPricing.duration === 15 ? "Infant lessons" : "Standard lessons"}
+                      </span>
+                      {" · "}
+                      {exPricing.duration}-minute private lessons with {instructor === "lukaah" ? "Lukaah" : "Estee"} ·{" "}
+                      {exPricing.label}
+                      {instructor === "lukaah" ? "/week (5 lessons)" : "/month (4 lessons)"}
+                      {autoNote}
+                    </p>
+                  </div>
+                );
+              })()}
               <Textarea
                 label="Notes (optional)"
                 value={row.notes ?? ""}

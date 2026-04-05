@@ -52,14 +52,32 @@ I acknowledge that this waiver is binding upon me, my heirs, legal representativ
 interface Props {
   instructor: "lukaah" | "estee";
   swimmers: SwimmerInfo[];
-  schedule: ScheduleSelection;
+  schedules: ScheduleSelection[];
   onConfirm: (method: "stripe" | "venmo") => void;
   onBack: () => void;
   loading: boolean;
 }
 
-export function StepConfirm({ instructor, swimmers, schedule, onConfirm, onBack, loading }: Props) {
+function summarizeSchedule(s: ScheduleSelection): string {
+  if (s.type === "weekly") {
+    const weekDate = new Date(s.weekStart + "T12:00:00");
+    const timeLabel = formatLessonTimeHm(s.time);
+    return `Mon – Fri at ${timeLabel} (${SITE_TIMEZONE_LABEL}), week of ${format(weekDate, "MMM d, yyyy")}`;
+  }
+  const [y, m] = s.month.split("-");
+  const monthDate = new Date(Number(y), Number(m) - 1, 1);
+  const timeLabel = formatLessonTimeHm(s.primaryTime);
+  if (s.secondDay && s.secondDayTime) {
+    const otherDay = s.primaryDay === "wednesday" ? "Thursday" : "Wednesday";
+    const secondLabel = formatLessonTimeHm(s.secondDayTime);
+    return `${s.primaryDay.charAt(0).toUpperCase() + s.primaryDay.slice(1)} at ${timeLabel} + ${otherDay} at ${secondLabel}, ${format(monthDate, "MMMM yyyy")} (${SITE_TIMEZONE_LABEL})`;
+  }
+  return `Every ${s.primaryDay.charAt(0).toUpperCase() + s.primaryDay.slice(1)} at ${timeLabel}, ${format(monthDate, "MMMM yyyy")} (${SITE_TIMEZONE_LABEL})`;
+}
+
+export function StepConfirm({ instructor, swimmers, schedules, onConfirm, onBack, loading }: Props) {
   const swimmerInfo = swimmers[0]!;
+  const firstSch = schedules[0]!;
   const [agreed, setAgreed] = useState(false);
   const [showWaiver, setShowWaiver] = useState(false);
   const [signature, setSignature] = useState("");
@@ -71,33 +89,27 @@ export function StepConfirm({ instructor, swimmers, schedule, onConfirm, onBack,
   const pricing =
     instructor === "estee" ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
 
-  let scheduleLabel: string;
   let totalLessons: number;
   let unitPrice: number;
 
-  if (schedule.type === "weekly") {
-    const weekDate = new Date(schedule.weekStart + "T12:00:00");
-    const timeLabel = formatLessonTimeHm(schedule.time);
-    scheduleLabel = `Mon – Fri at ${timeLabel} (${SITE_TIMEZONE_LABEL}), week of ${format(weekDate, "MMM d, yyyy")}`;
+  if (firstSch.type === "weekly") {
     totalLessons = 5;
     unitPrice = pricing.price;
   } else {
-    const [y, m] = schedule.month.split("-");
-    const monthDate = new Date(Number(y), Number(m) - 1, 1);
-    const timeLabel = formatLessonTimeHm(schedule.primaryTime);
     const monthlyPrice = pricing.price;
-    if (schedule.secondDay && schedule.secondDayTime) {
-      const otherDay = schedule.primaryDay === "wednesday" ? "Thursday" : "Wednesday";
-      const secondLabel = formatLessonTimeHm(schedule.secondDayTime);
-      scheduleLabel = `${capitalize(schedule.primaryDay)} at ${timeLabel} + ${otherDay} at ${secondLabel}, ${format(monthDate, "MMMM yyyy")} (${SITE_TIMEZONE_LABEL})`;
+    if (firstSch.secondDay && firstSch.secondDayTime) {
       totalLessons = 8;
       unitPrice = monthlyPrice * 2;
     } else {
-      scheduleLabel = `Every ${capitalize(schedule.primaryDay)} at ${timeLabel}, ${format(monthDate, "MMMM yyyy")} (${SITE_TIMEZONE_LABEL})`;
       totalLessons = 4;
       unitPrice = monthlyPrice;
     }
   }
+
+  const scheduleSummaryText =
+    swimmers.length > 1
+      ? swimmers.map((sw, i) => `${sw.swimmerName}: ${summarizeSchedule(schedules[i]!)}`).join("\n\n")
+      : summarizeSchedule(firstSch);
 
   const price = unitPrice * swimmers.length;
   const multi = swimmers.length > 1;
@@ -132,7 +144,7 @@ export function StepConfirm({ instructor, swimmers, schedule, onConfirm, onBack,
               />
             ))}
             <Row label="Duration" value={`${pricing.duration} minutes (same for everyone on this booking)`} />
-            <Row label="Schedule" value={scheduleLabel} />
+            <Row label={swimmers.length > 1 ? "Schedules" : "Schedule"} value={scheduleSummaryText} />
             <Row
               label="Lessons"
               value={
@@ -341,6 +353,3 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function capitalize(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}

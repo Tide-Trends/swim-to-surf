@@ -104,9 +104,9 @@ export function mergeSwimmersWithPrimary(primary: SwimmerInfo, extras: Additiona
 export interface BookingState {
   step: number;
   instructor: "lukaah" | "estee" | null;
-  /** One or more swimmers sharing the same schedule (staggered start times per child). */
   swimmers: SwimmerInfo[] | null;
-  schedule: ScheduleSelection | null;
+  /** One schedule per swimmer (same week/month/day options; each may pick a different time). */
+  swimmerSchedules: ScheduleSelection[] | null;
 }
 
 export interface LukaahSchedule {
