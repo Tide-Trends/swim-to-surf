@@ -14,6 +14,8 @@ interface Props {
   /** Calendar file uses the first swimmer’s schedule; others are in your confirmation email. */
   schedules: ScheduleSelection[];
   pricing: { duration: number; price: number; label: string };
+  /** True when swimmers use different lesson lengths — calendar duration matches the first swimmer only. */
+  mixedLessonLengths?: boolean;
   emailDelivery?: { customer: boolean; admin: boolean } | null;
 }
 
@@ -23,6 +25,7 @@ export function BookingSuccess({
   swimmers,
   schedules,
   pricing,
+  mixedLessonLengths,
   emailDelivery,
 }: Props) {
   const primary = swimmers[0]!;
@@ -106,6 +109,7 @@ export function BookingSuccess({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
+            className="space-y-3"
           >
             <CalendarDownload
               instructor={instructor}
@@ -113,6 +117,13 @@ export function BookingSuccess({
               schedule={calendarSchedule}
               duration={pricing.duration}
             />
+            {mixedLessonLengths && (
+              <p className="text-center text-sm text-[#86868B] font-ui leading-relaxed max-w-lg mx-auto">
+                Lesson lengths differ by swimmer on this booking. The calendar file uses{" "}
+                <span className="font-semibold text-[#1D1D1F]">{swimmers[0]!.swimmerName}</span>&rsquo;s slot length;
+                your email lists the exact duration for each swimmer.
+              </p>
+            )}
           </motion.div>
 
           <motion.div

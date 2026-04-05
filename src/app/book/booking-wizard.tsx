@@ -8,7 +8,9 @@ import {
   effectiveLessonTier,
   getEsteePricingForTier,
   getLukaahPricingForTier,
+  lessonDurationMinutesForSwimmer,
   PAYMENT_OPTIONS_COPY,
+  unitPriceCentsForSwimmerSchedule,
 } from "@/lib/constants";
 import { StepInstructor } from "@/components/booking/step-instructor";
 import { StepSwimmers } from "@/components/booking/step-swimmers";
@@ -89,28 +91,19 @@ export function BookingWizard() {
     const swimmers = state.swimmers;
     const schedules = state.swimmerSchedules;
     const firstSch = schedules[0]!;
-    const isEstee = state.instructor === "estee";
-    const tier = effectiveLessonTier(swimmers[0]!.swimmerAge, swimmers[0]!.lessonTier ?? "auto");
-    const unitPricing = isEstee ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
-    let totalLessons: number;
-    let unitPrice: number;
+    const totalLessons =
+      firstSch.type === "weekly" ? 5 : firstSch.secondDay && firstSch.secondDayTime ? 8 : 4;
 
-    if (firstSch.type === "weekly") {
-      totalLessons = 5;
-      unitPrice = unitPricing.price;
-    } else {
-      totalLessons = firstSch.secondDay ? 8 : 4;
-      unitPrice = firstSch.secondDay ? unitPricing.price * 2 : unitPricing.price;
-    }
-
-    const price = unitPrice * swimmers.length;
+    const price = swimmers.reduce(
+      (sum, sw, i) => sum + unitPriceCentsForSwimmerSchedule(state.instructor!, sw, schedules[i]!),
+      0
+    );
 
     const body = {
       instructor: state.instructor,
       swimmers,
       schedules,
       priceInfo: {
-        duration: unitPricing.duration,
         price,
         totalLessons,
       },
@@ -153,16 +146,20 @@ export function BookingWizard() {
   }
 
   if (bookingId && state.swimmers?.length && state.swimmerSchedules?.length && state.instructor) {
+    const instructor = state.instructor;
     const tier = effectiveLessonTier(state.swimmers[0]!.swimmerAge, state.swimmers[0]!.lessonTier ?? "auto");
     const pricing =
-      state.instructor === "estee" ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
+      instructor === "estee" ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
+    const durs = state.swimmers.map((s) => lessonDurationMinutesForSwimmer(instructor, s));
+    const mixedLessonLengths = new Set(durs).size > 1;
     return (
       <BookingSuccess
         bookingId={bookingId}
-        instructor={state.instructor}
+        instructor={instructor}
         swimmers={state.swimmers}
         schedules={state.swimmerSchedules}
         pricing={pricing}
+        mixedLessonLengths={mixedLessonLengths}
         emailDelivery={emailDelivery}
       />
     );

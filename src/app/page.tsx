@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Hero } from "@/components/hero";
 import { HomeHighlights } from "@/components/home-highlights";
@@ -13,22 +14,40 @@ export default function Home() {
       <Hero />
 
       {/* Philosophy Section */}
-      <section className="bg-warm-white py-32 overflow-hidden relative">
+      <section className="bg-warm-white pt-14 pb-20 md:pt-16 md:pb-28 overflow-hidden relative">
         <WaterLineArt />
         <div className="container mx-auto px-6 max-w-7xl relative z-10">
           
-          <FadeIn className="text-center max-w-3xl mx-auto mb-20">
-            <div className="inline-flex items-center gap-2 mb-8 justify-center">
+          <FadeIn className="text-center max-w-3xl mx-auto mb-10 md:mb-12">
+            <div className="inline-flex items-center gap-2 mb-6 justify-center">
               <span className="w-1 h-1 rounded-full bg-sunshine" />
               <span className="text-xs font-ui uppercase tracking-[0.2em] text-muted">Philosophy</span>
             </div>
-            <h2 className="text-5xl md:text-7xl font-display tracking-tight mb-8 leading-[1.05] text-dark">
+            <h2 className="text-5xl md:text-7xl font-display tracking-tight mb-6 md:mb-8 leading-[1.05] text-dark">
               Confidence <br />
               <span className="text-ocean-mid">starts here.</span>
             </h2>
             <p className="text-xl md:text-2xl text-dark/70 font-light leading-relaxed">
               We exist to build courageous swimmers—the kind who can one day grab a board and surf, or play fearlessly in any water.
             </p>
+          </FadeIn>
+
+          <FadeIn delay={0.06} className="mb-12 md:mb-16">
+            <div className="mx-auto max-w-lg">
+              <div className="relative overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-[0_20px_60px_rgba(0,0,0,0.06)] ring-1 ring-black/5">
+                <Image
+                  src="/images/confidence-in-the-pool.png"
+                  alt="Young swimmer moving through clear pool water with goggles — confidence in the water"
+                  width={960}
+                  height={640}
+                  className="h-auto w-full object-cover object-[center_42%]"
+                  sizes="(max-width: 768px) 100vw, 512px"
+                />
+              </div>
+              <p className="mt-3 text-center text-[11px] font-ui uppercase tracking-[0.2em] text-muted">
+                Real progress, one lesson at a time
+              </p>
+            </div>
           </FadeIn>
 
           <HomeHighlights />
@@ -79,8 +98,8 @@ export default function Home() {
       <HomePricing />
 
       {/* Testimonials */}
-      <section className="bg-warm-white py-32 overflow-hidden relative">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-white/70 to-transparent" />
+      <section className="bg-warm-white pt-12 pb-16 md:pt-14 md:pb-20 overflow-hidden relative">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-[#0077B6]/[0.06] to-transparent" />
         <Testimonials />
       </section>
 

@@ -10,6 +10,7 @@ import {
   getEsteePricingForTier,
   getLukaahPricingForTier,
   formatPrice,
+  lessonDurationMinutesForSwimmer,
 } from "@/lib/constants";
 import {
   esteeProposalConflicts,
@@ -146,7 +147,7 @@ async function sendBookingEmails(args: {
   specificDays: string;
   calendarLink: string;
   priceFormatted: string;
-  priceInfo: { totalLessons: number; duration: number; price: number };
+  priceInfo: { totalLessons: number; price: number; duration?: number; durationSummary?: string };
   paymentMethod: string;
   origin: string;
 }): Promise<{ customerEmailSent: boolean; adminEmailSent: boolean }> {
@@ -240,7 +241,7 @@ async function sendBookingEmails(args: {
                   </tr>
                   <tr style="border-bottom: 1px solid #E8E8ED;">
                     <td style="padding: 12px 0; font-weight: 600; color: #333;">Lessons</td>
-                    <td style="padding: 12px 0; color: #1D1D1F;">${swimmers.length} × (${priceInfo.totalLessons} lessons each) · ${priceInfo.duration} min</td>
+                    <td style="padding: 12px 0; color: #1D1D1F;">${swimmers.length} × (${priceInfo.totalLessons} lessons each) · ${priceInfo.durationSummary || `${priceInfo.duration} min`}</td>
                   </tr>
                   <tr style="border-bottom: 1px solid #E8E8ED;">
                     <td style="padding: 12px 0; font-weight: 600; color: #333;">Price</td>
@@ -282,7 +283,7 @@ async function sendBookingEmails(args: {
                   <p style="margin: 0 0 4px; font-size: 14px; color: #005f8a; font-weight: 700;">YOUR SCHEDULE</p>
                   <p style="margin: 0 0 8px; font-size: 17px; color: #1D3557; font-weight: 600;">${scheduleText}</p>
                   <p style="margin: 0 0 4px; font-size: 14px; color: #1D3557;">${specificDays}</p>
-                  <p style="margin: 0; font-size: 14px; color: #1D3557;">${priceInfo.duration}-minute lessons · <strong>${priceFormatted}</strong> total</p>
+                  <p style="margin: 0; font-size: 14px; color: #1D3557;">${priceInfo.durationSummary || `${priceInfo.duration}-minute lessons`} · <strong>${priceFormatted}</strong> total</p>
                 </div>
 
                 ${calendarBtn("Add to Google Calendar")}
@@ -406,7 +407,7 @@ export async function POST(req: Request) {
       schedules?: ScheduleSelection[];
       /** @deprecated single-schedule; use schedules */
       schedule?: ScheduleSelection;
-      priceInfo: { duration: number; price: number; totalLessons: number };
+      priceInfo: { duration?: number; price: number; totalLessons: number };
       paymentMethod: string;
     };
 
@@ -479,43 +480,36 @@ export async function POST(req: Request) {
 
     const n = swimmersList.length;
 
-    const durationsSet = new Set<number>();
-    let expectedTotalCents = 0;
-    let expectedLessonsPerSwimmer = 0;
+    const instKey = instructor as "lukaah" | "estee";
+    const expectedLessonsPerSwimmer =
+      firstSch.type === "weekly" ? 5 : firstSch.secondDay && firstSch.secondDayTime ? 8 : 4;
 
-    for (const s of swimmersList) {
+    if (expectedLessonsPerSwimmer !== priceInfo.totalLessons) {
+      return NextResponse.json(
+        { error: "Lesson count does not match. Please refresh and try again." },
+        { status: 400 }
+      );
+    }
+
+    let expectedTotalCents = 0;
+    for (let i = 0; i < n; i++) {
+      const s = swimmersList[i]!;
+      const sch = schedulesList[i]!;
       const tier = effectiveLessonTier(s.swimmerAge, s.lessonTier ?? "auto");
       const base = instructor === "estee" ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
-      durationsSet.add(base.duration);
-      let perSwimmerPrice: number;
       if (firstSch.type === "weekly") {
-        expectedLessonsPerSwimmer = 5;
-        perSwimmerPrice = base.price;
-      } else {
-        expectedLessonsPerSwimmer = firstSch.secondDay ? 8 : 4;
-        perSwimmerPrice = firstSch.secondDay ? base.price * 2 : base.price;
+        expectedTotalCents += base.price;
+      } else if (sch.type === "monthly") {
+        expectedTotalCents += sch.secondDay && sch.secondDayTime ? base.price * 2 : base.price;
       }
-      expectedTotalCents += perSwimmerPrice;
     }
 
-    if (durationsSet.size !== 1) {
-      return NextResponse.json(
-        {
-          error:
-            "All swimmers in one booking must use the same lesson length. Book separately for mixed 15- and 30-minute lessons.",
-        },
-        { status: 400 }
-      );
-    }
-
-    const unifiedDuration = [...durationsSet][0]!;
-
-    if (unifiedDuration !== priceInfo.duration || expectedLessonsPerSwimmer !== priceInfo.totalLessons) {
-      return NextResponse.json(
-        { error: "Lesson length or lesson count does not match. Please refresh and try again." },
-        { status: 400 }
-      );
-    }
+    const durationSummary =
+      n === 1
+        ? `${lessonDurationMinutesForSwimmer(instKey, swimmersList[0]!)} min`
+        : swimmersList
+            .map((s) => `${s.swimmerName}: ${lessonDurationMinutesForSwimmer(instKey, s)} min`)
+            .join(" · ");
 
     if (Math.abs(expectedTotalCents - priceInfo.price) > 1) {
       return NextResponse.json(
@@ -566,8 +560,10 @@ export async function POST(req: Request) {
 
       for (let i = 0; i < n; i++) {
         const sch = schedulesList[i]!;
+        const s = swimmersList[i]!;
+        const durI = lessonDurationMinutesForSwimmer(instKey, s);
         if (sch.type === "weekly") {
-          if (lukaahProposalConflicts(pool, sch.weekStart, sch.time, priceInfo.duration)) {
+          if (lukaahProposalConflicts(pool, sch.weekStart, sch.time, durI)) {
             return NextResponse.json(
               { error: "That time slot was just booked for this week. Please pick another time." },
               { status: 409 }
@@ -576,12 +572,12 @@ export async function POST(req: Request) {
           pool.push({
             lesson_time: sch.time,
             week_start: sch.weekStart,
-            lesson_duration: priceInfo.duration,
+            lesson_duration: durI,
             day_of_week: ["monday", "tuesday", "wednesday", "thursday", "friday"],
             second_day_time: null,
           });
         } else {
-          if (esteeProposalConflicts(pool, sch, priceInfo.duration)) {
+          if (esteeProposalConflicts(pool, sch, durI)) {
             return NextResponse.json(
               { error: "One of those times is no longer available this month. Please choose different times." },
               { status: 409 }
@@ -595,7 +591,7 @@ export async function POST(req: Request) {
                 ? [sch.primaryDay, sch.primaryDay === "wednesday" ? "thursday" : "wednesday"]
                 : [sch.primaryDay],
             month: sch.month,
-            lesson_duration: priceInfo.duration,
+            lesson_duration: durI,
           });
         }
       }
@@ -623,6 +619,7 @@ export async function POST(req: Request) {
         const base = instructor === "estee" ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
         const perSwimmerPrice =
           sch.type === "weekly" ? base.price : sch.secondDay ? base.price * 2 : base.price;
+        const durInsert = lessonDurationMinutesForSwimmer(instKey, s);
 
         const { data: booking, error: dbError } = await supabase
           .from("bookings")
@@ -630,7 +627,7 @@ export async function POST(req: Request) {
             instructor,
             swimmer_name: s.swimmerName,
             swimmer_age: s.swimmerAge,
-            lesson_duration: priceInfo.duration,
+            lesson_duration: durInsert,
             parent_name: s.parentName || "Adult Swimmer",
             parent_email: s.parentEmail?.trim() || "",
             parent_phone: s.parentPhone?.trim() || "",
@@ -681,10 +678,11 @@ export async function POST(req: Request) {
 
     const persisted = canPersist;
 
+    const calendarDuration = lessonDurationMinutesForSwimmer(instKey, swimmersList[0]!);
     const { instructorName, scheduleText, specificDays, calendarLink } = computeScheduleEmailFields(
       instructor as "lukaah" | "estee",
       firstSch as ScheduleSelection,
-      priceInfo
+      { duration: calendarDuration }
     );
     const priceFormatted = `$${(priceInfo.price / 100).toFixed(2)}`;
 
@@ -698,7 +696,11 @@ export async function POST(req: Request) {
       specificDays,
       calendarLink,
       priceFormatted,
-      priceInfo,
+      priceInfo: {
+        ...priceInfo,
+        duration: calendarDuration,
+        durationSummary,
+      },
       paymentMethod,
       origin,
     };

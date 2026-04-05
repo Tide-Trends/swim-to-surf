@@ -7,8 +7,8 @@ import {
   swimmerInfoSchema,
   additionalSwimmerSchema,
   mergeSwimmersWithPrimary,
-  type SwimmerInfo,
   type AdditionalSwimmer,
+  type SwimmerInfo,
 } from "@/lib/booking-schema";
 import {
   effectiveLessonTier,
@@ -21,6 +21,25 @@ import { Button } from "@/components/ui/button";
 
 const MAX_SWIMMERS = 5;
 
+/** Form row for additional swimmers — age starts blank until the parent fills it in. */
+type ExtraDraft = {
+  swimmerName: string;
+  swimmerAge: number | "";
+  swimmerMonths?: number;
+  lessonTier: "auto" | "infant" | "standard";
+  notes?: string;
+};
+
+function extraDraftFromSaved(s: AdditionalSwimmer): ExtraDraft {
+  return {
+    swimmerName: s.swimmerName,
+    swimmerAge: s.swimmerAge,
+    swimmerMonths: s.swimmerMonths,
+    lessonTier: s.lessonTier ?? "auto",
+    notes: s.notes,
+  };
+}
+
 interface Props {
   instructor: "lukaah" | "estee";
   defaultPrimary?: SwimmerInfo;
@@ -29,17 +48,17 @@ interface Props {
   onBack: () => void;
 }
 
-function emptyExtra(): AdditionalSwimmer {
+function emptyExtra(): ExtraDraft {
   return {
     swimmerName: "",
-    swimmerAge: 5,
+    swimmerAge: "",
     lessonTier: "auto",
     notes: "",
   };
 }
 
 export function StepSwimmers({ instructor, defaultPrimary, defaultExtras, onSubmit, onBack }: Props) {
-  const [extras, setExtras] = useState<AdditionalSwimmer[]>(defaultExtras ?? []);
+  const [extras, setExtras] = useState<ExtraDraft[]>(() => defaultExtras?.map(extraDraftFromSaved) ?? []);
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -73,7 +92,7 @@ export function StepSwimmers({ instructor, defaultPrimary, defaultExtras, onSubm
         : getLukaahPricingForTier(tier)
       : null;
 
-  function updateExtra(index: number, patch: Partial<AdditionalSwimmer>) {
+  function updateExtra(index: number, patch: Partial<ExtraDraft>) {
     setExtras((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   }
 
@@ -83,28 +102,30 @@ export function StepSwimmers({ instructor, defaultPrimary, defaultExtras, onSubm
 
   function submitAll(primary: SwimmerInfo) {
     setFormError(null);
-    const merged = mergeSwimmersWithPrimary(primary, extras);
-    const durations = merged.map((s) => {
-      const t = effectiveLessonTier(s.swimmerAge, s.lessonTier ?? "auto");
-      const p = instructor === "estee" ? getEsteePricingForTier(t) : getLukaahPricingForTier(t);
-      return p.duration;
-    });
-    if (new Set(durations).size > 1) {
-      setFormError(
-        "Everyone on this booking needs the same lesson length (same age band or same 15/30 override). Book separately if you need mixed lengths."
-      );
-      return;
-    }
+    const validatedExtras: AdditionalSwimmer[] = [];
     for (let i = 0; i < extras.length; i++) {
-      const r = additionalSwimmerSchema.safeParse(extras[i]);
+      const row = extras[i]!;
+      if (row.swimmerAge === "") {
+        setFormError(`Please enter swimmer ${i + 2}'s age.`);
+        return;
+      }
+      const candidate: AdditionalSwimmer = {
+        swimmerName: row.swimmerName,
+        swimmerAge: row.swimmerAge,
+        swimmerMonths: row.swimmerMonths,
+        lessonTier: row.lessonTier ?? "auto",
+        notes: row.notes,
+      };
+      const r = additionalSwimmerSchema.safeParse(candidate);
       if (!r.success) {
         const msg = r.error.flatten().fieldErrors;
         const first = Object.values(msg).flat()[0];
         setFormError(first || `Please check swimmer ${i + 2}'s details.`);
         return;
       }
+      validatedExtras.push(r.data);
     }
-    onSubmit(merged);
+    onSubmit(mergeSwimmersWithPrimary(primary, validatedExtras));
   }
 
   return (
@@ -112,7 +133,7 @@ export function StepSwimmers({ instructor, defaultPrimary, defaultExtras, onSubm
       <div>
         <h3 className="font-display text-3xl font-medium tracking-tight text-[#1D1D1F] mb-2">Swimmers</h3>
         <p className="font-ui text-sm text-[#86868B] mb-8 max-w-xl leading-relaxed">
-          Add every child (or adult) on this booking. On the next step you’ll pick the same week or month for everyone, then each swimmer chooses their own lesson times.
+          Add every child (or adult) on this booking. You’ll share the same week (Lukaah) or month and day pattern (Estee); each swimmer picks their own start times. Lesson length follows each swimmer’s age (15 min for 0–2, 30 min for 3+) unless you override it — mixed lengths on one booking are fine.
         </p>
 
         <div className="rounded-2xl border border-ocean-deep/20 bg-ocean-surf/20 px-4 py-3 mb-8">
@@ -158,7 +179,7 @@ export function StepSwimmers({ instructor, defaultPrimary, defaultExtras, onSubm
           <div className="space-y-3 border-t border-black/5 px-4 pb-4 pt-3">
             <p className="font-ui text-xs leading-relaxed text-[#86868B]">
               Default: <strong className="text-[#1D1D1F]">0–2</strong> → 15 min infant ·{" "}
-              <strong className="text-[#1D1D1F]">3+</strong> → 30 min standard. Use the same length for all swimmers on this booking.
+              <strong className="text-[#1D1D1F]">3+</strong> → 30 min standard. Override per swimmer if needed (e.g. a 3-year-old who fits better in 15 minutes).
             </p>
             <div className="flex flex-wrap gap-2">
               {(
@@ -291,11 +312,15 @@ export function StepSwimmers({ instructor, defaultPrimary, defaultExtras, onSubm
                   type="number"
                   min={0}
                   max={99}
-                  value={row.swimmerAge}
-                  onChange={(e) => updateExtra(index, { swimmerAge: Number(e.target.value) })}
+                  placeholder="e.g. 4"
+                  value={row.swimmerAge === "" ? "" : row.swimmerAge}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    updateExtra(index, { swimmerAge: v === "" ? "" : Number(v) });
+                  }}
                 />
               </div>
-              {row.swimmerAge === 0 && (
+              {row.swimmerAge !== "" && row.swimmerAge === 0 && (
                 <Input
                   label="Months (0–11)"
                   type="number"
@@ -330,8 +355,10 @@ export function StepSwimmers({ instructor, defaultPrimary, defaultExtras, onSubm
                 ))}
               </div>
               {(() => {
-                const validAge = typeof row.swimmerAge === "number" && row.swimmerAge >= 0 && row.swimmerAge <= 99;
-                const exTier = validAge ? effectiveLessonTier(row.swimmerAge, row.lessonTier ?? "auto") : null;
+                const ageNum = row.swimmerAge;
+                const validAge =
+                  ageNum !== "" && typeof ageNum === "number" && ageNum >= 0 && ageNum <= 99;
+                const exTier = validAge ? effectiveLessonTier(ageNum, row.lessonTier ?? "auto") : null;
                 const exPricing =
                   validAge && exTier
                     ? instructor === "estee"
@@ -340,7 +367,7 @@ export function StepSwimmers({ instructor, defaultPrimary, defaultExtras, onSubm
                     : null;
                 if (!exPricing) return null;
                 const autoNote =
-                  (row.lessonTier ?? "auto") === "auto" && row.swimmerAge === 0 && typeof row.swimmerMonths === "number"
+                  (row.lessonTier ?? "auto") === "auto" && ageNum === 0 && typeof row.swimmerMonths === "number"
                     ? ` (${row.swimmerMonths} mo)`
                     : "";
                 return (

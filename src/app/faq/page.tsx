@@ -11,7 +11,8 @@ export const metadata: Metadata = {
 const faqs = [
   {
     question: "How many sessions should I sign up for?",
-    answer: "Every swimmer learns at a different pace, so there's no one-size-fits-all answer. However, with every single lesson, there is a high chance for visible improvement! We typically see excellent results after about 4 sessions (roughly 20 lessons).",
+    answer:
+      "Every swimmer learns at their own pace. After even one session, many families notice a real shift in confidence and comfort in the water — and instructors look for visible skill gains every time you show up. For the strongest, lasting progress, we recommend a minimum of about three sessions (how many individual lessons that is depends on whether you book a week with Lukaah or a month with Estee). Depending on your child, your instructor can advise whether stacking sessions back-to-back or spacing them out will work best.",
   },
   {
     question: "Do you offer group lessons?",

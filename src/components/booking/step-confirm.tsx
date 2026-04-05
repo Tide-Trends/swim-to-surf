@@ -4,12 +4,11 @@ import { useState, useRef } from "react";
 import { format } from "date-fns";
 import type { SwimmerInfo, ScheduleSelection } from "@/lib/booking-schema";
 import {
-  effectiveLessonTier,
   formatPrice,
-  getEsteePricingForTier,
-  getLukaahPricingForTier,
   INSTRUCTORS,
+  lessonDurationMinutesForSwimmer,
   PAYMENT_OPTIONS_COPY,
+  unitPriceCentsForSwimmerSchedule,
 } from "@/lib/constants";
 import { formatLessonTimeHm, SITE_TIMEZONE_LABEL } from "@/lib/timezone";
 import { Button } from "@/components/ui/button";
@@ -85,33 +84,22 @@ export function StepConfirm({ instructor, swimmers, schedules, onConfirm, onBack
   const [policyAgreed, setPolicyAgreed] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inst = INSTRUCTORS[instructor];
-  const tier = effectiveLessonTier(swimmerInfo.swimmerAge, swimmerInfo.lessonTier ?? "auto");
-  const pricing =
-    instructor === "estee" ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
 
-  let totalLessons: number;
-  let unitPrice: number;
+  const totalLessons =
+    firstSch.type === "weekly" ? 5 : firstSch.secondDay && firstSch.secondDayTime ? 8 : 4;
 
-  if (firstSch.type === "weekly") {
-    totalLessons = 5;
-    unitPrice = pricing.price;
-  } else {
-    const monthlyPrice = pricing.price;
-    if (firstSch.secondDay && firstSch.secondDayTime) {
-      totalLessons = 8;
-      unitPrice = monthlyPrice * 2;
-    } else {
-      totalLessons = 4;
-      unitPrice = monthlyPrice;
-    }
-  }
+  const perSwimmer = swimmers.map((s, i) => ({
+    ...s,
+    dur: lessonDurationMinutesForSwimmer(instructor, s),
+    unit: unitPriceCentsForSwimmerSchedule(instructor, s, schedules[i]!),
+  }));
 
   const scheduleSummaryText =
     swimmers.length > 1
       ? swimmers.map((sw, i) => `${sw.swimmerName}: ${summarizeSchedule(schedules[i]!)}`).join("\n\n")
       : summarizeSchedule(firstSch);
 
-  const price = unitPrice * swimmers.length;
+  const price = perSwimmer.reduce((a, p) => a + p.unit, 0);
   const multi = swimmers.length > 1;
 
   const signerName = swimmerInfo.parentName || swimmerInfo.swimmerName;
@@ -143,15 +131,17 @@ export function StepConfirm({ instructor, swimmers, schedules, onConfirm, onBack
                 }${s.notes ? ` — ${s.notes}` : ""}`}
               />
             ))}
-            <Row label="Duration" value={`${pricing.duration} minutes (same for everyone on this booking)`} />
+            {multi ? (
+              perSwimmer.map((p, i) => (
+                <Row key={`dur-${i}`} label={`Lesson length · ${p.swimmerName}`} value={`${p.dur} minutes`} />
+              ))
+            ) : (
+              <Row label="Duration" value={`${perSwimmer[0]!.dur} minutes`} />
+            )}
             <Row label={swimmers.length > 1 ? "Schedules" : "Schedule"} value={scheduleSummaryText} />
             <Row
               label="Lessons"
-              value={
-                multi
-                  ? `${swimmers.length} × ${totalLessons} lessons each (${pricing.duration} min)`
-                  : String(totalLessons)
-              }
+              value={multi ? `${swimmers.length} × ${totalLessons} lessons each` : String(totalLessons)}
             />
             <Row label="Guardian" value={swimmerInfo.parentName || ""} />
             <Row label="Contact" value={`${swimmerInfo.parentEmail || ""} \n ${swimmerInfo.parentPhone || ""}`} />

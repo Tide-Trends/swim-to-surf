@@ -74,7 +74,7 @@ export function Testimonials() {
   };
 
   return (
-    <div className="relative bg-[#F7F8FA] py-24 md:py-32">
+    <div className="relative bg-[#F7F8FA] py-12 md:py-16">
       <div className="mx-auto max-w-7xl px-6 md:px-8">
         <FadeIn>
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">

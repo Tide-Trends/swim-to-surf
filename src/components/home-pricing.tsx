@@ -28,10 +28,10 @@ export function HomePricing() {
 
   return (
     <section
-      className="relative overflow-hidden py-24 md:py-32"
+      className="relative overflow-hidden pt-12 pb-20 md:pt-14 md:pb-28"
       style={{ background: "linear-gradient(135deg, #0077B6 0%, #00B4D8 50%, #0096C7 100%)" }}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-warm-white via-warm-white/75 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 md:h-14 bg-gradient-to-b from-warm-white via-warm-white/80 to-transparent" />
 
       <div className="container relative z-20 mx-auto max-w-7xl px-6">
         <FadeIn className="mb-10 text-center md:mb-14">

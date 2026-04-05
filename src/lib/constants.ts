@@ -1,3 +1,5 @@
+import type { ScheduleSelection, SwimmerInfo } from "./booking-schema";
+
 export const SITE = {
   name: "Swim to Surf",
   tagline: "Private Swimming Lessons in American Fork, Utah",
@@ -117,6 +119,27 @@ export function getEsteePricingForTier(tier: LessonProductTier) {
 
 export function formatPrice(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
+}
+
+/** Lesson length in minutes for this swimmer (15 infant / 30 standard, respecting tier override). */
+export function lessonDurationMinutesForSwimmer(
+  instructor: "lukaah" | "estee",
+  swimmer: Pick<SwimmerInfo, "swimmerAge"> & { lessonTier?: SwimmerInfo["lessonTier"] }
+): number {
+  const tier = effectiveLessonTier(swimmer.swimmerAge, swimmer.lessonTier ?? "auto");
+  return instructor === "estee" ? getEsteePricingForTier(tier).duration : getLukaahPricingForTier(tier).duration;
+}
+
+/** Total package price in cents for one swimmer given their schedule (week vs month, optional second day). */
+export function unitPriceCentsForSwimmerSchedule(
+  instructor: "lukaah" | "estee",
+  swimmer: Pick<SwimmerInfo, "swimmerAge"> & { lessonTier?: SwimmerInfo["lessonTier"] },
+  schedule: ScheduleSelection
+): number {
+  const tier = effectiveLessonTier(swimmer.swimmerAge, swimmer.lessonTier ?? "auto");
+  const base = instructor === "estee" ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
+  if (schedule.type === "weekly") return base.price;
+  return schedule.secondDay && schedule.secondDayTime ? base.price * 2 : base.price;
 }
 
 export const FEATURES = {

@@ -23,12 +23,20 @@ export function InstructorProfilesEditor({ editor }: { editor: InstructorSlug })
     setProfiles(getProfilesFromStorage());
   }, []);
 
-  function patchField(field: keyof InstructorProfile, value: string) {
+  function patchField<K extends keyof InstructorProfile>(field: K, value: InstructorProfile[K]) {
     setSaved(false);
     setProfiles((prev) => ({
       ...prev,
       [active]: { ...prev[active], [field]: value },
     }));
+  }
+
+  function patchQualifications(text: string) {
+    const lines = text
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    patchField("qualifications", lines);
   }
 
   function save() {
@@ -94,6 +102,12 @@ export function InstructorProfilesEditor({ editor }: { editor: InstructorSlug })
           label="Hero Image Path"
           value={profile.heroImage}
           onChange={(e) => patchField("heroImage", e.target.value)}
+        />
+        <Textarea
+          label="Qualifications (one per line)"
+          value={profile.qualifications.join("\n")}
+          onChange={(e) => patchQualifications(e.target.value)}
+          className="min-h-[180px]"
         />
       </div>
 

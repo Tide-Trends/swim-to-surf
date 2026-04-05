@@ -10,6 +10,7 @@ import {
   getLukaahPricingForTier,
   INSTRUCTORS,
   getEsteeDatesForMonth,
+  lessonDurationMinutesForSwimmer,
 } from "@/lib/constants";
 import {
   esteeUnavailableStartsForDay,
@@ -54,39 +55,16 @@ function getSummerMonths(): { value: string; label: string }[] {
 }
 
 export function StepSchedule({ instructor, swimmers, onSelect, onBack }: Props) {
-  const first = swimmers[0]!;
-  const tier = effectiveLessonTier(first.swimmerAge, first.lessonTier ?? "auto");
-  const pricing = instructor === "estee" ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
-  const duration = pricing.duration;
-
   if (instructor === "lukaah") {
-    return (
-      <LukaahScheduleStep
-        swimmers={swimmers}
-        duration={duration}
-        pricing={pricing}
-        onSelect={onSelect}
-        onBack={onBack}
-      />
-    );
+    return <LukaahScheduleStep swimmers={swimmers} onSelect={onSelect} onBack={onBack} />;
   }
 
-  return (
-    <EsteeScheduleStep
-      swimmers={swimmers}
-      duration={duration}
-      pricing={pricing}
-      onSelect={onSelect}
-      onBack={onBack}
-    />
-  );
+  return <EsteeScheduleStep swimmers={swimmers} onSelect={onSelect} onBack={onBack} />;
 }
-
-type PricingTier = { age?: string; duration: number; price: number; label: string };
 
 function siblingLukaahRows(
   weekStart: string,
-  duration: number,
+  swimmers: SwimmerInfo[],
   times: (string | null)[],
   beforeIndex: number
 ): BookingSlotRow[] {
@@ -94,10 +72,11 @@ function siblingLukaahRows(
   for (let j = 0; j < beforeIndex; j++) {
     const t = times[j];
     if (!t) continue;
+    const dur = lessonDurationMinutesForSwimmer("lukaah", swimmers[j]!);
     rows.push({
       lesson_time: t,
       week_start: weekStart,
-      lesson_duration: duration,
+      lesson_duration: dur,
       day_of_week: ["monday", "tuesday", "wednesday", "thursday", "friday"],
       second_day_time: null,
     });
@@ -129,19 +108,20 @@ function siblingEsteeComplete(
   secondDay: boolean,
   primaryTimes: (string | null)[],
   secondTimes: (string | null)[],
-  duration: number,
+  swimmers: SwimmerInfo[],
   beforeIndex: number
 ): BookingSlotRow[] {
   const out: BookingSlotRow[] = [];
   for (let j = 0; j < beforeIndex; j++) {
     const p = primaryTimes[j];
     if (!p) continue;
+    const dur = lessonDurationMinutesForSwimmer("estee", swimmers[j]!);
     if (secondDay) {
       const sec = secondTimes[j];
       if (!sec) continue;
-      out.push(esteeSyntheticRow(month, primaryDay, true, p, sec, duration));
+      out.push(esteeSyntheticRow(month, primaryDay, true, p, sec, dur));
     } else {
-      out.push(esteeSyntheticRow(month, primaryDay, false, p, null, duration));
+      out.push(esteeSyntheticRow(month, primaryDay, false, p, null, dur));
     }
   }
   return out;
@@ -149,14 +129,10 @@ function siblingEsteeComplete(
 
 function LukaahScheduleStep({
   swimmers,
-  duration,
-  pricing,
   onSelect,
   onBack,
 }: {
   swimmers: SwimmerInfo[];
-  duration: number;
-  pricing: PricingTier;
   onSelect: (schedules: ScheduleSelection[]) => void;
   onBack: () => void;
 }) {
@@ -171,17 +147,32 @@ function LukaahScheduleStep({
     setSelectedTimes((prev) => swimmers.map((_, i) => prev[i] ?? null));
   }, [swimmers.length]);
 
-  const candidates = useMemo(
+  const perSwimmerSlots = useMemo(
     () =>
-      generateSlotStartTimes(
-        inst.startHour,
-        inst.startMinute,
-        inst.endHour,
-        inst.endMinute,
-        duration,
-        15
-      ),
-    [duration, inst.endHour, inst.endMinute, inst.startHour, inst.startMinute]
+      swimmers.map((sw) => {
+        const dur = lessonDurationMinutesForSwimmer("lukaah", sw);
+        return {
+          duration: dur,
+          candidates: generateSlotStartTimes(
+            inst.startHour,
+            inst.startMinute,
+            inst.endHour,
+            inst.endMinute,
+            dur,
+            15
+          ),
+        };
+      }),
+    [swimmers, inst.endHour, inst.endMinute, inst.startHour, inst.startMinute]
+  );
+
+  const totalPriceCents = useMemo(
+    () =>
+      swimmers.reduce((sum, sw) => {
+        const tier = effectiveLessonTier(sw.swimmerAge, sw.lessonTier ?? "auto");
+        return sum + getLukaahPricingForTier(tier).price;
+      }, 0),
+    [swimmers]
   );
 
   const fetchTaken = useCallback(
@@ -282,14 +273,15 @@ function LukaahScheduleStep({
         >
           <h3 className="font-display text-3xl font-medium tracking-tight">Choose times</h3>
           {swimmers.map((sw, i) => {
-            const pool = [...dbRows, ...siblingLukaahRows(selectedWeek, duration, selectedTimes, i)];
-            const taken = lukaahUnavailableStarts(pool, selectedWeek, duration, candidates);
+            const { duration: durI, candidates: candI } = perSwimmerSlots[i]!;
+            const pool = [...dbRows, ...siblingLukaahRows(selectedWeek, swimmers, selectedTimes, i)];
+            const taken = lukaahUnavailableStarts(pool, selectedWeek, durI, candI);
             return (
               <div key={sw.swimmerName + i} className="space-y-4">
                 <div>
                   <h4 className="font-display text-xl font-medium text-[#1D1D1F]">{sw.swimmerName}</h4>
                   <p className="text-[#86868B] font-body text-sm">
-                    Same time Monday – Friday for this week ({duration} min lessons).
+                    Same time Monday – Friday for this week ({durI} min lessons).
                   </p>
                 </div>
                 <TimeSlotGrid
@@ -297,7 +289,7 @@ function LukaahScheduleStep({
                   startMinute={inst.startMinute}
                   endHour={inst.endHour}
                   endMinute={inst.endMinute}
-                  duration={duration}
+                  duration={durI}
                   selected={selectedTimes[i] ?? null}
                   takenSlots={taken}
                   onSelect={(t) => setTimeAt(i, t)}
@@ -315,14 +307,14 @@ function LukaahScheduleStep({
           {swimmers.map((sw, i) => (
             <p key={i} className="font-display text-xl text-[#1D1D1F]">
               <span className="font-ui text-sm text-[#86868B] block">{sw.swimmerName}</span>
-              Mon – Fri at {formatLessonTimeHm(selectedTimes[i]!)} · {duration} min
+              Mon – Fri at {formatLessonTimeHm(selectedTimes[i]!)} · {perSwimmerSlots[i]!.duration} min
             </p>
           ))}
           <p className="font-ui text-sm text-[#86868B]">Week of {selectedWeekObj.label}</p>
           <div className="flex items-end justify-between border-t border-black/5 pt-6">
             <span className="font-ui text-xs font-semibold text-[#86868B] uppercase tracking-widest">Total</span>
             <span className="font-display text-4xl text-[#1D1D1F] tracking-tighter">
-              {formatPrice(pricing.price * swimmers.length)}
+              {formatPrice(totalPriceCents)}
             </span>
           </div>
         </div>
@@ -346,14 +338,10 @@ function LukaahScheduleStep({
 
 function EsteeScheduleStep({
   swimmers,
-  duration,
-  pricing,
   onSelect,
   onBack,
 }: {
   swimmers: SwimmerInfo[];
-  duration: number;
-  pricing: PricingTier;
   onSelect: (schedules: ScheduleSelection[]) => void;
   onBack: () => void;
 }) {
@@ -376,15 +364,34 @@ function EsteeScheduleStep({
     setSecondTimes((p) => swimmers.map((_, i) => p[i] ?? null));
   }, [swimmers.length]);
 
-  const candAm = useMemo(
+  const perSwimmerEstee = useMemo(
     () =>
-      generateSlotStartTimes(amBlock.startHour, amBlock.startMinute, amBlock.endHour, amBlock.endMinute, duration, 15),
-    [amBlock.endHour, amBlock.endMinute, amBlock.startHour, amBlock.startMinute, duration]
-  );
-  const candPm = useMemo(
-    () =>
-      generateSlotStartTimes(pmBlock.startHour, pmBlock.startMinute, pmBlock.endHour, pmBlock.endMinute, duration, 15),
-    [duration, pmBlock.endHour, pmBlock.endMinute, pmBlock.startHour, pmBlock.startMinute]
+      swimmers.map((sw) => {
+        const dur = lessonDurationMinutesForSwimmer("estee", sw);
+        return {
+          duration: dur,
+          candAm: generateSlotStartTimes(
+            amBlock.startHour,
+            amBlock.startMinute,
+            amBlock.endHour,
+            amBlock.endMinute,
+            dur,
+            15
+          ),
+          candPm: generateSlotStartTimes(
+            pmBlock.startHour,
+            pmBlock.startMinute,
+            pmBlock.endHour,
+            pmBlock.endMinute,
+            dur,
+            15
+          ),
+          monthlyUnitCents: getEsteePricingForTier(
+            effectiveLessonTier(sw.swimmerAge, sw.lessonTier ?? "auto")
+          ).price,
+        };
+      }),
+    [swimmers, amBlock, pmBlock]
   );
 
   const fetchTaken = useCallback(async (month: string) => {
@@ -414,22 +421,37 @@ function EsteeScheduleStep({
   }, [primaryDay, swimmers.length]);
 
   const otherDay = primaryDay === "wednesday" ? "thursday" : "wednesday";
-  const monthlyPrice = pricing.price;
   const totalLessons = secondDay ? 8 : 4;
-  const totalPrice = secondDay ? monthlyPrice * 2 : monthlyPrice;
+  const totalBookingCents = useMemo(
+    () =>
+      perSwimmerEstee.reduce((sum, row) => sum + (secondDay ? row.monthlyUnitCents * 2 : row.monthlyUnitCents), 0),
+    [perSwimmerEstee, secondDay]
+  );
+  const addSecondDayPerSwimmerCents = useMemo(
+    () => perSwimmerEstee.reduce((sum, row) => sum + row.monthlyUnitCents, 0),
+    [perSwimmerEstee]
+  );
 
   function takenPrimaryForSwimmer(i: number, part: "am" | "pm") {
     if (!selectedMonth) return [];
-    const pool = [...dbRows, ...siblingEsteeComplete(selectedMonth, primaryDay, secondDay, primaryTimes, secondTimes, duration, i)];
-    const cand = part === "am" ? candAm : candPm;
-    return esteeUnavailableStartsForDay(pool, selectedMonth, primaryDay, duration, cand);
+    const dur = perSwimmerEstee[i]!.duration;
+    const cand = part === "am" ? perSwimmerEstee[i]!.candAm : perSwimmerEstee[i]!.candPm;
+    const pool = [
+      ...dbRows,
+      ...siblingEsteeComplete(selectedMonth, primaryDay, secondDay, primaryTimes, secondTimes, swimmers, i),
+    ];
+    return esteeUnavailableStartsForDay(pool, selectedMonth, primaryDay, dur, cand);
   }
 
   function takenSecondForSwimmer(i: number, part: "am" | "pm") {
     if (!selectedMonth) return [];
-    const pool = [...dbRows, ...siblingEsteeComplete(selectedMonth, primaryDay, secondDay, primaryTimes, secondTimes, duration, i)];
-    const cand = part === "am" ? candAm : candPm;
-    return esteeUnavailableStartsForDay(pool, selectedMonth, otherDay, duration, cand);
+    const dur = perSwimmerEstee[i]!.duration;
+    const cand = part === "am" ? perSwimmerEstee[i]!.candAm : perSwimmerEstee[i]!.candPm;
+    const pool = [
+      ...dbRows,
+      ...siblingEsteeComplete(selectedMonth, primaryDay, secondDay, primaryTimes, secondTimes, swimmers, i),
+    ];
+    return esteeUnavailableStartsForDay(pool, selectedMonth, otherDay, dur, cand);
   }
 
   function setPrimaryAt(index: number, t: string) {
@@ -599,7 +621,7 @@ function EsteeScheduleStep({
                     startMinute={amBlock.startMinute}
                     endHour={amBlock.endHour}
                     endMinute={amBlock.endMinute}
-                    duration={duration}
+                    duration={perSwimmerEstee[i]!.duration}
                     selected={primaryTimes[i] ?? null}
                     takenSlots={takenPrimaryForSwimmer(i, "am")}
                     onSelect={(t) => setPrimaryAt(i, t)}
@@ -615,7 +637,7 @@ function EsteeScheduleStep({
                     startMinute={pmBlock.startMinute}
                     endHour={pmBlock.endHour}
                     endMinute={pmBlock.endMinute}
-                    duration={duration}
+                    duration={perSwimmerEstee[i]!.duration}
                     selected={primaryTimes[i] ?? null}
                     takenSlots={takenPrimaryForSwimmer(i, "pm")}
                     onSelect={(t) => setPrimaryAt(i, t)}
@@ -636,11 +658,11 @@ function EsteeScheduleStep({
                   }, 100);
                 }
               }}
-              label={`Add a second day each week (+${formatPrice(monthlyPrice)} per swimmer)`}
+              label={`Add a second day each week (+${formatPrice(addSecondDayPerSwimmerCents)} total)`}
               description={
                 secondDay
                   ? `Each swimmer adds ${otherDay.charAt(0).toUpperCase() + otherDay.slice(1)}s — 8 lessons per swimmer this month.`
-                  : `4 lessons per swimmer on your primary day. Toggle to add 4 more on ${otherDay.charAt(0).toUpperCase() + otherDay.slice(1)}s.`
+                  : `4 lessons per swimmer on your primary day. Toggle to add 4 more on ${otherDay.charAt(0).toUpperCase() + otherDay.slice(1)}s (priced per swimmer’s age band).`
               }
             />
           </div>
@@ -662,7 +684,7 @@ function EsteeScheduleStep({
                       startMinute={amBlock.startMinute}
                       endHour={amBlock.endHour}
                       endMinute={amBlock.endMinute}
-                      duration={duration}
+                      duration={perSwimmerEstee[i]!.duration}
                       selected={secondTimes[i] ?? null}
                       takenSlots={takenSecondForSwimmer(i, "am")}
                       onSelect={(t) => setSecondAt(i, t)}
@@ -678,7 +700,7 @@ function EsteeScheduleStep({
                       startMinute={pmBlock.startMinute}
                       endHour={pmBlock.endHour}
                       endMinute={pmBlock.endMinute}
-                      duration={duration}
+                      duration={perSwimmerEstee[i]!.duration}
                       selected={secondTimes[i] ?? null}
                       takenSlots={takenSecondForSwimmer(i, "pm")}
                       onSelect={(t) => setSecondAt(i, t)}
@@ -707,12 +729,14 @@ function EsteeScheduleStep({
               ))}
               <p className="font-ui text-sm text-[#86868B]">
                 {months.find((m) => m.value === selectedMonth)?.label} &middot; {totalLessons} lessons per swimmer &middot;{" "}
-                {duration} min
+                {new Set(perSwimmerEstee.map((r) => r.duration)).size === 1
+                  ? `${perSwimmerEstee[0]!.duration} min`
+                  : "mixed lesson lengths (see each swimmer above)"}
               </p>
               <div className="flex items-end justify-between border-t border-black/5 pt-6">
                 <span className="font-ui text-xs font-semibold text-[#86868B] uppercase tracking-widest">Total</span>
                 <span className="font-display text-4xl text-[#1D1D1F] tracking-tighter">
-                  {formatPrice(totalPrice * swimmers.length)}
+                  {formatPrice(totalBookingCents)}
                 </span>
               </div>
             </div>
