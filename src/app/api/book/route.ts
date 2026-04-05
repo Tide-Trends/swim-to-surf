@@ -20,6 +20,12 @@ import {
 const LUKAAH_EMAIL = process.env.ADMIN_EMAIL || "lukaah.marlowe@gmail.com";
 const ESTEE_EMAIL = "esteemarlowe@gmail.com";
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "Swim to Surf <onboarding@resend.dev>";
+const REPLY_TO = process.env.RESEND_REPLY_TO || "swimtosurfemail@gmail.com";
+
+function resendApiKeyConfigured(): boolean {
+  const k = process.env.RESEND_API_KEY?.trim();
+  return Boolean(k && k.length > 10 && !k.includes("your-resend"));
+}
 
 function getAdminEmail(instructor: string): string {
   return instructor === "estee" ? ESTEE_EMAIL : LUKAAH_EMAIL;
@@ -132,46 +138,104 @@ async function sendBookingEmails(args: {
     origin,
   } = args;
 
-  let customerEmailSent = false;
-  let adminEmailSent = false;
-
-  const customerTo = swimmerInfo.parentEmail?.trim();
   if (!resend) {
     return { customerEmailSent: false, adminEmailSent: false };
   }
 
+  const customerTo = swimmerInfo.parentEmail?.trim();
   const paymentBlurb =
     paymentMethod === "stripe"
-      ? "<p style=\"font-size: 16px; line-height: 1.6;\"><strong>Card payment:</strong> Complete checkout on the next screen. You&rsquo;ll get a receipt from Stripe when payment succeeds.</p>"
-      : '<p style="font-size: 16px; line-height: 1.6;"><strong>💳 Payment:</strong> Please bring payment (Venmo or Cash) to your first lesson.</p>';
+      ? "<p style=\"font-size: 16px; line-height: 1.6; color: #1D1D1F;\"><strong>Card payment:</strong> Complete checkout on the next screen. You&rsquo;ll get a receipt from Stripe when payment succeeds.</p>"
+      : '<p style="font-size: 16px; line-height: 1.6; color: #1D1D1F;"><strong>Payment (Venmo or cash):</strong> Please bring payment to your first lesson. Venmo: @swimtosurf</p>';
 
-  if (customerTo) {
-    try {
-      await resend.emails.send({
-        from: FROM_EMAIL,
-        to: [customerTo],
-        subject: `Your Swim Lessons are Booked! 🏊`,
-        html: `
+  const calendarBtn = (label: string) => `
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 24px auto;">
+      <tr>
+        <td bgcolor="#005f8a" style="background-color: #005f8a; border-radius: 999px;">
+          <a href="${calendarLink}" target="_blank" rel="noopener noreferrer"
+            style="display: inline-block; padding: 16px 32px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; font-weight: 700; color: #ffffff !important; text-decoration: none; line-height: 1.2;">
+            ${label}
+          </a>
+        </td>
+      </tr>
+    </table>`;
+
+  const adminEmail = getAdminEmail(instructor);
+  const payLabel =
+    paymentMethod === "stripe" ? "Card (Stripe)" : paymentMethod === "venmo" ? "Pay later (Venmo/cash)" : String(paymentMethod);
+
+  const adminHtml = `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1D1D1F; max-width: 560px; margin: 0 auto;">
+              <div style="padding: 32px 0; text-align: center; border-bottom: 2px solid #0077B6;">
+                <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 8px; color: #0077B6;">New booking</h1>
+                <p style="color: #1D1D1F; font-size: 15px; margin: 0; font-weight: 600;">Confirmation #${bookingId.slice(0, 8).toUpperCase()} · ${payLabel}</p>
+              </div>
+
+              <div style="padding: 24px 0;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
+                  <tr style="border-bottom: 1px solid #E8E8ED;">
+                    <td style="padding: 12px 0; font-weight: 600; color: #333; width: 140px;">Instructor</td>
+                    <td style="padding: 12px 0; color: #1D1D1F;">${instructorName}</td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #E8E8ED;">
+                    <td style="padding: 12px 0; font-weight: 600; color: #333;">Swimmer</td>
+                    <td style="padding: 12px 0; color: #1D1D1F;">${swimmerInfo.swimmerName} (age ${swimmerInfo.swimmerAge})</td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #E8E8ED;">
+                    <td style="padding: 12px 0; font-weight: 600; color: #333;">Guardian</td>
+                    <td style="padding: 12px 0; color: #1D1D1F;">${swimmerInfo.parentName || "N/A"}</td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #E8E8ED;">
+                    <td style="padding: 12px 0; font-weight: 600; color: #333;">Email</td>
+                    <td style="padding: 12px 0;"><a href="mailto:${swimmerInfo.parentEmail || ""}" style="color: #005f8a; font-weight: 600;">${swimmerInfo.parentEmail || "Not provided"}</a></td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #E8E8ED;">
+                    <td style="padding: 12px 0; font-weight: 600; color: #333;">Phone</td>
+                    <td style="padding: 12px 0;"><a href="tel:${swimmerInfo.parentPhone || ""}" style="color: #005f8a; font-weight: 600;">${swimmerInfo.parentPhone || "Not provided"}</a></td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #E8E8ED;">
+                    <td style="padding: 12px 0; font-weight: 600; color: #333;">Schedule</td>
+                    <td style="padding: 12px 0; color: #1D1D1F;">${scheduleText}<br/><span style="color:#555;font-size:14px;">${specificDays}</span></td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #E8E8ED;">
+                    <td style="padding: 12px 0; font-weight: 600; color: #333;">Lessons</td>
+                    <td style="padding: 12px 0; color: #1D1D1F;">${priceInfo.totalLessons} × ${priceInfo.duration} min</td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #E8E8ED;">
+                    <td style="padding: 12px 0; font-weight: 600; color: #333;">Price</td>
+                    <td style="padding: 12px 0; font-weight: 700; font-size: 18px; color: #005f8a;">${priceFormatted}</td>
+                  </tr>
+                  ${swimmerInfo.notes ? `<tr><td style="padding: 12px 0; font-weight: 600; color: #333;">Notes</td><td style="padding: 12px 0; color: #1D1D1F;">${swimmerInfo.notes}</td></tr>` : ""}
+                </table>
+              </div>
+
+              ${calendarBtn("Add to Google Calendar")}
+
+              <p style="color: #555; font-size: 13px; margin-top: 24px; border-top: 1px solid #E8E8ED; padding-top: 16px; text-align: center;">
+                Swim to Surf · Booking ID: ${bookingId}
+              </p>
+            </div>
+          `;
+
+  const customerHtml = `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1D1D1F; max-width: 560px; margin: 0 auto;">
               <div style="padding: 40px 0; text-align: center; border-bottom: 1px solid #E8E8ED;">
-                <h1 style="font-size: 28px; font-weight: 600; margin: 0 0 8px;">You're booked! 🏊</h1>
-                <p style="color: #86868B; font-size: 16px; margin: 0;">Swim to Surf · Confirmation #${bookingId.slice(0, 8).toUpperCase()}</p>
+                <h1 style="font-size: 28px; font-weight: 600; margin: 0 0 8px; color: #1D1D1F;">You&apos;re booked</h1>
+                <p style="color: #333; font-size: 16px; margin: 0;">Swim to Surf · Confirmation #${bookingId.slice(0, 8).toUpperCase()}</p>
               </div>
 
               <div style="padding: 32px 0;">
-                <p style="font-size: 16px; line-height: 1.6;">Hi ${swimmerInfo.parentName || swimmerInfo.swimmerName},</p>
-                <p style="font-size: 16px; line-height: 1.6;">You are officially booked for <strong>${priceInfo.totalLessons} lessons</strong> with <strong>${instructorName}</strong>!</p>
+                <p style="font-size: 16px; line-height: 1.6; color: #1D1D1F;">Hi ${swimmerInfo.parentName || swimmerInfo.swimmerName},</p>
+                <p style="font-size: 16px; line-height: 1.6; color: #1D1D1F;">You are booked for <strong>${priceInfo.totalLessons} lessons</strong> with <strong>${instructorName}</strong>.</p>
 
                 <div style="margin: 24px 0; padding: 20px; background: #E8F4FD; border-radius: 16px; border: 1px solid #B8DFF0;">
-                  <p style="margin: 0 0 4px; font-size: 14px; color: #0077B6; font-weight: 700;">📅 YOUR SCHEDULE</p>
+                  <p style="margin: 0 0 4px; font-size: 14px; color: #005f8a; font-weight: 700;">YOUR SCHEDULE</p>
                   <p style="margin: 0 0 8px; font-size: 17px; color: #1D3557; font-weight: 600;">${scheduleText}</p>
                   <p style="margin: 0 0 4px; font-size: 14px; color: #1D3557;">${specificDays}</p>
                   <p style="margin: 0; font-size: 14px; color: #1D3557;">${priceInfo.totalLessons} × ${priceInfo.duration}-minute lessons · <strong>${priceFormatted}</strong></p>
                 </div>
 
-                <div style="text-align: center; margin: 24px 0;">
-                  <a href="${calendarLink}" style="display: inline-block; background: #0077B6; color: white; padding: 14px 28px; border-radius: 50px; text-decoration: none; font-size: 15px; font-weight: 600;">📅 Add to Calendar</a>
-                </div>
+                ${calendarBtn("Add to Google Calendar")}
 
                 ${paymentBlurb}
               </div>
@@ -181,96 +245,77 @@ async function sendBookingEmails(args: {
               </div>
 
               <div style="margin: 24px 0; padding: 24px; background: #F5F5F7; border-radius: 16px; border: 1px solid #E8E8ED;">
-                <h3 style="margin: 0 0 16px; color: #1D1D1F; font-size: 16px;">⚠️ Additional Policies</h3>
+                <h3 style="margin: 0 0 16px; color: #1D1D1F; font-size: 16px;">Policies</h3>
                 <ul style="padding-left: 20px; margin: 0; color: #333; line-height: 1.8; font-size: 14px;">
-                  <li><strong>Full Cancellation:</strong> 7 days advance notice required for a full refund.</li>
-                  <li><strong>Missed Lesson:</strong> Notify us 24 hours in advance. We'll try to accommodate, but makeups are not guaranteed.</li>
-                  <li><strong>No-shows:</strong> No refunds or rescheduling for no-shows or late cancellations.</li>
+                  <li><strong>Full cancellation:</strong> 7 days advance notice for a full refund.</li>
+                  <li><strong>Missed lesson:</strong> Notify us 24 hours in advance; makeups are not guaranteed.</li>
+                  <li><strong>No-shows:</strong> No refunds or rescheduling.</li>
                 </ul>
               </div>
 
-              <p style="font-size: 16px; line-height: 1.6; margin-top: 24px;">We can't wait to see you in the water! 🌊</p>
-              <p style="color: #86868B; font-size: 13px; margin-top: 32px; border-top: 1px solid #E8E8ED; padding-top: 24px;">
+              <p style="font-size: 16px; line-height: 1.6; margin-top: 24px; color: #1D1D1F;">We can&apos;t wait to see you in the water.</p>
+              <p style="color: #555; font-size: 13px; margin-top: 32px; border-top: 1px solid #E8E8ED; padding-top: 24px;">
                 Swim to Surf LLC · American Fork, Utah<br/>
                 swimtosurfemail@gmail.com · 385-499-8036
               </p>
             </div>
-          `,
-      });
-      customerEmailSent = true;
-      console.log("✅ Customer confirmation email sent to:", customerTo);
-    } catch (e) {
-      console.error("Resend Error (customer):", e instanceof Error ? e.message : e);
-    }
+          `;
+
+  const baseSend = {
+    from: FROM_EMAIL,
+    replyTo: REPLY_TO,
+  } as const;
+
+  const adminPromise = resend.emails.send({
+    ...baseSend,
+    to: [adminEmail],
+    subject: `New booking: ${swimmerInfo.swimmerName} · ${instructorName} · ${payLabel}`,
+    html: adminHtml,
+  });
+
+  const customerPromise =
+    customerTo != null && customerTo.length > 0
+      ? resend.emails.send({
+          ...baseSend,
+          to: [customerTo],
+          subject: `You're booked — Swim to Surf (confirmation ${bookingId.slice(0, 8).toUpperCase()})`,
+          html: customerHtml,
+        })
+      : Promise.resolve({ data: null, error: null });
+
+  const [adminResult, customerResult] = await Promise.allSettled([adminPromise, customerPromise]);
+
+  let adminEmailSent = false;
+  let customerEmailSent = false;
+
+  if (adminResult.status === "fulfilled" && !adminResult.value.error) {
+    adminEmailSent = true;
+    console.log("Admin notification email sent to:", adminEmail);
   } else {
-    console.warn("⚠ No customer email address — skipping confirmation email. Admin will still be notified if Resend is configured.");
+    const err =
+      adminResult.status === "rejected"
+        ? adminResult.reason
+        : adminResult.status === "fulfilled"
+          ? adminResult.value.error
+          : null;
+    console.error("Resend error (admin):", err);
   }
 
-  const adminEmail = getAdminEmail(instructor);
-  try {
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to: [adminEmail],
-      subject: `🆕 New Booking: ${swimmerInfo.swimmerName} with ${instructorName}`,
-      html: `
-            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1D1D1F; max-width: 560px; margin: 0 auto;">
-              <div style="padding: 32px 0; text-align: center; border-bottom: 2px solid #0077B6;">
-                <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 8px; color: #0077B6;">🆕 New Booking Received</h1>
-                <p style="color: #86868B; font-size: 14px; margin: 0;">Confirmation #${bookingId.slice(0, 8).toUpperCase()} · ${paymentMethod === "stripe" ? "💳 Card" : paymentMethod === "venmo" ? "📱 Venmo" : "💵 Cash"}</p>
-              </div>
-
-              <div style="padding: 24px 0;">
-                <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
-                  <tr style="border-bottom: 1px solid #E8E8ED;">
-                    <td style="padding: 12px 0; font-weight: 600; color: #86868B; width: 140px;">Instructor</td>
-                    <td style="padding: 12px 0;">${instructorName}</td>
-                  </tr>
-                  <tr style="border-bottom: 1px solid #E8E8ED;">
-                    <td style="padding: 12px 0; font-weight: 600; color: #86868B;">Swimmer</td>
-                    <td style="padding: 12px 0;">${swimmerInfo.swimmerName} (age ${swimmerInfo.swimmerAge})</td>
-                  </tr>
-                  <tr style="border-bottom: 1px solid #E8E8ED;">
-                    <td style="padding: 12px 0; font-weight: 600; color: #86868B;">Guardian</td>
-                    <td style="padding: 12px 0;">${swimmerInfo.parentName || "N/A"}</td>
-                  </tr>
-                  <tr style="border-bottom: 1px solid #E8E8ED;">
-                    <td style="padding: 12px 0; font-weight: 600; color: #86868B;">Email</td>
-                    <td style="padding: 12px 0;"><a href="mailto:${swimmerInfo.parentEmail || ""}" style="color: #0077B6;">${swimmerInfo.parentEmail || "Not provided"}</a></td>
-                  </tr>
-                  <tr style="border-bottom: 1px solid #E8E8ED;">
-                    <td style="padding: 12px 0; font-weight: 600; color: #86868B;">Phone</td>
-                    <td style="padding: 12px 0;"><a href="tel:${swimmerInfo.parentPhone || ""}" style="color: #0077B6;">${swimmerInfo.parentPhone || "Not provided"}</a></td>
-                  </tr>
-                  <tr style="border-bottom: 1px solid #E8E8ED;">
-                    <td style="padding: 12px 0; font-weight: 600; color: #86868B;">Schedule</td>
-                    <td style="padding: 12px 0;">${scheduleText}<br/><span style="color:#86868B;font-size:13px;">${specificDays}</span></td>
-                  </tr>
-                  <tr style="border-bottom: 1px solid #E8E8ED;">
-                    <td style="padding: 12px 0; font-weight: 600; color: #86868B;">Lessons</td>
-                    <td style="padding: 12px 0;">${priceInfo.totalLessons} × ${priceInfo.duration} min</td>
-                  </tr>
-                  <tr style="border-bottom: 1px solid #E8E8ED;">
-                    <td style="padding: 12px 0; font-weight: 600; color: #86868B;">Price</td>
-                    <td style="padding: 12px 0; font-weight: 700; font-size: 18px; color: #0077B6;">${priceFormatted}</td>
-                  </tr>
-                  ${swimmerInfo.notes ? `<tr><td style="padding: 12px 0; font-weight: 600; color: #86868B;">Notes</td><td style="padding: 12px 0;">${swimmerInfo.notes}</td></tr>` : ""}
-                </table>
-              </div>
-
-              <div style="text-align: center; margin: 20px 0;">
-                <a href="${calendarLink}" style="display: inline-block; background: #0077B6; color: white; padding: 12px 24px; border-radius: 50px; text-decoration: none; font-size: 14px; font-weight: 600;">📅 Add to Your Calendar</a>
-              </div>
-
-              <p style="color: #86868B; font-size: 12px; margin-top: 24px; border-top: 1px solid #E8E8ED; padding-top: 16px; text-align: center;">
-                Swim to Surf Admin Notification · Booking ID: ${bookingId}
-              </p>
-            </div>
-          `,
-    });
-    adminEmailSent = true;
-    console.log("✅ Admin notification email sent to:", adminEmail);
-  } catch (e) {
-    console.error("Resend Error (admin):", e instanceof Error ? e.message : e);
+  if (customerTo) {
+    if (customerResult.status === "fulfilled" && !customerResult.value.error) {
+      customerEmailSent = true;
+      console.log("Customer confirmation email sent to:", customerTo);
+    } else {
+      const err =
+        customerResult.status === "rejected"
+          ? customerResult.reason
+          : customerResult.status === "fulfilled"
+            ? customerResult.value.error
+            : null;
+      console.error("Resend error (customer):", err);
+    }
+  } else {
+    console.warn("No customer email — admin notification still attempted.");
   }
 
   return { customerEmailSent, adminEmailSent };
@@ -306,11 +351,10 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY &&
       process.env.SUPABASE_SERVICE_ROLE_KEY !== "your-supabase-anon-key";
 
-    const hasResend = process.env.RESEND_API_KEY && process.env.RESEND_API_KEY !== "your-resend-api-key";
-
-    const resend = hasResend ? new Resend(process.env.RESEND_API_KEY) : null;
+    const hasResend = resendApiKeyConfigured();
+    const resend = hasResend ? new Resend(process.env.RESEND_API_KEY!.trim()) : null;
     if (!hasResend) {
-      console.warn("⚠ Resend not configured — no emails will be sent. Set RESEND_API_KEY in .env.local");
+      console.warn("Resend not configured — set RESEND_API_KEY (and verify RESEND_FROM_EMAIL domain in Resend).");
     }
 
     let bookingId = crypto.randomUUID();
@@ -342,6 +386,13 @@ export async function POST(req: Request) {
       );
     }
 
+    if (schedule.type === "weekly" && instructor !== "lukaah") {
+      return NextResponse.json({ error: "Invalid instructor for weekly booking." }, { status: 400 });
+    }
+    if (schedule.type === "monthly" && instructor !== "estee") {
+      return NextResponse.json({ error: "Invalid instructor for monthly booking." }, { status: 400 });
+    }
+
     // 1. Create booking in Supabase (if configured)
     if (hasSupabase) {
       const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -350,7 +401,7 @@ export async function POST(req: Request) {
         const { data: existing, error: exErr } = await supabase
           .from("bookings")
           .select("lesson_time, week_start")
-          .eq("instructor", "lukaah")
+          .eq("instructor", instructor)
           .eq("week_start", schedule.weekStart)
           .eq("status", "confirmed");
         if (exErr) {
@@ -404,8 +455,8 @@ export async function POST(req: Request) {
           swimmer_age: swimmerInfo.swimmerAge,
           lesson_duration: priceInfo.duration,
           parent_name: swimmerInfo.parentName || "Adult Swimmer",
-          parent_email: swimmerInfo.parentEmail || null,
-          parent_phone: swimmerInfo.parentPhone || null,
+          parent_email: swimmerInfo.parentEmail?.trim() || "",
+          parent_phone: swimmerInfo.parentPhone?.trim() || "",
           notes: notesCombined,
           status: "confirmed",
           price: priceInfo.price,
@@ -426,6 +477,14 @@ export async function POST(req: Request) {
 
       if (dbError) {
         console.error("Supabase Error:", dbError);
+        const code = (dbError as { code?: string }).code;
+        const msg = (dbError as { message?: string }).message || "";
+        if (code === "23505" || msg.includes("duplicate") || msg.includes("just booked") || msg.includes("no longer available")) {
+          return NextResponse.json(
+            { error: "That time slot was just taken. Please pick another time." },
+            { status: 409 }
+          );
+        }
         return NextResponse.json({ error: "Failed to save booking. Please try again." }, { status: 400 });
       }
       bookingId = booking.id;

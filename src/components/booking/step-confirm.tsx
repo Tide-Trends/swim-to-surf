@@ -202,20 +202,19 @@ export function StepConfirm({ instructor, swimmerInfo, schedule, onConfirm, onBa
           Back
         </Button>
         <div className="flex-1 order-1 sm:order-2 flex flex-col sm:flex-row gap-3">
-          <Button 
-            onClick={() => onConfirm("venmo")} 
-            disabled={loading || !agreed || !policyAgreed} 
-            variant="outline" 
-            className="flex-1 rounded-full py-6 text-[15px] border-black/20 hover:border-black hover:bg-black/5" 
+          <Button
+            onClick={() => onConfirm("venmo")}
+            disabled={loading || !agreed || !policyAgreed}
+            className="flex-1 rounded-full border-2 border-[#062f3d] bg-[#0a4a5c] py-6 text-[15px] font-semibold text-white shadow-sm hover:bg-[#0c5a70] disabled:opacity-45"
             size="lg"
           >
-            Pay later (Venmo/Cash)
+            Pay later (Venmo / cash)
           </Button>
-          <Button 
-            onClick={() => onConfirm("stripe")} 
-            disabled={loading || !agreed || !policyAgreed} 
-            loading={loading} 
-            className="flex-1 rounded-full py-6 bg-[#635BFF] text-white hover:bg-[#635BFF]/90 text-[15px] font-semibold" 
+          <Button
+            onClick={() => onConfirm("stripe")}
+            disabled={loading || !agreed || !policyAgreed}
+            loading={loading}
+            className="flex-1 rounded-full border-2 border-[#4f46e5] bg-[#635BFF] py-6 text-[15px] font-semibold text-white shadow-sm hover:bg-[#5646e0] disabled:opacity-45"
             size="lg"
           >
             Pay with card (+ fees)
@@ -295,16 +294,16 @@ export function StepConfirm({ instructor, swimmerInfo, schedule, onConfirm, onBa
                   >
                     Cancel
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => {
                       setAgreed(true);
                       setShowWaiver(false);
                     }}
                     disabled={!canSign}
-                    className={`flex-1 rounded-full py-5 text-base font-semibold shadow-md transition-all ${
+                    className={`flex-1 rounded-full border-2 py-5 text-base font-semibold shadow-sm transition-all ${
                       canSign
-                        ? "bg-[#1D1D1F] text-white hover:bg-black"
-                        : "bg-[#1D1D1F]/30 text-white/60 cursor-not-allowed"
+                        ? "border-[#062f3d] bg-[#0a4a5c] text-white hover:bg-[#0c5a70]"
+                        : "cursor-not-allowed border-[#cbd5e1] bg-[#e2e8f0] text-[#64748b]"
                     }`}
                   >
                     {!hasScrolledToBottom 

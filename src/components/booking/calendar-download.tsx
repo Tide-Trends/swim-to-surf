@@ -43,25 +43,26 @@ export function CalendarDownload({ instructor, swimmerName, schedule, duration }
         <p className="text-sm text-[#86868B] font-body max-w-sm leading-relaxed mb-6">
           Download the calendar file or add directly to Google Calendar to keep your lessons organized.
         </p>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Button onClick={downloadIcs} className="flex-1 rounded-full py-6 bg-[#1D1D1F] text-white hover:bg-black gap-2 transition-all shadow-sm">
-            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+          <Button
+            onClick={downloadIcs}
+            className="flex-1 gap-2 rounded-full border-2 border-[#062f3d] bg-[#0a4a5c] py-5 text-base font-semibold text-white shadow-md hover:bg-[#0c5a70] sm:py-6"
+          >
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            Apple / Outlook
+            Download .ics (Apple / Outlook)
           </Button>
           {googleUrl && (
-            <a
-              href={googleUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1"
-            >
-              <Button variant="outline" className="w-full rounded-full py-6 gap-2 hover:bg-black/5 transition-all">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="flex-1">
+              <Button
+                variant="outline"
+                className="w-full gap-2 rounded-full border-2 border-[#1D1D1F] py-5 text-base font-semibold text-[#0f172a] hover:bg-[#f1f5f9] sm:py-6"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
-                Google Calendar
+                Open in Google Calendar
               </Button>
             </a>
           )}

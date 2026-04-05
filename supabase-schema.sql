@@ -50,3 +50,6 @@ create policy "Authenticated users can delete bookings"
 create policy "Anyone can check slot availability"
   on public.bookings for select
   using (status = 'confirmed');
+
+-- Optional: run supabase-migrations/002_prevent_double_booking.sql in the SQL editor
+-- to enforce no duplicate slots at the database layer (recommended for production).

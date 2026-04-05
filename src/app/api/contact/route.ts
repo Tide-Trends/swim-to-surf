@@ -30,8 +30,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
     }
 
-    const apiKey = process.env.RESEND_API_KEY;
-    const hasResend = Boolean(apiKey && apiKey !== "your-resend-api-key");
+    const apiKey = process.env.RESEND_API_KEY?.trim();
+    const hasResend = Boolean(apiKey && apiKey.length > 10 && !apiKey.includes("your-resend"));
 
     if (!hasResend) {
       console.error("Contact form: RESEND_API_KEY is not configured.");

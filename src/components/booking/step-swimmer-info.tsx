@@ -86,40 +86,42 @@ export function StepSwimmerInfo({ instructor, defaultValues, onSubmit, onBack }:
         </div>
       )}
 
-        <div className="mt-8 rounded-2xl border border-black/8 bg-white px-5 py-4 shadow-sm">
-          <p className="font-ui text-xs font-semibold uppercase tracking-[0.18em] text-[#86868B]">
-            Lesson length
-          </p>
-          <p className="mt-1 font-ui text-sm leading-relaxed text-[#86868B]">
-            By default we use age: <strong className="text-[#1D1D1F]">0–2</strong> → 15-minute infant lessons,{" "}
-            <strong className="text-[#1D1D1F]">3+</strong> → 30-minute standard. Override only if you need the other
-            length.
-          </p>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            {(
-              [
-                { v: "auto" as const, label: "Auto (from age)" },
-                { v: "infant" as const, label: "Infant (15 min)" },
-                { v: "standard" as const, label: "Standard (30 min)" },
-              ]
-            ).map((opt) => (
-              <label
-                key={opt.v}
-                className={`flex cursor-pointer items-center gap-2 rounded-full border px-4 py-2.5 font-ui text-sm transition-colors ${
-                  (lessonTier ?? "auto") === opt.v
-                    ? "border-ocean-deep bg-ocean-surf/50 text-ocean-deep"
-                    : "border-black/10 bg-[#F5F5F7] text-[#1D1D1F] hover:border-black/20"
-                }`}
-              >
-                <input type="radio" value={opt.v} className="sr-only" {...register("lessonTier")} />
-                {opt.label}
-              </label>
-            ))}
+        <details className="group mt-6 rounded-xl border border-black/10 bg-[#fafafa] open:bg-white open:shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-ui text-sm font-semibold text-[#1D1D1F] marker:hidden [&::-webkit-details-marker]:hidden">
+            <span>Lesson length override</span>
+            <span className="text-xs font-medium text-[#86868B] transition-transform group-open:-rotate-180">▼</span>
+          </summary>
+          <div className="space-y-3 border-t border-black/5 px-4 pb-4 pt-3">
+            <p className="font-ui text-xs leading-relaxed text-[#86868B]">
+              Default: <strong className="text-[#1D1D1F]">0–2</strong> → 15 min infant ·{" "}
+              <strong className="text-[#1D1D1F]">3+</strong> → 30 min standard. Expand only if you need the other length.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { v: "auto" as const, label: "Auto" },
+                  { v: "infant" as const, label: "15 min" },
+                  { v: "standard" as const, label: "30 min" },
+                ]
+              ).map((opt) => (
+                <label
+                  key={opt.v}
+                  className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-2 font-ui text-xs font-semibold transition-colors ${
+                    (lessonTier ?? "auto") === opt.v
+                      ? "border-ocean-deep bg-ocean-surf/60 text-ocean-deep"
+                      : "border-black/12 bg-white text-[#1D1D1F] hover:border-black/25"
+                  }`}
+                >
+                  <input type="radio" value={opt.v} className="sr-only" {...register("lessonTier")} />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+            {errors.lessonTier && (
+              <p className="text-sm text-error">{String(errors.lessonTier.message)}</p>
+            )}
           </div>
-          {errors.lessonTier && (
-            <p className="mt-2 text-sm text-error">{String(errors.lessonTier.message)}</p>
-          )}
-        </div>
+        </details>
 
         {pricing && (
           <div className="mt-8 rounded-2xl px-6 py-5 bg-[#F5F5F7] border border-black/5 text-sm font-ui flex items-center gap-4 shadow-sm">

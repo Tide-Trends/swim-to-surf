@@ -19,6 +19,8 @@ export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("bookings");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filter, setFilter] = useState<"all" | "lukaah" | "estee">("all");
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const session = getAdminSession();
@@ -37,18 +39,35 @@ export default function AdminPage() {
     }
 
     try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Failed to fetch");
+      setFetchError(null);
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        const msg =
+          typeof (errBody as { error?: string }).error === "string"
+            ? (errBody as { error: string }).error
+            : `Could not load bookings (${res.status}).`;
+        throw new Error(msg);
+      }
       const data = await res.json();
-      setBookings((data as Booking[]) || []);
+      setBookings(Array.isArray(data) ? (data as Booking[]) : []);
     } catch (err) {
       console.error("Fetch error:", err);
+      setFetchError(err instanceof Error ? err.message : "Failed to load bookings.");
     }
   }, [filter]);
 
   useEffect(() => {
-    if (authedUser) fetchBookings();
+    if (authedUser) void fetchBookings();
   }, [authedUser, fetchBookings]);
+
+  useEffect(() => {
+    if (!authedUser || tab !== "bookings") return;
+    const t = window.setInterval(() => {
+      void fetchBookings();
+    }, 25000);
+    return () => window.clearInterval(t);
+  }, [authedUser, tab, fetchBookings]);
 
   async function cancelBooking(id: string) {
     if (!confirm("Cancel this booking? The parent will be notified.")) return;
@@ -128,18 +147,44 @@ export default function AdminPage() {
 
         {/* Filter */}
         {tab === "bookings" && (
-          <div className="flex gap-2 mb-6">
-            {(["all", "lukaah", "estee"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-4 py-1.5 rounded-full font-ui text-sm transition-colors capitalize cursor-pointer ${
-                  filter === f ? "bg-primary text-white" : "bg-secondary text-muted hover:text-dark"
-                }`}
-              >
-                {f === "all" ? "All" : f}
-              </button>
-            ))}
+          <div className="mb-6 flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap gap-2">
+              {(["all", "lukaah", "estee"] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`cursor-pointer rounded-full px-4 py-1.5 font-ui text-sm capitalize transition-colors ${
+                    filter === f ? "bg-primary text-white" : "bg-secondary text-muted hover:text-dark"
+                  }`}
+                >
+                  {f === "all" ? "All" : f}
+                </button>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-auto border-2 border-[#1D1D1F] font-semibold"
+              disabled={refreshing}
+              onClick={async () => {
+                setRefreshing(true);
+                await fetchBookings();
+                setRefreshing(false);
+              }}
+            >
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </Button>
+          </div>
+        )}
+
+        {fetchError && tab === "bookings" && (
+          <div
+            className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+            role="alert"
+          >
+            <strong className="font-semibold">Could not sync bookings.</strong> {fetchError} Confirm{" "}
+            <code className="rounded bg-red-100 px-1">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
+            <code className="rounded bg-red-100 px-1">SUPABASE_SERVICE_ROLE_KEY</code> on Vercel match your project.
           </div>
         )}
 

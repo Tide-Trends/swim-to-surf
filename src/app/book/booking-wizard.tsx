@@ -36,6 +36,7 @@ export function BookingWizard() {
   });
 
   const [bookingId, setBookingId] = useState<string | null>(null);
+  const [emailDelivery, setEmailDelivery] = useState<{ customer: boolean; admin: boolean } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -112,6 +113,10 @@ export function BookingWizard() {
         window.location.href = data.url;
       } else {
         setBookingId(data.id || "manual-booking-fallback");
+        setEmailDelivery({
+          customer: Boolean(data.customerEmailSent),
+          admin: Boolean(data.adminEmailSent),
+        });
       }
     } catch (err) {
       console.error("Booking failed:", err);
@@ -137,6 +142,7 @@ export function BookingWizard() {
         swimmerInfo={state.swimmerInfo}
         schedule={state.schedule}
         pricing={pricing}
+        emailDelivery={emailDelivery}
       />
     );
   }

@@ -16,16 +16,16 @@ const base =
 
 const variants: Record<Variant, string> = {
   primary:
-    "bg-gradient-to-b from-white to-[#f3fcff] text-[#08384b] border border-[#08384b]/15 shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_12px_28px_rgba(6,75,96,0.16),0_22px_48px_rgba(34,211,238,0.16)] hover:-translate-y-0.5 hover:bg-gradient-to-b hover:from-white hover:to-[#e9f8ff] hover:shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_16px_34px_rgba(6,75,96,0.18),0_28px_58px_rgba(34,211,238,0.18)] active:translate-y-0 active:scale-[0.99]",
-  secondary: "bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED]",
-  outline: "border border-black/10 text-[#1D1D1F] hover:border-black/30 bg-white",
+    "bg-[#0a4a5c] text-white border border-[#062f3d] shadow-[0_2px_0_rgba(255,255,255,0.12)_inset,0_8px_24px_rgba(6,47,61,0.35)] hover:bg-[#0c5a70] hover:border-[#083848] hover:shadow-[0_2px_0_rgba(255,255,255,0.14)_inset,0_12px_32px_rgba(6,47,61,0.4)] active:translate-y-px active:scale-[0.99]",
+  secondary: "bg-[#E8ECF0] text-[#0f172a] border border-black/10 hover:bg-[#dce3ea]",
+  outline: "border-2 border-[#1D1D1F] text-[#0f172a] bg-white hover:bg-[#f8fafc]",
   ghost: "text-[#1D1D1F] hover:bg-[#F5F5F7]",
 };
 
 const sizes: Record<Size, string> = {
-  sm: "px-6 py-3 text-sm",
-  md: "px-8 py-4 text-sm",
-  lg: "px-10 py-5 text-base",
+  sm: "px-5 py-2.5 text-sm font-semibold",
+  md: "px-8 py-3.5 text-sm font-semibold",
+  lg: "px-10 py-4 text-base font-semibold",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(

@@ -13,9 +13,10 @@ interface Props {
   swimmerInfo: SwimmerInfo;
   schedule: ScheduleSelection;
   pricing: { duration: number; price: number; label: string };
+  emailDelivery?: { customer: boolean; admin: boolean } | null;
 }
 
-export function BookingSuccess({ bookingId, instructor, swimmerInfo, schedule, pricing }: Props) {
+export function BookingSuccess({ bookingId, instructor, swimmerInfo, schedule, pricing, emailDelivery }: Props) {
   const inst = INSTRUCTORS[instructor];
 
   return (
@@ -47,15 +48,42 @@ export function BookingSuccess({ bookingId, instructor, swimmerInfo, schedule, p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="text-white/60 text-lg md:text-xl font-light font-body max-w-2xl mx-auto tracking-wide"
+            className="mx-auto max-w-2xl text-lg font-light tracking-wide text-white/80 md:text-xl font-body"
           >
-            Order #{bookingId.slice(0, 8).toUpperCase()} &middot; Receipt sent to {swimmerInfo.parentEmail}
+            Confirmation #{bookingId.slice(0, 8).toUpperCase()}
+            {emailDelivery?.customer
+              ? ` · Confirmation sent to ${swimmerInfo.parentEmail}`
+              : emailDelivery && !emailDelivery.customer
+                ? " · Email could not be delivered — see note below"
+                : swimmerInfo.parentEmail
+                  ? ` · We will email ${swimmerInfo.parentEmail}`
+                  : ""}
           </motion.p>
         </div>
       </section>
 
       <section className="pt-16 md:pt-24">
-        <div className="mx-auto max-w-3xl px-6 space-y-12">
+        <div className="mx-auto max-w-3xl space-y-12 px-6">
+          {emailDelivery && !emailDelivery.customer && (
+            <div
+              role="status"
+              className="rounded-2xl border border-amber-200/80 bg-amber-50 px-5 py-4 text-left text-sm leading-relaxed text-amber-950 shadow-sm"
+            >
+              <p className="font-ui font-semibold text-amber-950">Confirmation email not sent</p>
+              <p className="mt-2 text-amber-900/90">
+                Your booking is saved. If you don’t see an email within a few minutes, check spam, then text or email us at{" "}
+                <a href="mailto:swimtosurfemail@gmail.com" className="font-semibold underline underline-offset-2">
+                  swimtosurfemail@gmail.com
+                </a>{" "}
+                with confirmation <strong>#{bookingId.slice(0, 8).toUpperCase()}</strong>.
+              </p>
+              {!emailDelivery.admin && (
+                <p className="mt-2 text-amber-900/85">
+                  Our team notification also failed — please contact us so we can confirm your spot.
+                </p>
+              )}
+            </div>
+          )}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

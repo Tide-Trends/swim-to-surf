@@ -2,24 +2,39 @@
 
 import { motion, useScroll, useTransform } from "framer-motion";
 import Link from "next/link";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TextReveal } from "./ui/animate";
 
 export function Hero() {
   const ref = useRef<HTMLDivElement>(null);
+  const [softScroll, setSoftScroll] = useState(true);
+
+  useEffect(() => {
+    const mqReduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const mqNarrow = window.matchMedia("(max-width: 768px)");
+    const sync = () => setSoftScroll(!mqReduce.matches && !mqNarrow.matches);
+    sync();
+    mqReduce.addEventListener("change", sync);
+    mqNarrow.addEventListener("change", sync);
+    return () => {
+      mqReduce.removeEventListener("change", sync);
+      mqNarrow.removeEventListener("change", sync);
+    };
+  }, []);
+
   const { scrollYProgress } = useScroll({
     target: ref,
-    offset: ["start start", "end start"],
+    offset: ["start start", "end 0.45"],
   });
 
-  const opacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
-  const y = useTransform(scrollYProgress, [0, 1], ["0%", "45%"]);
+  const opacity = useTransform(scrollYProgress, [0, 1], softScroll ? [1, 0.12] : [1, 1]);
+  const y = useTransform(scrollYProgress, [0, 1], softScroll ? ["0%", "18%"] : ["0%", "0%"]);
 
   return (
     <section
       ref={ref}
-      className="relative flex min-h-[800px] w-full items-center overflow-hidden bg-[#fdfbf6] pt-24 md:pt-28"
-      style={{ minHeight: "100dvh" }}
+      className="relative flex min-h-[800px] w-full flex-col items-center overflow-x-hidden bg-[#fdfbf6] pt-24 pb-20 md:min-h-0 md:pt-28 md:pb-24"
+      style={{ minHeight: "min(100dvh, 920px)" }}
     >
       <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
         <div className="absolute -top-28 left-1/2 h-[420px] w-[92vw] -translate-x-1/2 rounded-[999px] bg-[radial-gradient(ellipse_at_center,rgba(255,237,188,0.8)_0%,rgba(255,255,255,0)_70%)]" />
@@ -29,7 +44,7 @@ export function Hero() {
 
       <motion.div
         style={{ opacity, y }}
-        className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center px-6 pb-24 pt-12 text-center md:pb-28 md:pt-16"
+        className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center px-6 pt-8 text-center md:pt-16"
       >
         <div className="flex w-full flex-col items-center text-center">
           <motion.div
@@ -74,27 +89,28 @@ export function Hero() {
               Our philosophy
             </Link>
           </motion.div>
-
-          <div className="grid w-full max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-[#0b5c79]/10 bg-white/85 px-4 py-3 text-left backdrop-blur">
-              <p className="text-[10px] font-ui uppercase tracking-[0.2em] text-dark/45">Private lessons</p>
-              <p className="mt-1 text-sm font-semibold text-dark">One coach, one swimmer</p>
-            </div>
-            <div className="rounded-2xl border border-[#0b5c79]/10 bg-white/85 px-4 py-3 text-left backdrop-blur">
-              <p className="text-[10px] font-ui uppercase tracking-[0.2em] text-dark/45">Ages</p>
-              <p className="mt-1 text-sm font-semibold text-dark">Infants to adults</p>
-            </div>
-            <div className="rounded-2xl border border-[#0b5c79]/10 bg-white/85 px-4 py-3 text-left backdrop-blur">
-              <p className="text-[10px] font-ui uppercase tracking-[0.2em] text-dark/45">Location</p>
-              <p className="mt-1 text-sm font-semibold text-dark">American Fork, UT</p>
-            </div>
-          </div>
         </div>
       </motion.div>
 
+      {/* Static stats — stay fully readable while scrolling (not tied to parallax fade) */}
+      <div className="relative z-20 mx-auto mt-6 grid w-full max-w-3xl grid-cols-1 gap-3 px-6 sm:mt-10 sm:grid-cols-3">
+        <div className="rounded-2xl border border-[#0b5c79]/20 bg-white px-4 py-4 text-left shadow-sm sm:py-3.5">
+          <p className="text-[10px] font-ui font-semibold uppercase tracking-[0.2em] text-dark/55">Private lessons</p>
+          <p className="mt-1.5 text-sm font-semibold leading-snug text-dark">One coach, one swimmer</p>
+        </div>
+        <div className="rounded-2xl border border-[#0b5c79]/20 bg-white px-4 py-4 text-left shadow-sm sm:py-3.5">
+          <p className="text-[10px] font-ui font-semibold uppercase tracking-[0.2em] text-dark/55">Ages</p>
+          <p className="mt-1.5 text-sm font-semibold leading-snug text-dark">Infants to adults</p>
+        </div>
+        <div className="rounded-2xl border border-[#0b5c79]/20 bg-white px-4 py-4 text-left shadow-sm sm:py-3.5">
+          <p className="text-[10px] font-ui font-semibold uppercase tracking-[0.2em] text-dark/55">Location</p>
+          <p className="mt-1.5 text-sm font-semibold leading-snug text-dark">American Fork, UT</p>
+        </div>
+      </div>
+
       <motion.div
         style={{ opacity }}
-        className="absolute bottom-8 left-1/2 z-30 flex -translate-x-1/2 flex-col items-center gap-3"
+        className="relative z-30 mt-10 flex flex-col items-center gap-3 pb-6 md:absolute md:bottom-8 md:left-1/2 md:mt-0 md:-translate-x-1/2 md:pb-0"
       >
         <span className="text-[10px] font-ui font-semibold uppercase tracking-[0.28em] text-dark/35">Scroll</span>
         <motion.div
