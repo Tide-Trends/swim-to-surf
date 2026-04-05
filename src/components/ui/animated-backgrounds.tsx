@@ -46,6 +46,74 @@ export function OceanWave({
   );
 }
 
+/** Soft light blooms + caustic shimmer for hero sections over ocean gradients */
+export function HeroAmbientLayers() {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+      <div
+        className="absolute -top-[20%] left-1/2 h-[85%] w-[140%] -translate-x-1/2 rounded-full opacity-90"
+        style={{
+          background:
+            "radial-gradient(ellipse 55% 45% at 50% 0%, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.08) 42%, transparent 70%)",
+        }}
+      />
+      <div
+        className="absolute -right-[10%] top-[15%] h-[55vmin] w-[55vmin] rounded-full opacity-50 blur-3xl"
+        style={{ background: "radial-gradient(circle, rgba(255,209,102,0.35) 0%, transparent 68%)" }}
+      />
+      <div
+        className="absolute -left-[15%] bottom-[5%] h-[45vmin] w-[45vmin] rounded-full opacity-35 blur-3xl"
+        style={{ background: "radial-gradient(circle, rgba(72,202,228,0.5) 0%, transparent 65%)" }}
+      />
+      <motion.div
+        className="absolute inset-0 opacity-[0.07]"
+        animate={{ opacity: [0.05, 0.1, 0.05] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          backgroundSize: "240px 240px",
+        }}
+      />
+      <svg
+        className="absolute inset-0 h-full w-full opacity-[0.14]"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 1200 400"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient id="heroCaustic" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0)" />
+            <stop offset="40%" stopColor="rgba(255,255,255,0.55)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+          </linearGradient>
+        </defs>
+        <motion.path
+          fill="none"
+          stroke="url(#heroCaustic)"
+          strokeWidth="2"
+          vectorEffect="non-scaling-stroke"
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: 1, opacity: 1 }}
+          transition={{ duration: 2.2, ease: "easeOut" }}
+          d="M0,220 Q280,160 560,210 T1120,180 T1400,240"
+        />
+        <motion.g
+          animate={{ x: [0, -90, 0] }}
+          transition={{ duration: 24, repeat: Infinity, ease: "linear" }}
+        >
+          <path
+            fill="none"
+            stroke="rgba(255,255,255,0.2)"
+            strokeWidth="1.5"
+            vectorEffect="non-scaling-stroke"
+            d="M-80,280 Q200,240 520,290 T1080,250 T1600,300"
+          />
+        </motion.g>
+      </svg>
+    </div>
+  );
+}
+
 export function WaterLineArt() {
   const [items, setItems] = useState<any[]>([]);
 
@@ -84,7 +152,7 @@ export function WaterLineArt() {
       {items.map((item) => (
         <motion.div
           key={item.id}
-          className="absolute text-ocean-light/25"
+          className="absolute text-white/35"
           style={{
             width: item.size,
             height: item.size,

@@ -4,7 +4,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import Link from "next/link";
 import { useRef } from "react";
 import { TextReveal } from "./ui/animate";
-import { OceanWave, WaterLineArt } from "./ui/animated-backgrounds";
+import { OceanWave, WaterLineArt, HeroAmbientLayers } from "./ui/animated-backgrounds";
 
 export function Hero() {
   const ref = useRef<HTMLDivElement>(null);
@@ -17,11 +17,12 @@ export function Hero() {
   const y = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
 
   return (
-    <section ref={ref} className="relative h-screen min-h-[800px] w-full overflow-hidden flex items-center justify-center" style={{ background: "linear-gradient(135deg, #00B4D8 0%, #0077B6 40%, #0096C7 100%)" }}>
+    <section ref={ref} className="relative h-screen min-h-[800px] w-full overflow-hidden flex items-center justify-center" style={{ background: "linear-gradient(145deg, #023E8A 0%, #0077B6 32%, #00B4D8 58%, #48CAE4 100%)" }}>
+      <HeroAmbientLayers />
       {/* Background with Gradient, SVGs, and Bubbles */}
       <motion.div 
         style={{ y }}
-        className="absolute inset-0 z-0"
+        className="absolute inset-0 z-[1]"
       >
         <WaterLineArt />
       </motion.div>

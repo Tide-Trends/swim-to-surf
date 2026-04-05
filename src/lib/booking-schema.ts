@@ -43,6 +43,22 @@ export const swimmerInfoSchema = z.object({
       });
     }
   }
+
+  if (values.swimmerAge >= 18) {
+    if (!values.parentEmail?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["parentEmail"],
+        message: "Email is required so we can send your booking confirmation.",
+      });
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.parentEmail.trim())) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["parentEmail"],
+        message: "Please enter a valid email.",
+      });
+    }
+  }
 });
 
 export type SwimmerInfo = z.infer<typeof swimmerInfoSchema>;
