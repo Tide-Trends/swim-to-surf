@@ -9,6 +9,7 @@ import {
   getEsteePricingForTier,
   getLukaahPricingForTier,
   INSTRUCTORS,
+  PAYMENT_OPTIONS_COPY,
 } from "@/lib/constants";
 import { formatLessonTimeHm, SITE_TIMEZONE_LABEL } from "@/lib/timezone";
 import { Button } from "@/components/ui/button";
@@ -50,14 +51,15 @@ I acknowledge that this waiver is binding upon me, my heirs, legal representativ
 
 interface Props {
   instructor: "lukaah" | "estee";
-  swimmerInfo: SwimmerInfo;
+  swimmers: SwimmerInfo[];
   schedule: ScheduleSelection;
   onConfirm: (method: "stripe" | "venmo") => void;
   onBack: () => void;
   loading: boolean;
 }
 
-export function StepConfirm({ instructor, swimmerInfo, schedule, onConfirm, onBack, loading }: Props) {
+export function StepConfirm({ instructor, swimmers, schedule, onConfirm, onBack, loading }: Props) {
+  const swimmerInfo = swimmers[0]!;
   const [agreed, setAgreed] = useState(false);
   const [showWaiver, setShowWaiver] = useState(false);
   const [signature, setSignature] = useState("");
@@ -71,14 +73,14 @@ export function StepConfirm({ instructor, swimmerInfo, schedule, onConfirm, onBa
 
   let scheduleLabel: string;
   let totalLessons: number;
-  let price: number;
+  let unitPrice: number;
 
   if (schedule.type === "weekly") {
     const weekDate = new Date(schedule.weekStart + "T12:00:00");
     const timeLabel = formatLessonTimeHm(schedule.time);
     scheduleLabel = `Mon – Fri at ${timeLabel} (${SITE_TIMEZONE_LABEL}), week of ${format(weekDate, "MMM d, yyyy")}`;
     totalLessons = 5;
-    price = pricing.price;
+    unitPrice = pricing.price;
   } else {
     const [y, m] = schedule.month.split("-");
     const monthDate = new Date(Number(y), Number(m) - 1, 1);
@@ -89,13 +91,16 @@ export function StepConfirm({ instructor, swimmerInfo, schedule, onConfirm, onBa
       const secondLabel = formatLessonTimeHm(schedule.secondDayTime);
       scheduleLabel = `${capitalize(schedule.primaryDay)} at ${timeLabel} + ${otherDay} at ${secondLabel}, ${format(monthDate, "MMMM yyyy")} (${SITE_TIMEZONE_LABEL})`;
       totalLessons = 8;
-      price = monthlyPrice * 2;
+      unitPrice = monthlyPrice * 2;
     } else {
       scheduleLabel = `Every ${capitalize(schedule.primaryDay)} at ${timeLabel}, ${format(monthDate, "MMMM yyyy")} (${SITE_TIMEZONE_LABEL})`;
       totalLessons = 4;
-      price = monthlyPrice;
+      unitPrice = monthlyPrice;
     }
   }
+
+  const price = unitPrice * swimmers.length;
+  const multi = swimmers.length > 1;
 
   const signerName = swimmerInfo.parentName || swimmerInfo.swimmerName;
   const signatureValid = signature.trim().length >= 2;
@@ -117,20 +122,27 @@ export function StepConfirm({ instructor, swimmerInfo, schedule, onConfirm, onBa
           {/* Summary rows */}
           <div className="divide-y divide-black/5 p-8 space-y-4">
             <Row label="Instructor" value={inst.name} />
-            <Row
-              label="Swimmer"
-              value={`${swimmerInfo.swimmerName}, age ${swimmerInfo.swimmerAge}${
-                swimmerInfo.swimmerAge === 0 && typeof swimmerInfo.swimmerMonths === "number"
-                  ? ` (${swimmerInfo.swimmerMonths} months)`
-                  : ""
-              }`}
-            />
-            <Row label="Duration" value={`${pricing.duration} minutes`} />
+            {swimmers.map((s, i) => (
+              <Row
+                key={i}
+                label={multi ? `Swimmer ${i + 1}` : "Swimmer"}
+                value={`${s.swimmerName}, age ${s.swimmerAge}${
+                  s.swimmerAge === 0 && typeof s.swimmerMonths === "number" ? ` (${s.swimmerMonths} months)` : ""
+                }${s.notes ? ` — ${s.notes}` : ""}`}
+              />
+            ))}
+            <Row label="Duration" value={`${pricing.duration} minutes (same for everyone on this booking)`} />
             <Row label="Schedule" value={scheduleLabel} />
-            <Row label="Lessons" value={String(totalLessons)} />
+            <Row
+              label="Lessons"
+              value={
+                multi
+                  ? `${swimmers.length} × ${totalLessons} lessons each (${pricing.duration} min)`
+                  : String(totalLessons)
+              }
+            />
             <Row label="Guardian" value={swimmerInfo.parentName || ""} />
             <Row label="Contact" value={`${swimmerInfo.parentEmail || ""} \n ${swimmerInfo.parentPhone || ""}`} />
-            {swimmerInfo.notes && <Row label="Notes" value={swimmerInfo.notes} />}
           </div>
 
           {/* Price */}
@@ -151,7 +163,7 @@ export function StepConfirm({ instructor, swimmerInfo, schedule, onConfirm, onBa
           <li><strong>Missed Lessons:</strong> Notify us at least 24 hours in advance if you need to miss a lesson. We'll see what we can do, but makeup sessions are not guaranteed.</li>
           <li><strong>No-shows:</strong> No refunds or makeups for no-shows or late cancellations.</li>
           <li><strong>Parking:</strong> You must park on the south side of 1300 N. Do not block neighbors.</li>
-          <li><strong>Stripe Fee:</strong> Paying with a card incurs a standard ~3% processing surcharge. Venmo/Cash is free of fees.</li>
+          <li><strong>Stripe:</strong> Online checkout accepts cards and Apple Pay; a small processing fee (~3.5%) is included at checkout. In person you can also use Apple Pay or a card with us.</li>
         </ul>
         <label className="flex items-start gap-3 cursor-pointer group">
           <input
@@ -192,9 +204,7 @@ export function StepConfirm({ instructor, swimmerInfo, schedule, onConfirm, onBa
       {/* Payment info */}
       <div className="px-2 pt-6">
         <h4 className="font-display text-xl tracking-tight text-[#1D1D1F] mb-3">Complete booking</h4>
-        <p className="text-[#86868B] font-light leading-relaxed text-sm mb-4">
-          If selecting Venmo or Cash, your lesson will be securely added to our calendar now, and your confirmation email will be sent upon completion. Payment will be collected prior to the start of your first lesson.
-        </p>
+        <p className="text-[#86868B] font-light leading-relaxed text-sm mb-4">{PAYMENT_OPTIONS_COPY.booking}</p>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 border-t border-black/5 pt-8">
@@ -217,7 +227,7 @@ export function StepConfirm({ instructor, swimmerInfo, schedule, onConfirm, onBa
             className="flex-1 rounded-full border-2 border-[#4f46e5] bg-[#635BFF] py-6 text-[15px] font-semibold text-white shadow-sm hover:bg-[#5646e0] disabled:opacity-45"
             size="lg"
           >
-            Pay with card (+ fees)
+            Pay with Stripe (card / Apple Pay)
           </Button>
         </div>
       </div>

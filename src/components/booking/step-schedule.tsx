@@ -11,11 +11,11 @@ import {
   INSTRUCTORS,
   getEsteeDatesForMonth,
 } from "@/lib/constants";
-import { takenSlotsEsteeMonth, takenSlotsLukaahWeek } from "@/lib/booking-slots";
+import { esteeUnavailableStartsForDay, lukaahUnavailableStarts } from "@/lib/booking-slots";
 import { formatLessonTimeHm, timezoneBookingHint } from "@/lib/timezone";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
-import { TimeSlotGrid } from "@/components/booking/time-slot-grid";
+import { generateSlotStartTimes, TimeSlotGrid } from "@/components/booking/time-slot-grid";
 
 interface Props {
   instructor: "lukaah" | "estee";
@@ -102,12 +102,20 @@ function LukaahScheduleStep({
       );
       if (res.ok) {
         const data = await res.json();
-        setTakenSlots(takenSlotsLukaahWeek(data, weekStart));
+        const candidates = generateSlotStartTimes(
+          inst.startHour,
+          inst.startMinute,
+          inst.endHour,
+          inst.endMinute,
+          duration,
+          15
+        );
+        setTakenSlots(lukaahUnavailableStarts(data, weekStart, duration, candidates));
       }
     } catch {
       setTakenSlots([]);
     }
-  }, []);
+  }, [duration, inst.endHour, inst.endMinute, inst.startHour, inst.startMinute]);
 
   useEffect(() => {
     if (selectedWeek) {
@@ -240,6 +248,8 @@ function EsteeScheduleStep({
   const [takenThu, setTakenThu] = useState<string[]>([]);
 
   const schedule = INSTRUCTORS.estee.schedule;
+  const amBlock = schedule.wednesday.am;
+  const pmBlock = schedule.wednesday.pm;
 
   // Get specific dates for the selected month
   const monthDates = selectedMonth ? getEsteeDatesForMonth(selectedMonth) : null;
@@ -251,15 +261,38 @@ function EsteeScheduleStep({
       );
       if (res.ok) {
         const data = await res.json();
-        const { wed, thu } = takenSlotsEsteeMonth(data);
-        setTakenWed(wed);
-        setTakenThu(thu);
+        const candAm = generateSlotStartTimes(
+          amBlock.startHour,
+          amBlock.startMinute,
+          amBlock.endHour,
+          amBlock.endMinute,
+          duration,
+          15
+        );
+        const candPm = generateSlotStartTimes(
+          pmBlock.startHour,
+          pmBlock.startMinute,
+          pmBlock.endHour,
+          pmBlock.endMinute,
+          duration,
+          15
+        );
+        const blockedWed = new Set([
+          ...esteeUnavailableStartsForDay(data, "wednesday", duration, candAm),
+          ...esteeUnavailableStartsForDay(data, "wednesday", duration, candPm),
+        ]);
+        const blockedThu = new Set([
+          ...esteeUnavailableStartsForDay(data, "thursday", duration, candAm),
+          ...esteeUnavailableStartsForDay(data, "thursday", duration, candPm),
+        ]);
+        setTakenWed([...blockedWed]);
+        setTakenThu([...blockedThu]);
       }
     } catch {
       setTakenWed([]);
       setTakenThu([]);
     }
-  }, []);
+  }, [duration, amBlock, pmBlock]);
 
   useEffect(() => {
     if (selectedMonth) {
@@ -274,7 +307,7 @@ function EsteeScheduleStep({
   }, [primaryDay]);
 
   const otherDay = primaryDay === "wednesday" ? "thursday" : "wednesday";
-  
+
   // Use Estee's monthly pricing ($120/month for 4 lessons with one day, $60/month for infants)
   const monthlyPrice = pricing.price;
   const totalLessons = secondDay ? 8 : 4;
@@ -293,10 +326,6 @@ function EsteeScheduleStep({
     };
     onSelect(s);
   }
-
-  // Both days now have AM and PM blocks
-  const amBlock = schedule.wednesday.am; // Same for both days
-  const pmBlock = schedule.wednesday.pm; // Same for both days
 
   return (
     <div className="space-y-10">

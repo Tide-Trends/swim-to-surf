@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseServerClient } from "@/lib/supabase-server";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -8,21 +8,14 @@ export async function GET(request: Request) {
   const month = searchParams.get("month");
   const status = searchParams.get("status") || "confirmed";
 
-  const hasSupabase = process.env.NEXT_PUBLIC_SUPABASE_URL 
-    && process.env.NEXT_PUBLIC_SUPABASE_URL !== "your-supabase-url"
-    && process.env.SUPABASE_SERVICE_ROLE_KEY
-    && process.env.SUPABASE_SERVICE_ROLE_KEY !== "your-supabase-anon-key";
-
-  if (!hasSupabase) {
-    // Return empty array — no bookings yet, all time slots are available
+  const supabase = getSupabaseServerClient();
+  if (!supabase) {
     return NextResponse.json([]);
   }
 
-  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-
   let query = supabase
     .from("bookings")
-    .select("lesson_time, second_day_time, day_of_week, week_start, month")
+    .select("lesson_time, second_day_time, day_of_week, week_start, month, lesson_duration")
     .eq("status", status);
 
   if (instructor) query = query.eq("instructor", instructor as "lukaah" | "estee");

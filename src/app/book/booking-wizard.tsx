@@ -8,21 +8,37 @@ import {
   effectiveLessonTier,
   getEsteePricingForTier,
   getLukaahPricingForTier,
+  PAYMENT_OPTIONS_COPY,
 } from "@/lib/constants";
 import { StepInstructor } from "@/components/booking/step-instructor";
-import { StepSwimmerInfo } from "@/components/booking/step-swimmer-info";
+import { StepSwimmers } from "@/components/booking/step-swimmers";
 import { StepSchedule } from "@/components/booking/step-schedule";
 import { StepConfirm } from "@/components/booking/step-confirm";
 import { BookingSuccess } from "@/components/booking/booking-success";
 
-const steps = ["Instructor", "Swimmer", "Schedule", "Confirm"];
+const steps = ["Instructor", "Swimmers", "Schedule", "Confirm"];
 
 const quickFaqs = [
-  { q: "What age groups do you teach?", a: "We teach all ages, from newborns to adults (0–99). Ages 0–2 use 15-minute infant lessons; ages 3+ use 30-minute standard lessons (you can override on the swimmer step if needed)." },
-  { q: "How does booking with Lukaah work?", a: "Choose one time and it repeats Monday-Friday for one week only (5 total lessons)." },
-  { q: "How does booking with Estee work?", a: "Choose one weekly slot (Wednesday or Thursday) for the month (4 lessons), with optional second weekly slot (8 lessons)." },
-  { q: "Do you offer group lessons?", a: "No. We believe private, 1-on-1 focus is the only way to build real confidence and skill quickly." },
-  { q: "How do I pay?", a: "Payment is due on the first day of your session. We accept Venmo (@swimtosurf), cash, or check." }
+  {
+    q: "What age groups do you teach?",
+    a: "We teach all ages, from newborns to adults (0–99). Ages 0–2 use 15-minute infant lessons; ages 3+ use 30-minute standard lessons (you can override on the swimmer step if needed).",
+  },
+  {
+    q: "How does booking with Lukaah work?",
+    a: "Choose one time and it repeats Monday-Friday for one week only (5 total lessons per swimmer). Multiple kids on one booking get back-to-back start times automatically.",
+  },
+  {
+    q: "How does booking with Estee work?",
+    a: "Choose one weekly slot (Wednesday or Thursday) for the month (4 lessons per swimmer), with optional second weekly slot (8 lessons). Multiple kids get staggered times on the same days.",
+  },
+  {
+    q: "Do you offer group lessons?",
+    a: "No. We believe private, 1-on-1 focus is the only way to build real confidence and skill quickly.",
+  },
+  {
+    q: "How do I pay?",
+    a: PAYMENT_OPTIONS_COPY.booking,
+  },
 ];
 
 export function BookingWizard() {
@@ -31,7 +47,7 @@ export function BookingWizard() {
   const [state, setState] = useState<BookingState>({
     step: 0,
     instructor: null,
-    swimmerInfo: null,
+    swimmers: null,
     schedule: null,
   });
 
@@ -51,8 +67,8 @@ export function BookingWizard() {
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   }
 
-  function setSwimmerInfo(info: SwimmerInfo) {
-    setState((s) => ({ ...s, swimmerInfo: info, step: 2 }));
+  function setSwimmers(swimmers: SwimmerInfo[]) {
+    setState((s) => ({ ...s, swimmers, step: 2 }));
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   }
 
@@ -67,29 +83,32 @@ export function BookingWizard() {
   }
 
   async function confirmBooking(paymentMethod: "stripe" | "venmo") {
-    if (!state.instructor || !state.swimmerInfo || !state.schedule) return;
+    if (!state.instructor || !state.swimmers?.length || !state.schedule) return;
     setSubmitting(true);
 
+    const swimmers = state.swimmers;
     const isEstee = state.instructor === "estee";
-    const tier = effectiveLessonTier(state.swimmerInfo.swimmerAge, state.swimmerInfo.lessonTier ?? "auto");
-    const pricing = isEstee ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
+    const tier = effectiveLessonTier(swimmers[0]!.swimmerAge, swimmers[0]!.lessonTier ?? "auto");
+    const unitPricing = isEstee ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
     let totalLessons: number;
-    let price: number;
+    let unitPrice: number;
 
     if (state.schedule.type === "weekly") {
       totalLessons = 5;
-      price = pricing.price;
+      unitPrice = unitPricing.price;
     } else {
       totalLessons = state.schedule.secondDay ? 8 : 4;
-      price = state.schedule.secondDay ? pricing.price * 2 : pricing.price;
+      unitPrice = state.schedule.secondDay ? unitPricing.price * 2 : unitPricing.price;
     }
+
+    const price = unitPrice * swimmers.length;
 
     const body = {
       instructor: state.instructor,
-      swimmerInfo: state.swimmerInfo,
+      swimmers,
       schedule: state.schedule,
       priceInfo: {
-        duration: pricing.duration,
+        duration: unitPricing.duration,
         price,
         totalLessons,
       },
@@ -123,7 +142,7 @@ export function BookingWizard() {
       const msg = err instanceof Error ? err.message : "Something went wrong";
       alert(
         msg.includes("Invalid API Key")
-          ? "Card payments are temporarily unavailable. Please use Venmo or Cash instead."
+          ? "Card payments are temporarily unavailable. Please use pay later instead."
           : msg
       );
     } finally {
@@ -131,15 +150,15 @@ export function BookingWizard() {
     }
   }
 
-  if (bookingId && state.swimmerInfo && state.schedule && state.instructor) {
-    const tier = effectiveLessonTier(state.swimmerInfo.swimmerAge, state.swimmerInfo.lessonTier ?? "auto");
+  if (bookingId && state.swimmers?.length && state.schedule && state.instructor) {
+    const tier = effectiveLessonTier(state.swimmers[0]!.swimmerAge, state.swimmers[0]!.lessonTier ?? "auto");
     const pricing =
       state.instructor === "estee" ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
     return (
       <BookingSuccess
         bookingId={bookingId}
         instructor={state.instructor}
-        swimmerInfo={state.swimmerInfo}
+        swimmers={state.swimmers}
         schedule={state.schedule}
         pricing={pricing}
         emailDelivery={emailDelivery}
@@ -149,7 +168,6 @@ export function BookingWizard() {
 
   return (
     <div className="bg-[#F5F5F7] min-h-[100dvh] flex flex-col font-body">
-      {/* Compact Header */}
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-black/5 shrink-0 px-4 py-4 md:px-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-4">
@@ -169,25 +187,28 @@ export function BookingWizard() {
                 </motion.div>
               </AnimatePresence>
             </h1>
-            <button onClick={() => window.location.href = '/'} className="text-sm font-ui uppercase tracking-widest text-black/70 hover:text-black">
+            <button
+              onClick={() => (window.location.href = "/")}
+              className="text-sm font-ui uppercase tracking-widest text-black/70 hover:text-black"
+            >
               Cancel
             </button>
           </div>
 
-          {/* Progress bar */}
           <div className="flex gap-2">
             {steps.map((label, i) => (
               <div key={label} className="flex-1">
-                <div className={`h-1 rounded-full transition-all duration-700 ${
-                  i <= state.step ? "bg-[#1D1D1F]" : "bg-[#E8E8ED]"
-                }`} />
+                <div
+                  className={`h-1 rounded-full transition-all duration-700 ${
+                    i <= state.step ? "bg-[#1D1D1F]" : "bg-[#E8E8ED]"
+                  }`}
+                />
               </div>
             ))}
           </div>
         </div>
       </header>
 
-      {/* Main Content Area */}
       <main className="flex-1 px-4 py-6 md:p-8 pb-32">
         <div className="mx-auto max-w-4xl flex flex-col h-full">
           <AnimatePresence mode="wait">
@@ -201,34 +222,65 @@ export function BookingWizard() {
             >
               {state.step === 0 && <StepInstructor onSelect={selectInstructor} />}
               {state.step === 1 && (
-                <StepSwimmerInfo
+                <StepSwimmers
                   instructor={state.instructor || "lukaah"}
-                  defaultValues={state.swimmerInfo || undefined}
-                  onSubmit={setSwimmerInfo}
+                  defaultPrimary={state.swimmers?.[0]}
+                  defaultExtras={
+                    state.swimmers && state.swimmers.length > 1
+                      ? state.swimmers.slice(1).map((s) => ({
+                          swimmerName: s.swimmerName,
+                          swimmerAge: s.swimmerAge,
+                          swimmerMonths: s.swimmerMonths,
+                          lessonTier: s.lessonTier ?? "auto",
+                          notes: s.notes,
+                        }))
+                      : undefined
+                  }
+                  onSubmit={setSwimmers}
                   onBack={goBack}
                 />
               )}
-              {state.step === 2 && state.instructor && state.swimmerInfo && (
+              {state.step === 2 && state.instructor && state.swimmers?.[0] && (
                 <StepSchedule
                   instructor={state.instructor}
-                  swimmerAge={state.swimmerInfo.swimmerAge}
-                  lessonTier={state.swimmerInfo.lessonTier ?? "auto"}
+                  swimmerAge={state.swimmers[0].swimmerAge}
+                  lessonTier={state.swimmers[0].lessonTier ?? "auto"}
                   onSelect={setSchedule}
                   onBack={goBack}
                 />
               )}
-              {state.step === 3 && state.instructor && state.swimmerInfo && state.schedule && (
+              {state.step === 3 && state.instructor && state.swimmers?.length && state.schedule && (
                 <StepConfirm
                   instructor={state.instructor}
-                  swimmerInfo={state.swimmerInfo}
+                  swimmers={state.swimmers}
                   schedule={state.schedule}
-                  onConfirm={(m) => { void confirmBooking(m); }}
+                  onConfirm={(m) => {
+                    void confirmBooking(m);
+                  }}
                   onBack={goBack}
                   loading={submitting}
                 />
               )}
             </motion.div>
           </AnimatePresence>
+
+          <div className="mx-auto max-w-2xl pb-16 px-2">
+            <p className="font-ui text-xs font-semibold uppercase tracking-widest text-[#86868B] mb-4">Quick answers</p>
+            <div className="space-y-4">
+              {quickFaqs.map((f) => (
+                <details
+                  key={f.q}
+                  className="group rounded-2xl border border-black/10 bg-white/80 px-4 py-3 open:shadow-sm"
+                >
+                  <summary className="cursor-pointer list-none font-ui text-sm font-semibold text-[#1D1D1F] marker:hidden [&::-webkit-details-marker]:hidden flex justify-between gap-2">
+                    {f.q}
+                    <span className="text-[#86868B] text-xs shrink-0 group-open:rotate-180 transition-transform">▼</span>
+                  </summary>
+                  <p className="mt-3 text-sm text-[#86868B] leading-relaxed">{f.a}</p>
+                </details>
+              ))}
+            </div>
+          </div>
         </div>
       </main>
     </div>

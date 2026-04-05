@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { FadeIn } from "@/components/ui/animate";
+import { PAYMENT_OPTIONS_COPY } from "@/lib/constants";
 import { FaqAccordion } from "./faq-accordion";
 
 export const metadata: Metadata = {
@@ -30,7 +31,7 @@ const faqs = [
   },
   {
     question: "How do I pay?",
-    answer: "We accept Venmo (@swimtosurf), cash, or check. Payment is due on the first day of your session. A $15 late fee applies for each day that payment is overdue.",
+    answer: `${PAYMENT_OPTIONS_COPY.short} Payment is due on the first day of your session unless you prepaid online with Stripe. A $15 late fee applies for each day that payment is overdue.`,
   },
   {
     question: "What is your cancellation and missed lesson policy?",

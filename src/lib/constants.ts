@@ -7,6 +7,14 @@ export const SITE = {
   venmo: "@swimtosurf",
 } as const;
 
+/** Use in footer, FAQ, booking, and contact for consistent payment messaging. */
+export const PAYMENT_OPTIONS_COPY = {
+  short:
+    "We accept secure online checkout with Stripe (card and Apple Pay), Apple Pay and cards in person, Venmo (@swimtosurf), cash, and check.",
+  booking:
+    "Pay online with Stripe — card or Apple Pay in checkout — or choose pay later and bring Venmo, cash, check, Apple Pay, or a card when you arrive.",
+} as const;
+
 export const INSTRUCTORS = {
   lukaah: {
     id: "lukaah" as const,

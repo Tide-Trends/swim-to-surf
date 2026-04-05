@@ -53,3 +53,4 @@ create policy "Anyone can check slot availability"
 
 -- Optional: run supabase-migrations/002_prevent_double_booking.sql in the SQL editor
 -- to enforce no duplicate slots at the database layer (recommended for production).
+-- Then run 003_booking_interval_overlaps.sql so 15- and 30-minute lessons cannot overlap.

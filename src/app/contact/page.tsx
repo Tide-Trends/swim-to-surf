@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { FadeIn } from "@/components/ui/animate";
-import { SITE } from "@/lib/constants";
+import { SITE, PAYMENT_OPTIONS_COPY } from "@/lib/constants";
 import { ContactForm } from "./contact-form";
 
 export const metadata: Metadata = {
@@ -56,16 +56,15 @@ export default function ContactPage() {
                 <div>
                   <span className="font-ui text-xs font-semibold text-[#86868B] uppercase tracking-[0.2em] mb-3 block">Payment</span>
                   <p className="text-lg font-light text-[#1D1D1F] leading-relaxed">
-                    We accept Venmo{" "}
+                    {PAYMENT_OPTIONS_COPY.short}{" "}
                     <a
                       href="https://venmo.com/u/swimtosurf"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="font-medium hover:text-accent transition-colors underline"
                     >
-                      (@swimtosurf)
+                      Open Venmo
                     </a>
-                    , cash, or check.
                   </p>
                 </div>
               </div>

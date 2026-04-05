@@ -1,28 +1,39 @@
 "use client";
 
+import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { format } from "date-fns";
 import type { SwimmerInfo, ScheduleSelection } from "@/lib/booking-schema";
-import { INSTRUCTORS, formatPrice } from "@/lib/constants";
+import { PAYMENT_OPTIONS_COPY } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { CalendarDownload } from "@/components/booking/calendar-download";
 
 interface Props {
   bookingId: string;
   instructor: "lukaah" | "estee";
-  swimmerInfo: SwimmerInfo;
+  swimmers: SwimmerInfo[];
   schedule: ScheduleSelection;
   pricing: { duration: number; price: number; label: string };
   emailDelivery?: { customer: boolean; admin: boolean } | null;
 }
 
-export function BookingSuccess({ bookingId, instructor, swimmerInfo, schedule, pricing, emailDelivery }: Props) {
-  const inst = INSTRUCTORS[instructor];
+export function BookingSuccess({
+  bookingId,
+  instructor,
+  swimmers,
+  schedule,
+  pricing,
+  emailDelivery,
+}: Props) {
+  const primary = swimmers[0]!;
+  const calendarName = swimmers.map((s) => s.swimmerName).join(" & ");
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, []);
 
   return (
     <div className="bg-[#F5F5F7] min-h-screen pb-32">
       <section className="bg-black text-white pt-40 pb-32 relative overflow-hidden flex flex-col items-center justify-center text-center">
-        {/* Subtle background glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-accent/20 blur-[120px] rounded-full pointer-events-none" />
 
         <div className="relative z-10 mx-auto max-w-5xl px-6">
@@ -51,12 +62,17 @@ export function BookingSuccess({ bookingId, instructor, swimmerInfo, schedule, p
             className="mx-auto max-w-2xl text-lg font-light tracking-wide text-white/80 md:text-xl font-body"
           >
             Confirmation #{bookingId.slice(0, 8).toUpperCase()}
+            {swimmers.length > 1 && (
+              <span className="block mt-2 text-base text-white/70">
+                {swimmers.length} swimmers on this booking — check your email for all confirmation codes.
+              </span>
+            )}
             {emailDelivery?.customer
-              ? ` · Confirmation sent to ${swimmerInfo.parentEmail}`
+              ? ` · Confirmation sent to ${primary.parentEmail}`
               : emailDelivery && !emailDelivery.customer
                 ? " · Email could not be delivered — see note below"
-                : swimmerInfo.parentEmail
-                  ? ` · We will email ${swimmerInfo.parentEmail}`
+                : primary.parentEmail
+                  ? ` · We will email ${primary.parentEmail}`
                   : ""}
           </motion.p>
         </div>
@@ -91,7 +107,7 @@ export function BookingSuccess({ bookingId, instructor, swimmerInfo, schedule, p
           >
             <CalendarDownload
               instructor={instructor}
-              swimmerName={swimmerInfo.swimmerName}
+              swimmerName={calendarName}
               schedule={schedule}
               duration={pricing.duration}
             />
@@ -111,7 +127,9 @@ export function BookingSuccess({ bookingId, instructor, swimmerInfo, schedule, p
               </li>
               <li className="flex gap-6">
                 <span className="font-display text-accent text-2xl font-semibold w-8 flex-shrink-0">2</span>
-                <span>Bring payment (Venmo, cash, or check) on your first lesson day.</span>
+                <span>
+                  {PAYMENT_OPTIONS_COPY.short} If you chose pay later, bring payment on your first lesson day.
+                </span>
               </li>
               <li className="flex gap-6">
                 <span className="font-display text-accent text-2xl font-semibold w-8 flex-shrink-0">3</span>
@@ -130,10 +148,17 @@ export function BookingSuccess({ bookingId, instructor, swimmerInfo, schedule, p
             transition={{ delay: 0.6 }}
             className="flex flex-col sm:flex-row gap-4 pt-6"
           >
-            <Button variant="outline" className="w-full rounded-full py-6 text-lg flex-1" onClick={() => window.location.href = "/"}>
+            <Button
+              variant="outline"
+              className="w-full rounded-full py-6 text-lg flex-1"
+              onClick={() => (window.location.href = "/")}
+            >
               Back to Home
             </Button>
-            <Button className="w-full rounded-full py-6 text-lg bg-[#1D1D1F] text-white hover:bg-black flex-1" onClick={() => window.location.href = "/book"}>
+            <Button
+              className="w-full rounded-full py-6 text-lg bg-[#1D1D1F] text-white hover:bg-black flex-1"
+              onClick={() => (window.location.href = "/book")}
+            >
               Book Another
             </Button>
           </motion.div>

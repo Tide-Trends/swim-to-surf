@@ -65,10 +65,47 @@ export const swimmerInfoSchema = z.object({
 
 export type SwimmerInfo = z.infer<typeof swimmerInfoSchema>;
 
+/** Extra swimmers in a family booking — parent/contact copied from the first swimmer on submit. */
+export const additionalSwimmerSchema = z
+  .object({
+    swimmerName: z.string().min(1, "Name is required"),
+    swimmerAge: z.coerce
+      .number({ message: "Please enter a valid age" })
+      .min(0, "Age must be 0 or above")
+      .max(99, "Age must be 99 or below"),
+    swimmerMonths: z.coerce.number().min(0).max(11).optional(),
+    lessonTier: z.enum(["auto", "infant", "standard"]).default("auto"),
+    notes: z.string().optional(),
+  })
+  .superRefine((values, ctx) => {
+    if (values.swimmerAge === 0 && (values.swimmerMonths === undefined || Number.isNaN(values.swimmerMonths))) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["swimmerMonths"],
+        message: "Please select age in months for swimmers under 1 year old.",
+      });
+    }
+  });
+
+export type AdditionalSwimmer = z.infer<typeof additionalSwimmerSchema>;
+
+export function mergeSwimmersWithPrimary(primary: SwimmerInfo, extras: AdditionalSwimmer[]): SwimmerInfo[] {
+  return [
+    primary,
+    ...extras.map((e) => ({
+      ...e,
+      parentName: primary.parentName,
+      parentEmail: primary.parentEmail,
+      parentPhone: primary.parentPhone,
+    })),
+  ];
+}
+
 export interface BookingState {
   step: number;
   instructor: "lukaah" | "estee" | null;
-  swimmerInfo: SwimmerInfo | null;
+  /** One or more swimmers sharing the same schedule (staggered start times per child). */
+  swimmers: SwimmerInfo[] | null;
   schedule: ScheduleSelection | null;
 }
 

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { Hero } from "@/components/hero";
+import { HomeHighlights } from "@/components/home-highlights";
 import { HomePricing } from "@/components/home-pricing";
 import { Testimonials } from "@/components/testimonials";
 import { InstructorShowcase } from "@/components/instructor-showcase";
-import { FadeIn, Parallax } from "@/components/ui/animate";
+import { FadeIn } from "@/components/ui/animate";
 import { WaterLineArt } from "@/components/ui/animated-backgrounds";
 
 export default function Home() {
@@ -30,8 +31,10 @@ export default function Home() {
             </p>
           </FadeIn>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            <Parallax offset={10}>
+          <HomeHighlights />
+
+          <div className="mt-20 grid gap-8 md:grid-cols-3 md:mt-24">
+            <div>
               <div className="glass rounded-[2rem] p-10 hover:shadow-2xl hover:-translate-y-2 transition-all duration-700 relative overflow-hidden group h-full">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-ocean-light/30 blur-3xl group-hover:bg-sunshine/30 transition-colors" />
                 <div className="w-10 h-10 bg-ocean-mid text-white rounded-full flex items-center justify-center font-display text-lg mb-8 shadow-sm">
@@ -42,9 +45,9 @@ export default function Home() {
                   Drowning is a leading cause of death. We teach critical water-safety survival skills before anything else.
                 </p>
               </div>
-            </Parallax>
+            </div>
 
-            <Parallax offset={20}>
+            <div>
               <div className="glass rounded-[2rem] p-10 hover:shadow-2xl hover:-translate-y-2 transition-all duration-700 relative overflow-hidden group h-full">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-ocean-light/30 blur-3xl group-hover:bg-sunshine/30 transition-colors" />
                 <div className="w-10 h-10 bg-ocean-mid text-white rounded-full flex items-center justify-center font-display text-lg mb-8 shadow-sm">
@@ -55,9 +58,9 @@ export default function Home() {
                   Group lessons rarely work. Every session is private, ensuring your swimmer gets undivided attention.
                 </p>
               </div>
-            </Parallax>
+            </div>
 
-            <Parallax offset={30}>
+            <div>
               <div className="glass rounded-[2rem] p-10 hover:shadow-2xl hover:-translate-y-2 transition-all duration-700 relative overflow-hidden group h-full">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-ocean-light/30 blur-3xl group-hover:bg-sunshine/30 transition-colors" />
                 <div className="w-10 h-10 bg-ocean-mid text-white rounded-full flex items-center justify-center font-display text-lg mb-8 shadow-sm">
@@ -68,7 +71,7 @@ export default function Home() {
                   We meet you where you are, building on existing skills until every technique is mastered.
                 </p>
               </div>
-            </Parallax>
+            </div>
           </div>
         </div>
       </section>

@@ -153,8 +153,10 @@ export default function AdminPage() {
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`cursor-pointer rounded-full px-4 py-1.5 font-ui text-sm capitalize transition-colors ${
-                    filter === f ? "bg-primary text-white" : "bg-secondary text-muted hover:text-dark"
+                  className={`cursor-pointer rounded-full border px-4 py-1.5 font-ui text-sm font-medium capitalize transition-colors ${
+                    filter === f
+                      ? "border-primary bg-primary text-white"
+                      : "border-black/10 bg-white text-dark hover:border-black/25 hover:bg-[#f8fafc]"
                   }`}
                 >
                   {f === "all" ? "All" : f}

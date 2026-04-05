@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SITE } from "@/lib/constants";
+import { SITE, PAYMENT_OPTIONS_COPY } from "@/lib/constants";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -16,9 +16,10 @@ export function Footer() {
             <h3 className="text-2xl font-display font-semibold mb-6 tracking-tight">
               Swim to Surf.
             </h3>
-            <p className="text-ocean-light/70 max-w-sm mb-8 leading-relaxed">
+            <p className="text-ocean-light/70 max-w-sm mb-4 leading-relaxed">
               Empowering swimmers from 0 to 99 with private, one-on-one lessons in American Fork. Water safety and confidence taught with a smile.
             </p>
+            <p className="text-ocean-light/55 max-w-sm mb-8 text-sm leading-relaxed">{PAYMENT_OPTIONS_COPY.short}</p>
             <div className="flex flex-wrap gap-4">
               <Link
                 href="/book"

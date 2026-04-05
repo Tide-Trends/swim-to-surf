@@ -1,14 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { PRICING } from "@/lib/constants";
 import { FadeIn } from "@/components/ui/animate";
 
 type InstructorTab = "lukaah" | "estee";
 
+function PricingCardLink({
+  href,
+  children,
+  className,
+}: {
+  href: string;
+  children: ReactNode;
+  className: string;
+}) {
+  return (
+    <Link href={href} className={`group block h-full rounded-[2rem] transition-transform duration-200 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0077B6] ${className}`}>
+      {children}
+    </Link>
+  );
+}
+
 export function HomePricing() {
-  const [tab, setTab] = useState<InstructorTab>("lukaah");
+  const [tab, setTab] = useState<InstructorTab>("estee");
 
   return (
     <section
@@ -23,15 +39,15 @@ export function HomePricing() {
             Transparent <span className="text-sunshine opacity-95">pricing</span>
           </h2>
           <p className="mx-auto max-w-xl text-base text-white/85 md:text-lg">
-            Same rates on the site as at checkout. Pick an instructor to see their lesson format.
+            Tap a price to start booking. Same rates on the site as at checkout.
           </p>
         </FadeIn>
 
         <div className="mx-auto mb-10 flex max-w-md justify-center rounded-full bg-black/15 p-1.5 backdrop-blur-sm">
           {(
             [
-              { id: "lukaah" as const, label: "Lukaah", sub: "Mon–Fri week" },
               { id: "estee" as const, label: "Estee", sub: "Wed & Thu monthly" },
+              { id: "lukaah" as const, label: "Lukaah", sub: "Mon–Fri week" },
             ]
           ).map((t) => (
             <button
@@ -53,77 +69,103 @@ export function HomePricing() {
         {tab === "lukaah" ? (
           <div className="mx-auto grid max-w-3xl gap-4 md:grid-cols-2">
             <FadeIn delay={0.05}>
-              <div className="flex h-full flex-col justify-between rounded-[2rem] border-2 border-sunshine/50 bg-[#005a8c]/40 p-8 backdrop-blur-sm md:p-9">
-                <div>
-                  <span className="mb-3 inline-block rounded-full border border-sunshine/60 bg-sunshine/20 px-3 py-1 font-ui text-[10px] font-semibold uppercase tracking-[0.2em] text-sunshine">
-                    Infant · 0–2
-                  </span>
-                  <p className="font-display text-4xl font-light tracking-tighter text-sunshine md:text-5xl">{PRICING.infant.label}</p>
-                  <p className="mt-1 text-sm text-white/80">per week · 5 × {PRICING.infant.duration} min (Mon–Fri)</p>
+              <PricingCardLink
+                href="/book?instructor=lukaah"
+                className="border-2 border-sunshine/50 bg-[#005a8c]/40 p-8 backdrop-blur-sm md:p-9"
+              >
+                <div className="flex h-full flex-col justify-between">
+                  <div>
+                    <span className="mb-3 inline-block rounded-full border border-sunshine/60 bg-sunshine/20 px-3 py-1 font-ui text-[10px] font-semibold uppercase tracking-[0.2em] text-sunshine">
+                      Infant · 0–2
+                    </span>
+                    <p className="font-display text-4xl font-light tracking-tighter text-sunshine md:text-5xl group-hover:underline">
+                      {PRICING.infant.label}
+                    </p>
+                    <p className="mt-1 text-sm text-white/80">per week · 5 × {PRICING.infant.duration} min (Mon–Fri)</p>
+                  </div>
+                  <p className="mt-6 border-t border-white/20 pt-4 text-sm leading-relaxed text-white/90">
+                    One intensive week, same time daily. Tap to book with Lukaah →
+                  </p>
                 </div>
-                <p className="mt-6 border-t border-white/20 pt-4 text-sm leading-relaxed text-white/90">
-                  One intensive week, same time daily. Great for building a fast foundation.
-                </p>
-              </div>
+              </PricingCardLink>
             </FadeIn>
             <FadeIn delay={0.1}>
-              <div className="flex h-full flex-col justify-between rounded-[2rem] border border-white/25 bg-white/10 p-8 backdrop-blur-sm md:p-9">
-                <div>
-                  <span className="mb-3 inline-block rounded-full bg-white/20 px-3 py-1 font-ui text-[10px] font-semibold uppercase tracking-[0.2em] text-white">
-                    Standard · 3+
-                  </span>
-                  <p className="font-display text-4xl font-light tracking-tighter text-white md:text-5xl">{PRICING.standard.label}</p>
-                  <p className="mt-1 text-sm text-white/80">per week · 5 × {PRICING.standard.duration} min (Mon–Fri)</p>
+              <PricingCardLink
+                href="/book?instructor=lukaah"
+                className="border border-white/25 bg-white/10 p-8 backdrop-blur-sm md:p-9"
+              >
+                <div className="flex h-full flex-col justify-between">
+                  <div>
+                    <span className="mb-3 inline-block rounded-full bg-white/20 px-3 py-1 font-ui text-[10px] font-semibold uppercase tracking-[0.2em] text-white">
+                      Standard · 3+
+                    </span>
+                    <p className="font-display text-4xl font-light tracking-tighter text-white md:text-5xl group-hover:underline">
+                      {PRICING.standard.label}
+                    </p>
+                    <p className="mt-1 text-sm text-white/80">per week · 5 × {PRICING.standard.duration} min (Mon–Fri)</p>
+                  </div>
+                  <p className="mt-6 border-t border-white/20 pt-4 text-sm leading-relaxed text-white/90">
+                    Daily private sessions for one week. Tap to book →
+                  </p>
                 </div>
-                <p className="mt-6 border-t border-white/20 pt-4 text-sm leading-relaxed text-white/90">
-                  Daily private sessions for one week — ideal for school-age swimmers and adults.
-                </p>
-              </div>
+              </PricingCardLink>
             </FadeIn>
           </div>
         ) : (
           <div className="mx-auto grid max-w-3xl gap-4 md:grid-cols-2">
             <FadeIn delay={0.05}>
-              <div className="flex h-full flex-col justify-between rounded-[2rem] border-2 border-sunshine/45 bg-[#005a8c]/35 p-8 backdrop-blur-sm md:p-9">
-                <div>
-                  <span className="mb-3 inline-block rounded-full border border-sunshine/55 bg-sunshine/15 px-3 py-1 font-ui text-[10px] font-semibold uppercase tracking-[0.2em] text-sunshine">
-                    Infant · 0–2
-                  </span>
-                  <p className="font-display text-4xl font-light tracking-tighter text-sunshine md:text-5xl">
-                    {PRICING.esteeInfantMonthly.label}
-                  </p>
-                  <p className="mt-1 text-sm text-white/80">
-                    per month · {PRICING.esteeInfantMonthly.lessons} × {PRICING.esteeInfantMonthly.duration} min
+              <PricingCardLink
+                href="/book?instructor=estee"
+                className="border-2 border-sunshine/45 bg-[#005a8c]/35 p-8 backdrop-blur-sm md:p-9"
+              >
+                <div className="flex h-full flex-col justify-between">
+                  <div>
+                    <span className="mb-3 inline-block rounded-full border border-sunshine/55 bg-sunshine/15 px-3 py-1 font-ui text-[10px] font-semibold uppercase tracking-[0.2em] text-sunshine">
+                      Infant · 0–2
+                    </span>
+                    <p className="font-display text-4xl font-light tracking-tighter text-sunshine md:text-5xl group-hover:underline">
+                      {PRICING.esteeInfantMonthly.label}
+                    </p>
+                    <p className="mt-1 text-sm text-white/80">
+                      per month · {PRICING.esteeInfantMonthly.lessons} × {PRICING.esteeInfantMonthly.duration} min
+                    </p>
+                  </div>
+                  <p className="mt-6 border-t border-white/20 pt-4 text-sm leading-relaxed text-white/90">
+                    One weekly Wed or Thu slot. Tap to book with Estee →
                   </p>
                 </div>
-                <p className="mt-6 border-t border-white/20 pt-4 text-sm leading-relaxed text-white/90">
-                  One weekly slot on Wednesday or Thursday (your choice when booking).
-                </p>
-              </div>
+              </PricingCardLink>
             </FadeIn>
             <FadeIn delay={0.1}>
-              <div className="flex h-full flex-col justify-between rounded-[2rem] border border-sunshine/35 bg-white/10 p-8 backdrop-blur-sm md:p-9">
-                <div>
-                  <span className="mb-3 inline-block rounded-full bg-sunshine/20 px-3 py-1 font-ui text-[10px] font-semibold uppercase tracking-[0.2em] text-sunshine">
-                    Standard · 3+
-                  </span>
-                  <p className="font-display text-4xl font-light tracking-tighter text-white md:text-5xl">{PRICING.esteeMonthly.label}</p>
-                  <p className="mt-1 text-sm text-white/80">
-                    per month · {PRICING.esteeMonthly.lessons} × {PRICING.esteeMonthly.duration} min
+              <PricingCardLink
+                href="/book?instructor=estee"
+                className="border border-sunshine/35 bg-white/10 p-8 backdrop-blur-sm md:p-9"
+              >
+                <div className="flex h-full flex-col justify-between">
+                  <div>
+                    <span className="mb-3 inline-block rounded-full bg-sunshine/20 px-3 py-1 font-ui text-[10px] font-semibold uppercase tracking-[0.2em] text-sunshine">
+                      Standard · 3+
+                    </span>
+                    <p className="font-display text-4xl font-light tracking-tighter text-white md:text-5xl group-hover:underline">
+                      {PRICING.esteeMonthly.label}
+                    </p>
+                    <p className="mt-1 text-sm text-white/80">
+                      per month · {PRICING.esteeMonthly.lessons} × {PRICING.esteeMonthly.duration} min
+                    </p>
+                    <p className="mt-2 text-xs text-sunshine/90">Optional second weekly slot → 8 lessons (2× monthly rate).</p>
+                  </div>
+                  <p className="mt-6 border-t border-white/20 pt-4 text-sm leading-relaxed text-white/90">
+                    Steady monthly progress. Tap to book →
                   </p>
-                  <p className="mt-2 text-xs text-sunshine/90">Optional second weekly slot → 8 lessons (2× monthly rate).</p>
                 </div>
-                <p className="mt-6 border-t border-white/20 pt-4 text-sm leading-relaxed text-white/90">
-                  Steady progress across the month with Estee on Wed/Thu.
-                </p>
-              </div>
+              </PricingCardLink>
             </FadeIn>
           </div>
         )}
 
         <FadeIn delay={0.15} className="mt-10 text-center">
           <Link
-            href="/book"
+            href={tab === "estee" ? "/book?instructor=estee" : "/book?instructor=lukaah"}
             className="btn-cta-primary inline-flex min-h-[3rem] items-center justify-center rounded-full px-10 py-3 font-ui text-xs font-bold uppercase tracking-[0.2em] md:text-sm"
           >
             Book lessons
