@@ -165,7 +165,7 @@ export function StepConfirm({ instructor, swimmers, schedules, onConfirm, onBack
           <li><strong>Missed Lessons:</strong> Notify us at least 24 hours in advance if you need to miss a lesson. We'll see what we can do, but makeup sessions are not guaranteed.</li>
           <li><strong>No-shows:</strong> No refunds or makeups for no-shows or late cancellations.</li>
           <li><strong>Parking:</strong> You must park on the south side of 1300 N. Do not block neighbors.</li>
-          <li><strong>Stripe:</strong> Online checkout accepts cards and Apple Pay; a small processing fee (~3.5%) is included at checkout. In person you can also use Apple Pay or a card with us.</li>
+          <li><strong>Stripe:</strong> Your lesson times are held while you check out. After payment succeeds, your booking is confirmed and confirmation emails are sent. A small processing fee (~3.5%) is included in checkout. In person you can also use Apple Pay or a card with us.</li>
         </ul>
         <label className="flex items-start gap-3 cursor-pointer group">
           <input

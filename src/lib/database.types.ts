@@ -20,6 +20,8 @@ export type Database = {
           total_lessons: number;
           price: number;
           status: string;
+          stripe_checkout_session_id: string | null;
+          payment_hold_expires_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -40,6 +42,8 @@ export type Database = {
           total_lessons: number;
           price: number;
           status?: string;
+          stripe_checkout_session_id?: string | null;
+          payment_hold_expires_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -60,6 +64,8 @@ export type Database = {
           total_lessons?: number;
           price?: number;
           status?: string;
+          stripe_checkout_session_id?: string | null;
+          payment_hold_expires_at?: string | null;
           created_at?: string;
         };
         Relationships: [];

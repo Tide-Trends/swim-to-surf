@@ -17,7 +17,9 @@ create table if not exists public.bookings (
   month text,
   total_lessons integer not null,
   price integer not null,
-  status text not null default 'confirmed' check (status in ('confirmed', 'cancelled')),
+  status text not null default 'confirmed' check (status in ('confirmed', 'cancelled', 'pending_payment')),
+  stripe_checkout_session_id text,
+  payment_hold_expires_at timestamptz,
   reminder_sent boolean not null default false,
   created_at timestamptz default now()
 );
@@ -46,10 +48,17 @@ create policy "Authenticated users can delete bookings"
   on public.bookings for delete
   using (auth.role() = 'authenticated');
 
--- Also allow public reads for availability checking (only needed columns)
+-- Also allow public reads for availability checking (confirmed + active Stripe holds)
 create policy "Anyone can check slot availability"
   on public.bookings for select
-  using (status = 'confirmed');
+  using (
+    status = 'confirmed'
+    or (
+      status = 'pending_payment'
+      and payment_hold_expires_at is not null
+      and payment_hold_expires_at > now()
+    )
+  );
 
 -- Optional: run supabase-migrations/002_prevent_double_booking.sql in the SQL editor
 -- to enforce no duplicate slots at the database layer (recommended for production).

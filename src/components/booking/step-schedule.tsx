@@ -178,7 +178,9 @@ function LukaahScheduleStep({
   const fetchTaken = useCallback(
     async (weekStart: string) => {
       try {
-        const res = await fetch(`/api/bookings?instructor=lukaah&week_start=${weekStart}&status=confirmed`);
+        const res = await fetch(
+          `/api/bookings?instructor=lukaah&week_start=${weekStart}&availability=1`
+        );
         if (res.ok) {
           const data = await res.json();
           setDbRows(coerceBookingSlotRows(data));
@@ -396,7 +398,7 @@ function EsteeScheduleStep({
 
   const fetchTaken = useCallback(async (month: string) => {
     try {
-      const res = await fetch(`/api/bookings?instructor=estee&month=${month}&status=confirmed`);
+      const res = await fetch(`/api/bookings?instructor=estee&month=${month}&availability=1`);
       if (res.ok) {
         const data = await res.json();
         setDbRows(coerceBookingSlotRows(data));

@@ -58,6 +58,65 @@ export function BookingWizard() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    const checkout = searchParams.get("checkout");
+    const sessionId = searchParams.get("session_id");
+    if (checkout === "success" && sessionId) {
+      let cancelled = false;
+      setSubmitting(true);
+      void (async () => {
+        try {
+          const res = await fetch(
+            `/api/book/verify-session?session_id=${encodeURIComponent(sessionId)}`
+          );
+          const data = (await res.json()) as {
+            ok?: boolean;
+            error?: string;
+            bookingIds?: string[];
+            instructor?: "lukaah" | "estee";
+            swimmers?: SwimmerInfo[];
+            schedules?: ScheduleSelection[];
+            customerEmailSent?: boolean;
+            adminEmailSent?: boolean;
+          };
+          if (cancelled) return;
+          if (!res.ok || !data.ok || !data.bookingIds?.length) {
+            alert(
+              typeof data.error === "string"
+                ? data.error
+                : "We couldn’t confirm your payment yet. If checkout finished, wait for your email or contact us with your Stripe receipt."
+            );
+            window.history.replaceState({}, "", "/book");
+            setSubmitting(false);
+            return;
+          }
+          setState({
+            step: 3,
+            instructor: data.instructor ?? null,
+            swimmers: data.swimmers ?? null,
+            swimmerSchedules: data.schedules ?? null,
+          });
+          setBookingId(data.bookingIds[0]!);
+          setEmailDelivery({
+            customer: Boolean(data.customerEmailSent),
+            admin: Boolean(data.adminEmailSent),
+          });
+          window.history.replaceState({}, "", "/book");
+        } catch {
+          if (!cancelled) {
+            alert(
+              "Could not confirm your booking. If you were charged, save your Stripe receipt and contact us."
+            );
+            window.history.replaceState({}, "", "/book");
+          }
+        } finally {
+          if (!cancelled) setSubmitting(false);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }
+
     const inst = searchParams.get("instructor");
     if (inst === "lukaah" || inst === "estee") {
       setState((s) => ({ ...s, instructor: inst, step: 1 }));
