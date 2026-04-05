@@ -1,23 +1,16 @@
 import { createEvents, type EventAttributes } from "ics";
-import {
-  addDays,
-  addWeeks,
-  parse,
-  format,
-  startOfMonth,
-  getDay,
-  addMonths,
-} from "date-fns";
+import { addDays, addWeeks, format, startOfMonth, getDay, addMonths } from "date-fns";
 import type { ScheduleSelection } from "./booking-schema";
+import { lessonLocalToUtcIso } from "./timezone";
 
 const DAY_MAP: Record<string, number> = {
   sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6,
 };
 
-function timeToTuple(dateStr: string, time: string): [number, number, number, number, number] {
-  const d = new Date(dateStr + "T12:00:00");
-  const [h, m] = time.split(":").map(Number);
-  return [d.getFullYear(), d.getMonth() + 1, d.getDate(), h, m];
+/** ICS start in UTC (wall clock is always American Fork / Mountain). */
+function timeToTupleUtc(dateStr: string, time: string): [number, number, number, number, number] {
+  const d = lessonLocalToUtcIso(dateStr, time);
+  return [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes()];
 }
 
 function getLessonDates(schedule: ScheduleSelection): { date: string; time: string }[] {
@@ -73,7 +66,7 @@ export function generateIcsContent(
     title: `Swim Lesson — ${swimmerName} with ${instructorName}`,
     description: `Private swimming lesson with ${instructorName} at Swim to Surf.\n\nSwimmer: ${swimmerName}\nDuration: ${duration} minutes\n\nQuestions? swimtosurfemail@gmail.com | 385-499-8036`,
     location: "American Fork, Utah",
-    start: timeToTuple(d.date, d.time),
+    start: timeToTupleUtc(d.date, d.time),
     duration: { minutes: duration },
     status: "CONFIRMED" as const,
     busyStatus: "BUSY" as const,
@@ -100,11 +93,10 @@ export function generateGoogleCalendarUrl(
   if (dates.length === 0) return "";
 
   const first = dates[0];
-  const d = new Date(`${first.date}T${first.time}:00`);
+  const d = lessonLocalToUtcIso(first.date, first.time);
   const end = new Date(d.getTime() + duration * 60000);
 
-  const fmt = (date: Date) =>
-    format(date, "yyyyMMdd'T'HHmmss");
+  const fmt = (date: Date) => date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
 
   const params = new URLSearchParams({
     action: "TEMPLATE",

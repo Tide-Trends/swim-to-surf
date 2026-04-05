@@ -22,7 +22,7 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from("bookings")
-    .select("lesson_time, second_day_time, day_of_week")
+    .select("lesson_time, second_day_time, day_of_week, week_start, month")
     .eq("status", status);
 
   if (instructor) query = query.eq("instructor", instructor as "lukaah" | "estee");

@@ -47,23 +47,33 @@ export function OceanWave({
 }
 
 /** Soft light blooms + caustic shimmer for hero sections over ocean gradients */
-export function HeroAmbientLayers() {
+export function HeroAmbientLayers({ variant = "default" }: { variant?: "default" | "heroBold" }) {
+  const isBold = variant === "heroBold";
   return (
     <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
       <div
-        className="absolute -top-[20%] left-1/2 h-[85%] w-[140%] -translate-x-1/2 rounded-full opacity-90"
+        className={`absolute -top-[20%] left-1/2 h-[85%] w-[140%] -translate-x-1/2 rounded-full ${isBold ? "opacity-35" : "opacity-90"}`}
         style={{
-          background:
-            "radial-gradient(ellipse 55% 45% at 50% 0%, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.08) 42%, transparent 70%)",
+          background: isBold
+            ? "radial-gradient(ellipse 50% 40% at 50% 0%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.04) 38%, transparent 68%)"
+            : "radial-gradient(ellipse 55% 45% at 50% 0%, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.08) 42%, transparent 70%)",
         }}
       />
       <div
-        className="absolute -right-[10%] top-[15%] h-[55vmin] w-[55vmin] rounded-full opacity-50 blur-3xl"
-        style={{ background: "radial-gradient(circle, rgba(255,209,102,0.35) 0%, transparent 68%)" }}
+        className={`absolute -right-[10%] top-[15%] h-[55vmin] w-[55vmin] rounded-full blur-3xl ${isBold ? "opacity-70" : "opacity-50"}`}
+        style={{
+          background: isBold
+            ? "radial-gradient(circle, rgba(255,183,3,0.55) 0%, rgba(255,107,53,0.2) 45%, transparent 70%)"
+            : "radial-gradient(circle, rgba(255,209,102,0.35) 0%, transparent 68%)",
+        }}
       />
       <div
-        className="absolute -left-[15%] bottom-[5%] h-[45vmin] w-[45vmin] rounded-full opacity-35 blur-3xl"
-        style={{ background: "radial-gradient(circle, rgba(72,202,228,0.5) 0%, transparent 65%)" }}
+        className={`absolute -left-[15%] bottom-[5%] h-[45vmin] w-[45vmin] rounded-full blur-3xl ${isBold ? "opacity-45" : "opacity-35"}`}
+        style={{
+          background: isBold
+            ? "radial-gradient(circle, rgba(14,165,233,0.35) 0%, rgba(3,105,161,0.15) 50%, transparent 68%)"
+            : "radial-gradient(circle, rgba(72,202,228,0.5) 0%, transparent 65%)",
+        }}
       />
       <motion.div
         className="absolute inset-0 opacity-[0.07]"

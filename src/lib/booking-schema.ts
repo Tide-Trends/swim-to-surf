@@ -7,6 +7,8 @@ export const swimmerInfoSchema = z.object({
     .min(0, "Age must be 0 or above")
     .max(99, "Age must be 99 or below"),
   swimmerMonths: z.coerce.number().min(0).max(11).optional(),
+  /** Auto: 0–2 → infant (15 min), 3+ → standard (30 min). Override fixes edge cases. */
+  lessonTier: z.enum(["auto", "infant", "standard"]).default("auto"),
   parentName: z.string().optional(),
   parentEmail: z.string().email("Please enter a valid email").optional().or(z.literal("")),
   parentPhone: z.string().min(7, "Please enter a valid phone number").optional().or(z.literal("")),

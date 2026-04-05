@@ -4,7 +4,6 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import Link from "next/link";
 import { useRef } from "react";
 import { TextReveal } from "./ui/animate";
-import { OceanWave, WaterLineArt, HeroAmbientLayers } from "./ui/animated-backgrounds";
 
 export function Hero() {
   const ref = useRef<HTMLDivElement>(null);
@@ -14,80 +13,94 @@ export function Hero() {
   });
 
   const opacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
-  const y = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
+  const y = useTransform(scrollYProgress, [0, 1], ["0%", "45%"]);
 
   return (
-    <section ref={ref} className="relative h-screen min-h-[800px] w-full overflow-hidden flex items-center justify-center" style={{ background: "linear-gradient(145deg, #023E8A 0%, #0077B6 32%, #00B4D8 58%, #48CAE4 100%)" }}>
-      <HeroAmbientLayers />
-      {/* Background with Gradient, SVGs, and Bubbles */}
-      <motion.div 
-        style={{ y }}
-        className="absolute inset-0 z-[1]"
-      >
-        <WaterLineArt />
-      </motion.div>
-
-      {/* SVG Wave at the bottom bridging to the next section */}
-      <div className="absolute bottom-0 left-0 w-full h-[150px] z-20">
-        <OceanWave fill="var(--color-warm-white)" opacity={0.15} speed={20} direction="right" className="bottom-0 h-full" />
-        <OceanWave fill="var(--color-warm-white)" opacity={0.25} speed={15} direction="left" className="bottom-0 h-[80%]" />
-        <OceanWave fill="var(--color-warm-white)" opacity={1} speed={25} direction="right" className="-bottom-2 h-[60%]" />
+    <section
+      ref={ref}
+      className="relative flex min-h-[800px] w-full items-center overflow-hidden bg-[#fdfbf6] pt-24 md:pt-28"
+      style={{ minHeight: "100dvh" }}
+    >
+      <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+        <div className="absolute -top-28 left-1/2 h-[420px] w-[92vw] -translate-x-1/2 rounded-[999px] bg-[radial-gradient(ellipse_at_center,rgba(255,237,188,0.8)_0%,rgba(255,255,255,0)_70%)]" />
+        <div className="absolute -left-12 top-32 h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(144,224,239,0.45)_0%,rgba(255,255,255,0)_70%)] blur-2xl" />
+        <div className="absolute -right-6 bottom-16 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(255,209,102,0.5)_0%,rgba(255,255,255,0)_72%)] blur-2xl" />
       </div>
 
-      {/* Content */}
-      <motion.div 
-        style={{ opacity }}
-        className="relative z-30 container mx-auto px-6 max-w-7xl flex flex-col items-center text-center -mt-20"
+      <motion.div
+        style={{ opacity, y }}
+        className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center px-6 pb-24 pt-12 text-center md:pb-28 md:pt-16"
       >
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-          className="mb-8 inline-flex items-center gap-3 px-5 py-2.5 rounded-full border border-white/30 bg-white/10 backdrop-blur-md"
-        >
-          <span className="w-2.5 h-2.5 rounded-full bg-sunshine animate-pulse shadow-[0_0_10px_var(--color-sunshine)]" />
-          <span className="text-xs font-ui uppercase tracking-[0.2em] text-white">Private Lessons in American Fork</span>
-        </motion.div>
+        <div className="flex w-full flex-col items-center text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="mb-8 inline-flex items-center gap-3 rounded-full border border-[#0b5c79]/10 bg-white px-6 py-3 shadow-[0_10px_32px_rgba(11,92,121,0.08)] md:mb-10"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-[#0ba7d6]" aria-hidden />
+            <span className="text-[10px] font-ui font-bold uppercase tracking-[0.26em] text-[#0b5c79] md:text-[11px]">
+              Private only · American Fork, Utah
+            </span>
+          </motion.div>
 
-        <h1 className="text-6xl md:text-8xl lg:text-9xl font-display text-white tracking-tighter mb-6 leading-[0.9] max-w-5xl font-light">
-          Swim to <span className="text-gradient relative z-10 text-sunshine">Surf.</span>
-        </h1>
-        
-        <div className="text-lg md:text-2xl text-white max-w-2xl font-light mb-12 leading-relaxed">
-          <TextReveal delay={0.3} text="From first splashes to confident strokes. Private, one-on-one swim lessons designed for absolute focus and rapid progress." />
+          <h1 className="mb-6 max-w-[14ch] font-display text-[clamp(3rem,10vw,6.2rem)] font-light leading-[0.9] tracking-[-0.045em] text-dark md:mb-8">
+            Swim to <span className="hero-surf-word font-normal">Surf.</span>
+          </h1>
+
+          <div className="mb-10 max-w-2xl text-base font-normal leading-relaxed text-dark/75 md:mb-12 md:text-xl md:leading-relaxed">
+            <TextReveal
+              delay={0.26}
+              text="Calm, one-on-one swim lessons for all ages. We coach with patience, build real water confidence, and create momentum that feels joyful from day one."
+            />
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.48, duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
+            className="mb-10 flex w-full max-w-xl flex-col items-stretch gap-4 sm:mb-12 sm:flex-row sm:items-center sm:justify-center sm:gap-6"
+          >
+            <Link
+              href="/book"
+              className="btn-cta-primary inline-flex min-h-[3.4rem] w-full items-center justify-center rounded-full px-8 py-4 font-ui text-sm font-bold uppercase tracking-[0.2em] sm:w-auto sm:min-w-[280px] md:text-base"
+            >
+              Book swim lessons
+            </Link>
+            <Link
+              href="/about"
+              className="border-b border-dark/20 pb-1 text-center font-ui text-[11px] font-bold uppercase tracking-[0.24em] text-dark/70 transition-all duration-300 hover:border-dark hover:text-dark sm:text-left"
+            >
+              Our philosophy
+            </Link>
+          </motion.div>
+
+          <div className="grid w-full max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-[#0b5c79]/10 bg-white/85 px-4 py-3 text-left backdrop-blur">
+              <p className="text-[10px] font-ui uppercase tracking-[0.2em] text-dark/45">Private lessons</p>
+              <p className="mt-1 text-sm font-semibold text-dark">One coach, one swimmer</p>
+            </div>
+            <div className="rounded-2xl border border-[#0b5c79]/10 bg-white/85 px-4 py-3 text-left backdrop-blur">
+              <p className="text-[10px] font-ui uppercase tracking-[0.2em] text-dark/45">Ages</p>
+              <p className="mt-1 text-sm font-semibold text-dark">Infants to adults</p>
+            </div>
+            <div className="rounded-2xl border border-[#0b5c79]/10 bg-white/85 px-4 py-3 text-left backdrop-blur">
+              <p className="text-[10px] font-ui uppercase tracking-[0.2em] text-dark/45">Location</p>
+              <p className="mt-1 text-sm font-semibold text-dark">American Fork, UT</p>
+            </div>
+          </div>
         </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6, duration: 0.8 }}
-          className="flex flex-col sm:flex-row gap-6 items-center"
-        >
-          <Link
-            href="/book"
-            className="group relative inline-flex items-center justify-center px-12 py-5 font-ui text-lg font-bold uppercase tracking-widest text-white bg-coral rounded-full shadow-[0_0_40px_rgba(239,71,111,0.6)] overflow-hidden transition-all duration-300 hover:scale-105 hover:bg-[#ff3366] hover:shadow-[0_0_60px_rgba(239,71,111,0.8)]"
-          >
-            <span className="relative z-10">Book Swim Lessons</span>
-          </Link>
-          <Link
-            href="/about"
-            className="px-10 py-4 font-ui text-sm font-semibold uppercase tracking-widest text-white transition-colors hover:text-sunshine opacity-80 hover:opacity-100"
-          >
-            Our Philosophy
-          </Link>
-        </motion.div>
       </motion.div>
 
-      {/* Scroll indicator */}
-      <motion.div 
+      <motion.div
         style={{ opacity }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-3"
+        className="absolute bottom-8 left-1/2 z-30 flex -translate-x-1/2 flex-col items-center gap-3"
       >
-        <span className="text-[10px] font-ui uppercase tracking-[0.2em] text-white/60">Scroll</span>
-        <motion.div 
-          animate={{ height: ["0px", "40px", "0px"], opacity: [0, 1, 0], y: [0, 20, 40] }}
+        <span className="text-[10px] font-ui font-semibold uppercase tracking-[0.28em] text-dark/35">Scroll</span>
+        <motion.div
+          animate={{ height: ["0px", "36px", "0px"], opacity: [0, 1, 0], y: [0, 16, 32] }}
           transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-          className="w-[1px] bg-sunshine" 
+          className="w-px rounded-full bg-gradient-to-b from-[#0ba7d6]/80 via-[#0ba7d6]/35 to-transparent"
         />
       </motion.div>
     </section>

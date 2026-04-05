@@ -28,30 +28,26 @@ export default function AboutPage() {
   const profiles = useMemo(() => getProfilesFromStorage(), []);
 
   return (
-    <div className="bg-[#F5F5F7] min-h-screen">
+    <div className="min-h-screen bg-warm-white">
       {/* Hero */}
-      <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden bg-black">
-        <div className="absolute inset-0 z-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img 
-            src="/images/image4.jpg" 
-            alt="Ocean waves" 
-            className="w-full h-full object-cover object-center opacity-50"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+      <section className="relative flex min-h-[85vh] items-center justify-center overflow-hidden bg-warm-white pt-20">
+        <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+          <div className="absolute -top-24 left-1/2 h-[420px] w-[92vw] -translate-x-1/2 rounded-[999px] bg-[radial-gradient(ellipse_at_center,rgba(255,237,188,0.85)_0%,rgba(255,255,255,0)_70%)]" />
+          <div className="absolute -left-10 top-24 h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(144,224,239,0.4)_0%,rgba(255,255,255,0)_72%)] blur-2xl" />
+          <div className="absolute -right-12 bottom-20 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(255,209,102,0.5)_0%,rgba(255,255,255,0)_72%)] blur-2xl" />
         </div>
         
-        <div className="relative z-10 mx-auto max-w-5xl px-6 text-center pt-24">
+        <div className="relative z-10 mx-auto max-w-5xl px-6 pb-20 pt-24 text-center">
           <FadeIn>
-            <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full border border-white/20 bg-white/5 backdrop-blur-md mb-8">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-              <span className="text-xs font-ui uppercase tracking-widest text-white">Our Story</span>
+            <div className="mb-8 inline-flex items-center gap-3 rounded-full border border-[#0b5c79]/10 bg-white px-6 py-3 shadow-[0_10px_32px_rgba(11,92,121,0.08)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#0ba7d6]" />
+              <span className="text-[11px] font-ui font-bold uppercase tracking-[0.24em] text-[#0b5c79]">Our Story</span>
             </div>
-            <h1 className="text-6xl md:text-8xl lg:text-9xl font-display font-medium text-white leading-[0.9] tracking-tighter mb-8">
+            <h1 className="mb-8 text-6xl font-display font-light leading-[0.9] tracking-tighter text-dark md:text-8xl lg:text-9xl">
               Safe, confident, <br/>
-              <span className="text-white/60">and enjoyable.</span>
+              <span className="hero-surf-word">and enjoyable.</span>
             </h1>
-            <div className="max-w-2xl mx-auto text-xl text-white/70 font-light font-body">
+            <div className="mx-auto max-w-3xl text-lg font-body font-light text-dark/70 md:text-2xl">
               <TextReveal text="We teach swimmers of all ages to conquer the water with absolute confidence." delay={0.2} />
             </div>
           </FadeIn>
@@ -59,14 +55,14 @@ export default function AboutPage() {
       </section>
 
       {/* Story */}
-      <section className="py-32 md:py-48 bg-white">
+      <section className="bg-warm-white py-32 md:py-48">
         <div className="container mx-auto px-6 max-w-7xl">
           <div className="grid lg:grid-cols-12 gap-16 lg:gap-24">
             <div className="lg:col-span-5">
               <FadeIn className="sticky top-32">
-                <h2 className="text-4xl md:text-6xl font-display font-medium text-[#1D1D1F] tracking-tight leading-[1.05]">
+                <h2 className="text-4xl md:text-6xl font-display font-medium text-dark tracking-tight leading-[1.05]">
                   The reason we <br/>
-                  <span className="text-[#86868B]">dive in.</span>
+                  <span className="text-ocean-mid">dive in.</span>
                 </h2>
               </FadeIn>
             </div>
@@ -93,19 +89,19 @@ export default function AboutPage() {
       </section>
 
       {/* Philosophy - Minimalist Grid */}
-      <section className="py-32 md:py-48 bg-[#F5F5F7]">
+      <section className="py-32 md:py-48 bg-sand">
         <div className="container mx-auto px-6 max-w-7xl">
           <FadeIn className="mb-24 text-center max-w-3xl mx-auto">
             <h2 className="text-5xl md:text-7xl font-display font-medium tracking-tight text-[#1D1D1F] mb-6">
-              What makes us <span className="text-[#86868B]">different.</span>
+              What makes us <span className="text-ocean-mid">different.</span>
             </h2>
           </FadeIn>
           
           <StaggerChildren className="grid md:grid-cols-2 gap-8 lg:gap-12 max-w-6xl mx-auto">
             {values.map((v, i) => (
               <StaggerItem key={v.title}>
-                <div className="bg-white p-10 md:p-14 rounded-[2rem] h-full shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-black/5 hover:-translate-y-2 transition-transform duration-500">
-                  <span className="w-12 h-12 rounded-full bg-[#F5F5F7] text-[#1D1D1F] font-display text-xl flex items-center justify-center mb-8">
+                <div className="h-full rounded-[2rem] border border-[#0b5c79]/10 bg-white p-10 shadow-[0_14px_34px_rgba(11,92,121,0.08)] transition-transform duration-500 hover:-translate-y-2 md:p-14">
+                  <span className="mb-8 flex h-12 w-12 items-center justify-center rounded-full bg-ocean-surf text-[#1D1D1F] font-display text-xl">
                     {i + 1}
                   </span>
                   <h3 className="font-display text-3xl font-medium tracking-tight text-[#1D1D1F] mb-4">{v.title}</h3>
@@ -120,11 +116,11 @@ export default function AboutPage() {
       </section>
 
       {/* Instructors */}
-      <section className="py-32 md:py-48 bg-white border-t border-black/5">
+      <section className="bg-warm-white py-32 md:py-48">
         <div className="container mx-auto px-6 max-w-7xl">
           <FadeIn className="text-center mb-24">
             <h2 className="text-5xl md:text-7xl font-display font-medium tracking-tight text-[#1D1D1F]">
-              Meet your <span className="text-[#86868B]">instructors.</span>
+              Meet your <span className="text-ocean-mid">instructors.</span>
             </h2>
           </FadeIn>
           

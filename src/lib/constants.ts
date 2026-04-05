@@ -44,8 +44,8 @@ export const INSTRUCTORS = {
 
 export const PRICING = {
   // Lukaah: per-week pricing (Mon-Fri, 5 lessons)
-  infant: { age: "0–3", duration: 15, price: 7500, label: "$75", lessons: 5 },
-  standard: { age: "4+", duration: 30, price: 15000, label: "$150", lessons: 5 },
+  infant: { age: "0–2", duration: 15, price: 7500, label: "$75", lessons: 5 },
+  standard: { age: "3+", duration: 30, price: 15000, label: "$150", lessons: 5 },
   // Estee: per-month pricing (1 day/week = 4 lessons)
   esteeMonthly: { price: 12000, label: "$120", lessons: 4, duration: 30 },
   esteeInfantMonthly: { price: 6000, label: "$60", lessons: 4, duration: 15 },
@@ -79,13 +79,32 @@ export function getEsteeDatesForMonth(monthValue: string): { wednesdays: string[
   return { wednesdays, thursdays };
 }
 
+/** 0–2 years → infant (15 min); 3+ → standard (30 min) when tier is "auto". */
 export function getPricingForAge(age: number) {
-  return age <= 3 ? PRICING.infant : PRICING.standard;
+  return age < 3 ? PRICING.infant : PRICING.standard;
 }
 
-/** Get Estee's flat monthly price based on swimmer age */
+/** Get Estee's flat monthly price based on swimmer age (auto tier). */
 export function getEsteePricingForAge(age: number) {
-  return age <= 3 ? PRICING.esteeInfantMonthly : PRICING.esteeMonthly;
+  return age < 3 ? PRICING.esteeInfantMonthly : PRICING.esteeMonthly;
+}
+
+export type LessonProductTier = "infant" | "standard";
+
+export function effectiveLessonTier(
+  age: number,
+  lessonTier: "auto" | LessonProductTier | undefined
+): LessonProductTier {
+  if (lessonTier === "infant" || lessonTier === "standard") return lessonTier;
+  return age < 3 ? "infant" : "standard";
+}
+
+export function getLukaahPricingForTier(tier: LessonProductTier) {
+  return tier === "infant" ? PRICING.infant : PRICING.standard;
+}
+
+export function getEsteePricingForTier(tier: LessonProductTier) {
+  return tier === "infant" ? PRICING.esteeInfantMonthly : PRICING.esteeMonthly;
 }
 
 export function formatPrice(cents: number) {

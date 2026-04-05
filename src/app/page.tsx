@@ -4,7 +4,7 @@ import { Testimonials } from "@/components/testimonials";
 import { InstructorShowcase } from "@/components/instructor-showcase";
 import { FadeIn, Parallax } from "@/components/ui/animate";
 import { PRICING } from "@/lib/constants";
-import { OceanWave, WaterLineArt } from "@/components/ui/animated-backgrounds";
+import { WaterLineArt } from "@/components/ui/animated-backgrounds";
 
 export default function Home() {
   return (
@@ -75,9 +75,7 @@ export default function Home() {
 
       {/* Pricing - Bright Ocean */}
       <section className="text-white py-40 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0077B6 0%, #00B4D8 50%, #0096C7 100%)" }}>
-        <div className="absolute top-0 left-0 w-full h-[150px] z-10 rotate-180">
-          <OceanWave fill="var(--color-warm-white)" opacity={1} speed={22} direction="left" className="top-0 h-[60%]" />
-        </div>
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-warm-white via-warm-white/75 to-transparent" />
 
         <div className="container mx-auto px-6 max-w-7xl relative z-20 mt-12">
           <FadeIn className="text-center mb-24">
@@ -88,15 +86,19 @@ export default function Home() {
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
             <FadeIn delay={0.1}>
-              <div className="glass-dark rounded-[3rem] p-10 md:p-12 h-full flex flex-col justify-between group hover:border-sunshine/30 transition-colors">
+              <div className="glass-dark rounded-[3rem] border-2 border-sunshine/50 p-10 shadow-[0_0_60px_rgba(255,209,102,0.12)] transition-colors md:p-12 flex h-full flex-col justify-between group hover:border-sunshine">
                 <div>
-                  <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs font-ui uppercase tracking-[0.2em] mb-8">Infants · with Lukaah</span>
-                  <h3 className="text-5xl md:text-6xl font-display font-light tracking-tighter mb-3 text-white group-hover:text-sunshine transition-colors">{PRICING.infant.label}</h3>
-                  <p className="text-lg text-ocean-light/70 font-light">/ week</p>
+                  <span className="mb-8 inline-block rounded-full border border-sunshine/60 bg-sunshine/20 px-4 py-1.5 text-xs font-ui font-semibold uppercase tracking-[0.2em] text-sunshine">
+                    Infants · with Lukaah
+                  </span>
+                  <h3 className="mb-3 font-display text-5xl font-light tracking-tighter text-sunshine transition-colors md:text-6xl group-hover:text-[#ffe08a]">
+                    {PRICING.infant.label}
+                  </h3>
+                  <p className="text-lg font-light text-sunshine/80">/ week</p>
                 </div>
-                <div className="mt-12 pt-6 border-t border-white/10">
-                  <p className="text-base text-white/80 font-light">5 × {PRICING.infant.duration}-minute lessons (Mon–Fri)</p>
-                  <p className="text-ocean-light/50 text-sm mt-2">Ages {PRICING.infant.age}</p>
+                <div className="mt-12 border-t border-sunshine/25 pt-6">
+                  <p className="text-base font-light text-white/85">5 × {PRICING.infant.duration}-minute lessons (Mon–Fri)</p>
+                  <p className="mt-2 text-sm text-sunshine/70">Ages {PRICING.infant.age}</p>
                 </div>
               </div>
             </FadeIn>
@@ -114,15 +116,19 @@ export default function Home() {
               </div>
             </FadeIn>
             <FadeIn delay={0.3}>
-              <div className="glass-dark rounded-[3rem] p-10 md:p-12 h-full flex flex-col justify-between group hover:border-coral/30 transition-colors">
+              <div className="glass-dark rounded-[3rem] border-2 border-sunshine/45 p-10 shadow-[0_0_50px_rgba(255,209,102,0.1)] transition-colors md:p-12 flex h-full flex-col justify-between group hover:border-sunshine">
                 <div>
-                  <span className="inline-block px-4 py-1.5 rounded-full bg-coral/20 text-coral text-xs font-ui uppercase tracking-[0.2em] mb-8 font-semibold">Infants · with Estee</span>
-                  <h3 className="text-5xl md:text-6xl font-display font-light tracking-tighter mb-3 text-white group-hover:text-coral transition-colors">{PRICING.esteeInfantMonthly.label}</h3>
-                  <p className="text-lg text-white/70 font-light">/ month</p>
+                  <span className="mb-8 inline-block rounded-full border border-sunshine/55 bg-sunshine/15 px-4 py-1.5 text-xs font-ui font-semibold uppercase tracking-[0.2em] text-sunshine">
+                    Infants · with Estee
+                  </span>
+                  <h3 className="mb-3 font-display text-5xl font-light tracking-tighter text-sunshine transition-colors md:text-6xl group-hover:text-[#ffe08a]">
+                    {PRICING.esteeInfantMonthly.label}
+                  </h3>
+                  <p className="text-lg font-light text-sunshine/75">/ month</p>
                 </div>
-                <div className="mt-12 pt-6 border-t border-white/15">
-                  <p className="text-base text-white/80 font-light">4 × 15-minute lessons per month</p>
-                  <p className="text-white/50 text-sm mt-2">Ages 0–3 · Wed &amp; Thu available</p>
+                <div className="mt-12 border-t border-sunshine/20 pt-6">
+                  <p className="text-base font-light text-white/85">4 × 15-minute lessons per month</p>
+                  <p className="mt-2 text-sm text-sunshine/65">Ages 0–2 · Wed &amp; Thu available</p>
                 </div>
               </div>
             </FadeIn>
@@ -135,20 +141,19 @@ export default function Home() {
                 </div>
                 <div className="mt-12 pt-6 border-t border-white/15">
                   <p className="text-base text-white/90 font-light">{PRICING.esteeMonthly.lessons} × 30-minute lessons per month</p>
-                  <p className="text-white/50 text-sm mt-2">Ages 4+ · Wed &amp; Thu available</p>
+                  <p className="text-white/50 text-sm mt-2">Ages 3+ · Wed &amp; Thu available</p>
                 </div>
               </div>
             </FadeIn>
           </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 w-full h-[150px] z-10 transition-transform">
-          <OceanWave fill="var(--color-warm-white)" opacity={1} speed={18} direction="right" className="bottom-0 h-[70%]" />
-        </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-28 bg-gradient-to-t from-warm-white via-warm-white/75 to-transparent" />
       </section>
 
       {/* Testimonials */}
       <section className="bg-warm-white py-32 overflow-hidden relative">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-white/70 to-transparent" />
         <Testimonials />
       </section>
 
@@ -180,10 +185,7 @@ export default function Home() {
         <div className="absolute inset-0 z-0">
           <WaterLineArt />
         </div>
-        
-        <div className="absolute top-0 left-0 w-full h-[150px] z-20 rotate-180">
-          <OceanWave fill="var(--color-sand)" opacity={1} speed={25} direction="left" className="top-0 h-full" />
-        </div>
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-24 bg-gradient-to-b from-sand via-sand/80 to-transparent" />
         
         <div className="relative z-30 text-center px-6 max-w-4xl mx-auto">
           <FadeIn>
@@ -192,9 +194,9 @@ export default function Home() {
             </h2>
             <Link
               href="/book"
-              className="inline-flex items-center justify-center px-12 py-6 font-ui text-sm font-bold uppercase tracking-[0.2em] text-ocean-deep bg-white rounded-full hover:scale-105 hover:bg-sunshine hover:shadow-[0_0_80px_rgba(255,209,102,0.4)] transition-all duration-700"
+              className="btn-cta-primary inline-flex min-h-[3.75rem] min-w-[min(100%,280px)] items-center justify-center rounded-full px-12 py-5 font-ui text-base font-bold uppercase tracking-[0.18em] md:tracking-[0.2em]"
             >
-              Book a Lesson
+              Book swim lessons
             </Link>
           </FadeIn>
         </div>

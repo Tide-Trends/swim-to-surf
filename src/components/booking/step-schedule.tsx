@@ -1,13 +1,18 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {
-  format,
-  addWeeks,
-  addDays,
-} from "date-fns";
+import { format, addWeeks, addDays } from "date-fns";
 import type { ScheduleSelection, LukaahSchedule, EsteeSchedule } from "@/lib/booking-schema";
-import { getPricingForAge, getEsteePricingForAge, formatPrice, INSTRUCTORS, PRICING, getEsteeDatesForMonth } from "@/lib/constants";
+import {
+  effectiveLessonTier,
+  formatPrice,
+  getEsteePricingForTier,
+  getLukaahPricingForTier,
+  INSTRUCTORS,
+  getEsteeDatesForMonth,
+} from "@/lib/constants";
+import { takenSlotsEsteeMonth, takenSlotsLukaahWeek } from "@/lib/booking-slots";
+import { formatLessonTimeHm, timezoneBookingHint } from "@/lib/timezone";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { TimeSlotGrid } from "@/components/booking/time-slot-grid";
@@ -15,6 +20,7 @@ import { TimeSlotGrid } from "@/components/booking/time-slot-grid";
 interface Props {
   instructor: "lukaah" | "estee";
   swimmerAge: number;
+  lessonTier?: "auto" | "infant" | "standard";
   onSelect: (schedule: ScheduleSelection) => void;
   onBack: () => void;
 }
@@ -43,10 +49,9 @@ function getSummerMonths(): { value: string; label: string }[] {
   ];
 }
 
-export function StepSchedule({ instructor, swimmerAge, onSelect, onBack }: Props) {
-  const pricing = instructor === "estee" 
-    ? getEsteePricingForAge(swimmerAge) 
-    : getPricingForAge(swimmerAge);
+export function StepSchedule({ instructor, swimmerAge, lessonTier = "auto", onSelect, onBack }: Props) {
+  const tier = effectiveLessonTier(swimmerAge, lessonTier);
+  const pricing = instructor === "estee" ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
   const duration = pricing.duration;
 
   if (instructor === "lukaah") {
@@ -97,7 +102,7 @@ function LukaahScheduleStep({
       );
       if (res.ok) {
         const data = await res.json();
-        setTakenSlots(data.map((b: { lesson_time: string }) => b.lesson_time.slice(0, 5)));
+        setTakenSlots(takenSlotsLukaahWeek(data, weekStart));
       }
     } catch {
       setTakenSlots([]);
@@ -125,6 +130,9 @@ function LukaahScheduleStep({
 
   return (
     <div className="space-y-10">
+      <p className="rounded-xl border border-black/5 bg-[#F5F5F7] px-4 py-3 font-ui text-xs leading-relaxed text-[#1D1D1F]/80">
+        {timezoneBookingHint()}
+      </p>
       {/* Week picker */}
       <div>
         <h3 className="font-display text-3xl font-medium tracking-tight mb-6">Choose your week</h3>
@@ -171,6 +179,7 @@ function LukaahScheduleStep({
             selected={selectedTime}
             takenSlots={takenSlots}
             onSelect={setSelectedTime}
+            showTimezoneHint
           />
         </div>
       )}
@@ -182,8 +191,7 @@ function LukaahScheduleStep({
             Your Schedule
           </span>
           <p className="font-display text-3xl font-medium text-[#1D1D1F] mb-3">
-            Mon – Fri at{" "}
-            {format(new Date(`2000-01-01T${selectedTime}`), "h:mm a")}
+            Mon – Fri at {formatLessonTimeHm(selectedTime)}
           </p>
           <p className="font-ui text-sm text-[#86868B] mb-8">
             Week of {selectedWeekObj.label} &middot; 5 lessons &middot; {duration} min each
@@ -243,14 +251,7 @@ function EsteeScheduleStep({
       );
       if (res.ok) {
         const data = await res.json();
-        const wed: string[] = [];
-        const thu: string[] = [];
-        for (const b of data) {
-          if (b.day_of_week.includes("wednesday")) wed.push(b.lesson_time.slice(0, 5));
-          if (b.day_of_week.includes("thursday")) {
-            thu.push(b.second_day_time?.slice(0, 5) || b.lesson_time.slice(0, 5));
-          }
-        }
+        const { wed, thu } = takenSlotsEsteeMonth(data);
         setTakenWed(wed);
         setTakenThu(thu);
       }
@@ -299,6 +300,9 @@ function EsteeScheduleStep({
 
   return (
     <div className="space-y-10">
+      <p className="rounded-xl border border-black/5 bg-[#F5F5F7] px-4 py-3 font-ui text-xs leading-relaxed text-[#1D1D1F]/80">
+        {timezoneBookingHint()}
+      </p>
       {/* Month picker */}
       <div>
         <h3 className="font-display text-3xl font-medium tracking-tight mb-6">Choose a month</h3>
@@ -416,6 +420,7 @@ function EsteeScheduleStep({
                 selected={primaryTime}
                 takenSlots={primaryDay === "wednesday" ? takenWed : takenThu}
                 onSelect={setPrimaryTime}
+                showTimezoneHint
               />
             </div>
 
@@ -474,6 +479,7 @@ function EsteeScheduleStep({
                   selected={secondDayTime}
                   takenSlots={otherDay === "wednesday" ? takenWed : takenThu}
                   onSelect={setSecondDayTime}
+                  showTimezoneHint
                 />
               </div>
 
@@ -501,14 +507,12 @@ function EsteeScheduleStep({
                 Your Schedule
               </span>
               <p className="font-display text-3xl font-medium text-[#1D1D1F] mb-3">
-                Every <span className="capitalize">{primaryDay}</span> at{" "}
-                {format(new Date(`2000-01-01T${primaryTime}`), "h:mm a")}
+                Every <span className="capitalize">{primaryDay}</span> at {formatLessonTimeHm(primaryTime)}
                 {secondDay && secondDayTime && (
                   <>
                     <br />
-                    <span className="text-2xl text-[#1D1D1F]/80 mt-2 block">
-                      + <span className="capitalize">{otherDay}</span> at{" "}
-                      {format(new Date(`2000-01-01T${secondDayTime}`), "h:mm a")}
+                    <span className="mt-2 block text-2xl text-[#1D1D1F]/80">
+                      + <span className="capitalize">{otherDay}</span> at {formatLessonTimeHm(secondDayTime)}
                     </span>
                   </>
                 )}

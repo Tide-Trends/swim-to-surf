@@ -101,3 +101,52 @@ button, input, select, textarea, label {
 .text-gradient-dark {
   color: var(--color-primary);
 }
+
+/* Hero “Surf.” — bright sunshine → tangerine → coral, cheerful on ocean blue */
+.hero-surf-word {
+  background: linear-gradient(
+    125deg,
+    #0891b2 0%,
+    #06b6d4 28%,
+    #22d3ee 54%,
+    #f59e0b 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 2px 0 rgba(255, 255, 255, 0.5)) drop-shadow(0 10px 24px rgba(34, 211, 238, 0.25));
+}
+
+/* Premium bright CTA */
+.btn-cta-primary {
+  background: linear-gradient(180deg, #ffffff 0%, #f3fcff 100%);
+  color: #08384b;
+  border: 1px solid rgba(8, 56, 75, 0.14);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.95) inset,
+    0 12px 28px rgba(6, 75, 96, 0.16),
+    0 22px 48px rgba(34, 211, 238, 0.16);
+  transition:
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.35s ease,
+    background-color 0.35s ease;
+}
+
+.btn-cta-primary:hover {
+  transform: translateY(-3px);
+  filter: saturate(1.08);
+  background: linear-gradient(180deg, #ffffff 0%, #e9f8ff 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.95) inset,
+    0 16px 34px rgba(6, 75, 96, 0.18),
+    0 28px 58px rgba(34, 211, 238, 0.18);
+}
+
+.btn-cta-primary:active {
+  transform: translateY(0) scale(0.99);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 8px 18px rgba(6, 75, 96, 0.16),
+    0 16px 32px rgba(255, 209, 102, 0.16);
+}

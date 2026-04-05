@@ -3,7 +3,11 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { swimmerInfoSchema, type SwimmerInfo } from "@/lib/booking-schema";
-import { getPricingForAge, getEsteePricingForAge } from "@/lib/constants";
+import {
+  effectiveLessonTier,
+  getEsteePricingForTier,
+  getLukaahPricingForTier,
+} from "@/lib/constants";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -23,23 +27,29 @@ export function StepSwimmerInfo({ instructor, defaultValues, onSubmit, onBack }:
     formState: { errors },
   } = useForm<SwimmerInfo>({
     resolver: zodResolver(swimmerInfoSchema) as never,
-    defaultValues: defaultValues || {
-      swimmerName: "",
-      swimmerAge: undefined as unknown as number,
-      swimmerMonths: undefined,
-      parentName: "",
-      parentEmail: "",
-      parentPhone: "",
-      notes: "",
+    defaultValues: {
+      swimmerName: defaultValues?.swimmerName ?? "",
+      swimmerAge: (defaultValues?.swimmerAge ?? undefined) as unknown as number,
+      swimmerMonths: defaultValues?.swimmerMonths,
+      lessonTier: defaultValues?.lessonTier ?? "auto",
+      parentName: defaultValues?.parentName ?? "",
+      parentEmail: defaultValues?.parentEmail ?? "",
+      parentPhone: defaultValues?.parentPhone ?? "",
+      notes: defaultValues?.notes ?? "",
     },
   });
 
   const age = watch("swimmerAge");
   const months = watch("swimmerMonths");
+  const lessonTier = watch("lessonTier");
   const isValidAge = typeof age === "number" && age >= 0 && age <= 99;
-  const pricing = isValidAge 
-    ? (instructor === "estee" ? getEsteePricingForAge(age) : getPricingForAge(age))
-    : null;
+  const tier = isValidAge ? effectiveLessonTier(age, lessonTier ?? "auto") : null;
+  const pricing =
+    isValidAge && tier
+      ? instructor === "estee"
+        ? getEsteePricingForTier(tier)
+        : getLukaahPricingForTier(tier)
+      : null;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
@@ -75,6 +85,41 @@ export function StepSwimmerInfo({ instructor, defaultValues, onSubmit, onBack }:
           />
         </div>
       )}
+
+        <div className="mt-8 rounded-2xl border border-black/8 bg-white px-5 py-4 shadow-sm">
+          <p className="font-ui text-xs font-semibold uppercase tracking-[0.18em] text-[#86868B]">
+            Lesson length
+          </p>
+          <p className="mt-1 font-ui text-sm leading-relaxed text-[#86868B]">
+            By default we use age: <strong className="text-[#1D1D1F]">0–2</strong> → 15-minute infant lessons,{" "}
+            <strong className="text-[#1D1D1F]">3+</strong> → 30-minute standard. Override only if you need the other
+            length.
+          </p>
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            {(
+              [
+                { v: "auto" as const, label: "Auto (from age)" },
+                { v: "infant" as const, label: "Infant (15 min)" },
+                { v: "standard" as const, label: "Standard (30 min)" },
+              ]
+            ).map((opt) => (
+              <label
+                key={opt.v}
+                className={`flex cursor-pointer items-center gap-2 rounded-full border px-4 py-2.5 font-ui text-sm transition-colors ${
+                  (lessonTier ?? "auto") === opt.v
+                    ? "border-ocean-deep bg-ocean-surf/50 text-ocean-deep"
+                    : "border-black/10 bg-[#F5F5F7] text-[#1D1D1F] hover:border-black/20"
+                }`}
+              >
+                <input type="radio" value={opt.v} className="sr-only" {...register("lessonTier")} />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+          {errors.lessonTier && (
+            <p className="mt-2 text-sm text-error">{String(errors.lessonTier.message)}</p>
+          )}
+        </div>
 
         {pricing && (
           <div className="mt-8 rounded-2xl px-6 py-5 bg-[#F5F5F7] border border-black/5 text-sm font-ui flex items-center gap-4 shadow-sm">

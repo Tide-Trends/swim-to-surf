@@ -19,6 +19,7 @@ type FormData = z.infer<typeof schema>;
 
 export function ContactForm() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const {
     register,
@@ -29,16 +30,23 @@ export function ContactForm() {
 
   async function onSubmit(data: FormData) {
     setStatus("loading");
+    setErrorMessage(null);
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error();
+      const payload = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setErrorMessage(payload.error || "Something went wrong. Please try again.");
+        setStatus("error");
+        return;
+      }
       setStatus("success");
       reset();
     } catch {
+      setErrorMessage("Network error. Check your connection and try again.");
       setStatus("error");
     }
   }
@@ -58,11 +66,16 @@ export function ContactForm() {
       <Input label="Email" type="email" placeholder="your@email.com" error={errors.email?.message} {...register("email")} />
       <Input label="Phone (optional)" type="tel" placeholder="(385) 000-0000" {...register("phone")} />
       <Textarea label="Message" placeholder="Tell us what's on your mind..." error={errors.message?.message} {...register("message")} />
-      <Button type="submit" loading={status === "loading"} size="lg" className="w-full rounded-full py-6 text-lg bg-[#1D1D1F] text-white hover:bg-black">
+      <Button
+        type="submit"
+        loading={status === "loading"}
+        size="lg"
+        className="w-full rounded-full py-6 text-lg font-bold uppercase tracking-wider"
+      >
         Send Message
       </Button>
-      {status === "error" && (
-        <p className="text-error text-sm font-ui text-center">Something went wrong. Please try again or email us directly.</p>
+      {status === "error" && errorMessage && (
+        <p className="text-center font-ui text-sm text-error">{errorMessage}</p>
       )}
     </form>
   );

@@ -15,7 +15,8 @@ const base =
   "inline-flex items-center justify-center font-ui font-medium rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D1D1F] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer tracking-wide";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-[#1D1D1F] text-white hover:bg-black shadow-sm hover:shadow-lg hover:-translate-y-0.5",
+  primary:
+    "bg-gradient-to-b from-white to-[#f3fcff] text-[#08384b] border border-[#08384b]/15 shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_12px_28px_rgba(6,75,96,0.16),0_22px_48px_rgba(34,211,238,0.16)] hover:-translate-y-0.5 hover:bg-gradient-to-b hover:from-white hover:to-[#e9f8ff] hover:shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_16px_34px_rgba(6,75,96,0.18),0_28px_58px_rgba(34,211,238,0.18)] active:translate-y-0 active:scale-[0.99]",
   secondary: "bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED]",
   outline: "border border-black/10 text-[#1D1D1F] hover:border-black/30 bg-white",
   ghost: "text-[#1D1D1F] hover:bg-[#F5F5F7]",

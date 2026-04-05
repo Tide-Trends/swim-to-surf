@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "./ui/button";
 
 export function Nav() {
   const pathname = usePathname();
@@ -46,7 +45,7 @@ export function Nav() {
           <Link
             href="/"
             className={`text-xl font-semibold tracking-tight transition-opacity hover:opacity-70 ${
-              navStyleActive ? "text-ocean-deep" : "text-white"
+              navStyleActive ? "text-ocean-deep" : "text-dark"
             }`}
             onClick={() => setMobileMenuOpen(false)}
           >
@@ -60,22 +59,19 @@ export function Nav() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`relative py-1 transition-colors hover:opacity-70 ${
-                    pathname === link.href ? (navStyleActive ? "text-ocean-mid" : "text-white opacity-100") : (navStyleActive ? "text-dark/80" : "text-white/80")
+                  className={`relative py-1 transition-colors hover:text-ocean-deep ${
+                    pathname === link.href ? (navStyleActive ? "text-ocean-deep" : "text-ocean-deep opacity-100") : (navStyleActive ? "text-dark/90" : "text-dark/85")
                   }`}
                 >
                   {link.label}
                 </Link>
               ))}
             </div>
-            <Link href="/book">
-              <Button 
-                variant={navStyleActive ? "primary" : "outline"} 
-                size="sm" 
-                className="rounded-full px-6 font-semibold border-none"
-              >
-                Book Lesson
-              </Button>
+            <Link
+              href="/book"
+              className="btn-cta-primary rounded-full px-6 py-2.5 text-sm font-ui font-bold uppercase tracking-wider shadow-[0_10px_24px_rgba(6,75,96,0.16)]"
+            >
+              Book lesson
             </Link>
           </div>
 
@@ -86,12 +82,12 @@ export function Nav() {
             aria-label="Toggle Menu"
           >
             <span
-              className={`block w-6 h-[1.5px] transition-transform duration-300 ${navStyleActive ? 'bg-ocean-deep' : 'bg-white'} ${
+              className={`block w-6 h-[1.5px] transition-transform duration-300 ${navStyleActive ? 'bg-ocean-deep' : 'bg-dark'} ${
                 mobileMenuOpen ? "rotate-45 translate-y-[1.5px]" : "-translate-y-1"
               }`}
             />
             <span
-              className={`block w-6 h-[1.5px] transition-transform duration-300 ${navStyleActive ? 'bg-ocean-deep' : 'bg-white'} ${
+              className={`block w-6 h-[1.5px] transition-transform duration-300 ${navStyleActive ? 'bg-ocean-deep' : 'bg-dark'} ${
                 mobileMenuOpen ? "-rotate-45 -translate-y-[1.5px]" : "translate-y-1"
               }`}
             />
@@ -133,10 +129,12 @@ export function Nav() {
                 transition={{ delay: links.length * 0.05 }}
                 className="pt-6 border-t border-black/10 mt-4"
               >
-                <Link href="/book" onClick={() => setMobileMenuOpen(false)}>
-                  <Button size="lg" className="w-full rounded-full text-lg bg-black text-white">
-                    Book Your Lesson
-                  </Button>
+                <Link
+                  href="/book"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="btn-cta-primary flex w-full min-h-[3.5rem] items-center justify-center rounded-full text-base font-bold uppercase tracking-wider"
+                >
+                  Book swim lessons
                 </Link>
               </motion.div>
             </div>

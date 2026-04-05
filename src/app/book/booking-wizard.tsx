@@ -4,7 +4,11 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import type { BookingState, ScheduleSelection, SwimmerInfo } from "@/lib/booking-schema";
-import { getPricingForAge, getEsteePricingForAge } from "@/lib/constants";
+import {
+  effectiveLessonTier,
+  getEsteePricingForTier,
+  getLukaahPricingForTier,
+} from "@/lib/constants";
 import { StepInstructor } from "@/components/booking/step-instructor";
 import { StepSwimmerInfo } from "@/components/booking/step-swimmer-info";
 import { StepSchedule } from "@/components/booking/step-schedule";
@@ -14,7 +18,7 @@ import { BookingSuccess } from "@/components/booking/booking-success";
 const steps = ["Instructor", "Swimmer", "Schedule", "Confirm"];
 
 const quickFaqs = [
-  { q: "What age groups do you teach?", a: "We teach all ages, from newborns to adults (0-99 years). Under 3 years get 15-minute lessons, 3+ get 30 minutes." },
+  { q: "What age groups do you teach?", a: "We teach all ages, from newborns to adults (0–99). Ages 0–2 use 15-minute infant lessons; ages 3+ use 30-minute standard lessons (you can override on the swimmer step if needed)." },
   { q: "How does booking with Lukaah work?", a: "Choose one time and it repeats Monday-Friday for one week only (5 total lessons)." },
   { q: "How does booking with Estee work?", a: "Choose one weekly slot (Wednesday or Thursday) for the month (4 lessons), with optional second weekly slot (8 lessons)." },
   { q: "Do you offer group lessons?", a: "No. We believe private, 1-on-1 focus is the only way to build real confidence and skill quickly." },
@@ -66,9 +70,8 @@ export function BookingWizard() {
     setSubmitting(true);
 
     const isEstee = state.instructor === "estee";
-    const pricing = isEstee 
-      ? getEsteePricingForAge(state.swimmerInfo.swimmerAge) 
-      : getPricingForAge(state.swimmerInfo.swimmerAge);
+    const tier = effectiveLessonTier(state.swimmerInfo.swimmerAge, state.swimmerInfo.lessonTier ?? "auto");
+    const pricing = isEstee ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
     let totalLessons: number;
     let price: number;
 
@@ -99,7 +102,9 @@ export function BookingWizard() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) {
+        throw new Error(typeof data.error === "string" ? data.error : `Booking failed (${res.status})`);
+      }
 
       if (data.url && data.url.includes("checkout.stripe.com")) {
         window.location.href = data.url;
@@ -111,9 +116,10 @@ export function BookingWizard() {
     } catch (err) {
       console.error("Booking failed:", err);
       const msg = err instanceof Error ? err.message : "Something went wrong";
-      alert(msg.includes("Invalid API Key") 
-        ? "Card payments are temporarily unavailable. Please use Venmo or Cash instead." 
-        : msg
+      alert(
+        msg.includes("Invalid API Key")
+          ? "Card payments are temporarily unavailable. Please use Venmo or Cash instead."
+          : msg
       );
     } finally {
       setSubmitting(false);
@@ -121,7 +127,9 @@ export function BookingWizard() {
   }
 
   if (bookingId && state.swimmerInfo && state.schedule && state.instructor) {
-    const pricing = getPricingForAge(state.swimmerInfo.swimmerAge);
+    const tier = effectiveLessonTier(state.swimmerInfo.swimmerAge, state.swimmerInfo.lessonTier ?? "auto");
+    const pricing =
+      state.instructor === "estee" ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
     return (
       <BookingSuccess
         bookingId={bookingId}
@@ -155,7 +163,7 @@ export function BookingWizard() {
                 </motion.div>
               </AnimatePresence>
             </h1>
-            <button onClick={() => window.location.href = '/'} className="text-sm font-ui uppercase tracking-widest text-black/50 hover:text-black">
+            <button onClick={() => window.location.href = '/'} className="text-sm font-ui uppercase tracking-widest text-black/70 hover:text-black">
               Cancel
             </button>
           </div>
@@ -198,6 +206,7 @@ export function BookingWizard() {
                 <StepSchedule
                   instructor={state.instructor}
                   swimmerAge={state.swimmerInfo.swimmerAge}
+                  lessonTier={state.swimmerInfo.lessonTier ?? "auto"}
                   onSelect={setSchedule}
                   onBack={goBack}
                 />

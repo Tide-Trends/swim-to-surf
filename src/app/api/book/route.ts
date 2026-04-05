@@ -4,6 +4,18 @@ import Stripe from "stripe";
 import { Resend } from "resend";
 import { getPrepEmailContent } from "@/lib/email-templates";
 import type { ScheduleSelection } from "@/lib/booking-schema";
+import { formatLessonTimeHm, lessonLocalToUtcIso } from "@/lib/timezone";
+import {
+  effectiveLessonTier,
+  getEsteePricingForTier,
+  getLukaahPricingForTier,
+  formatPrice,
+} from "@/lib/constants";
+import {
+  esteeProposalConflicts,
+  lukaahProposalConflicts,
+  type BookingSlotRow,
+} from "@/lib/booking-slots";
 
 const LUKAAH_EMAIL = process.env.ADMIN_EMAIL || "lukaah.marlowe@gmail.com";
 const ESTEE_EMAIL = "esteemarlowe@gmail.com";
@@ -15,11 +27,7 @@ function getAdminEmail(instructor: string): string {
 
 /** Generate an .ics calendar event URL */
 function buildCalendarLink(title: string, startDate: string, time: string, durationMin: number): string {
-  // Parse the date and time
-  const [h, m] = time.split(":").map(Number);
-  const d = new Date(startDate + "T12:00:00");
-  d.setHours(h, m, 0, 0);
-
+  const d = lessonLocalToUtcIso(startDate, time);
   const start = d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
   const endDate = new Date(d.getTime() + durationMin * 60000);
   const end = endDate.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
@@ -47,31 +55,37 @@ function computeScheduleEmailFields(
 
   if (schedule.type === "weekly") {
     const time24 = schedule.time;
-    const timeFormatted = formatTime(time24);
+    const timeFormatted = formatLessonTimeHm(time24);
     const weekStart = schedule.weekStart;
     scheduleText = `Monday – Friday at ${timeFormatted}`;
     specificDays = `Week of ${weekStart} (Mon – Fri)`;
     calendarLink = buildCalendarLink(`🏊 Swim Lesson with ${instructorName}`, weekStart, time24, priceInfo.duration);
   } else {
     const dayName = schedule.primaryDay.charAt(0).toUpperCase() + schedule.primaryDay.slice(1);
-    const timeFormatted = formatTime(schedule.primaryTime);
+    const timeFormatted = formatLessonTimeHm(schedule.primaryTime);
     scheduleText = `Every ${dayName} at ${timeFormatted}`;
     specificDays = `${schedule.month} · Every ${dayName}`;
 
     if (schedule.secondDay && schedule.secondDayTime) {
       const otherDay = schedule.primaryDay === "wednesday" ? "Thursday" : "Wednesday";
-      const otherTimeFormatted = formatTime(schedule.secondDayTime);
+      const otherTimeFormatted = formatLessonTimeHm(schedule.secondDayTime);
       scheduleText += ` + ${otherDay} at ${otherTimeFormatted}`;
       specificDays += ` & ${otherDay}`;
     }
 
-    const [year, month] = schedule.month.split("-");
-    const firstDay = new Date(Number(year), Number(month) - 1, 1);
+    const [year, monthNum] = schedule.month.split("-").map(Number);
     const targetDow = schedule.primaryDay === "wednesday" ? 3 : 4;
-    while (firstDay.getDay() !== targetDow) firstDay.setDate(firstDay.getDate() + 1);
+    const daysInMonth = new Date(Date.UTC(year, monthNum, 0)).getUTCDate();
+    let firstLessonYmd = `${year}-${String(monthNum).padStart(2, "0")}-01`;
+    for (let dom = 1; dom <= daysInMonth; dom++) {
+      if (new Date(Date.UTC(year, monthNum - 1, dom)).getUTCDay() === targetDow) {
+        firstLessonYmd = `${year}-${String(monthNum).padStart(2, "0")}-${String(dom).padStart(2, "0")}`;
+        break;
+      }
+    }
     calendarLink = buildCalendarLink(
       `🏊 Swim Lesson with ${instructorName}`,
-      firstDay.toISOString().split("T")[0],
+      firstLessonYmd,
       schedule.primaryTime,
       priceInfo.duration
     );
@@ -265,7 +279,22 @@ async function sendBookingEmails(args: {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { instructor, swimmerInfo, schedule, priceInfo, paymentMethod } = body;
+    const { instructor, swimmerInfo, schedule, priceInfo, paymentMethod } = body as {
+      instructor: "lukaah" | "estee";
+      swimmerInfo: {
+        swimmerName: string;
+        swimmerAge: number;
+        swimmerMonths?: number;
+        lessonTier?: "auto" | "infant" | "standard";
+        parentName?: string;
+        parentEmail?: string;
+        parentPhone?: string;
+        notes?: string;
+      };
+      schedule: ScheduleSelection;
+      priceInfo: { duration: number; price: number; totalLessons: number };
+      paymentMethod: string;
+    };
 
     const host = req.headers.get("host") || "localhost:3000";
     const protocol = host.includes("localhost") ? "http" : "https";
@@ -286,9 +315,87 @@ export async function POST(req: Request) {
 
     let bookingId = crypto.randomUUID();
 
+    const tier = effectiveLessonTier(swimmerInfo.swimmerAge, swimmerInfo.lessonTier ?? "auto");
+    const basePricing =
+      instructor === "estee" ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
+
+    let expectedLessons: number;
+    let expectedPrice: number;
+    if (schedule.type === "weekly") {
+      expectedLessons = 5;
+      expectedPrice = basePricing.price;
+    } else {
+      expectedLessons = schedule.secondDay ? 8 : 4;
+      expectedPrice = schedule.secondDay ? basePricing.price * 2 : basePricing.price;
+    }
+
+    if (basePricing.duration !== priceInfo.duration || expectedLessons !== priceInfo.totalLessons) {
+      return NextResponse.json(
+        { error: "Lesson length does not match swimmer age and options. Please refresh and try again." },
+        { status: 400 }
+      );
+    }
+    if (Math.abs(expectedPrice - priceInfo.price) > 1) {
+      return NextResponse.json(
+        { error: `Price mismatch (expected ${formatPrice(expectedPrice)}). Please refresh and try again.` },
+        { status: 400 }
+      );
+    }
+
     // 1. Create booking in Supabase (if configured)
     if (hasSupabase) {
       const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+
+      if (schedule.type === "weekly") {
+        const { data: existing, error: exErr } = await supabase
+          .from("bookings")
+          .select("lesson_time, week_start")
+          .eq("instructor", "lukaah")
+          .eq("week_start", schedule.weekStart)
+          .eq("status", "confirmed");
+        if (exErr) {
+          console.error("Slot check error:", exErr);
+          return NextResponse.json({ error: "Could not verify availability. Try again." }, { status: 500 });
+        }
+        if (lukaahProposalConflicts((existing || []) as BookingSlotRow[], schedule.weekStart, schedule.time)) {
+          return NextResponse.json(
+            { error: "That time slot was just booked for this week. Please pick another time." },
+            { status: 409 }
+          );
+        }
+      } else {
+        const { data: existing, error: exErr } = await supabase
+          .from("bookings")
+          .select("lesson_time, second_day_time, day_of_week")
+          .eq("instructor", "estee")
+          .eq("month", schedule.month)
+          .eq("status", "confirmed");
+        if (exErr) {
+          console.error("Slot check error:", exErr);
+          return NextResponse.json({ error: "Could not verify availability. Try again." }, { status: 500 });
+        }
+        if (esteeProposalConflicts((existing || []) as BookingSlotRow[], schedule)) {
+          return NextResponse.json(
+            { error: "One of those times is no longer available this month. Please choose different times." },
+            { status: 409 }
+          );
+        }
+      }
+
+      const tierNote =
+        swimmerInfo.lessonTier && swimmerInfo.lessonTier !== "auto"
+          ? `Lesson tier: ${tier} (manual: ${swimmerInfo.lessonTier})`
+          : "";
+      const notesCombined = [
+        swimmerInfo.swimmerAge === 0 && typeof swimmerInfo.swimmerMonths === "number"
+          ? `Age detail: ${swimmerInfo.swimmerMonths} months`
+          : "",
+        tierNote,
+        swimmerInfo.notes || "",
+      ]
+        .filter(Boolean)
+        .join(" | ") || null;
+
       const { data: booking, error: dbError } = await supabase
         .from("bookings")
         .insert({
@@ -299,27 +406,20 @@ export async function POST(req: Request) {
           parent_name: swimmerInfo.parentName || "Adult Swimmer",
           parent_email: swimmerInfo.parentEmail || null,
           parent_phone: swimmerInfo.parentPhone || null,
-          notes: [
-            swimmerInfo.swimmerAge === 0 && typeof swimmerInfo.swimmerMonths === "number"
-              ? `Age detail: ${swimmerInfo.swimmerMonths} months`
-              : "",
-            swimmerInfo.notes || "",
-          ]
-            .filter(Boolean)
-            .join(" | ") || null,
+          notes: notesCombined,
           status: "confirmed",
           price: priceInfo.price,
           total_lessons: priceInfo.totalLessons,
-          month: schedule.month || null,
-          week_start: schedule.weekStart || null,
+          month: schedule.type === "monthly" ? schedule.month : null,
+          week_start: schedule.type === "weekly" ? schedule.weekStart : null,
           day_of_week:
             schedule.type === "weekly"
               ? ["monday", "tuesday", "wednesday", "thursday", "friday"]
               : schedule.secondDay
                 ? [schedule.primaryDay, schedule.primaryDay === "wednesday" ? "thursday" : "wednesday"]
                 : [schedule.primaryDay],
-          lesson_time: schedule.time || schedule.primaryTime,
-          second_day_time: schedule.secondDayTime || null,
+          lesson_time: schedule.type === "weekly" ? schedule.time : schedule.primaryTime,
+          second_day_time: schedule.type === "monthly" ? schedule.secondDayTime || null : null,
         })
         .select("id")
         .single();
@@ -424,9 +524,3 @@ export async function POST(req: Request) {
   }
 }
 
-function formatTime(time24: string): string {
-  const [h, m] = time24.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  const h12 = h % 12 || 12;
-  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
-}

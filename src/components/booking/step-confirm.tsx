@@ -3,7 +3,14 @@
 import { useState, useRef } from "react";
 import { format } from "date-fns";
 import type { SwimmerInfo, ScheduleSelection } from "@/lib/booking-schema";
-import { getPricingForAge, formatPrice, INSTRUCTORS, PRICING } from "@/lib/constants";
+import {
+  effectiveLessonTier,
+  formatPrice,
+  getEsteePricingForTier,
+  getLukaahPricingForTier,
+  INSTRUCTORS,
+} from "@/lib/constants";
+import { formatLessonTimeHm, SITE_TIMEZONE_LABEL } from "@/lib/timezone";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -58,7 +65,9 @@ export function StepConfirm({ instructor, swimmerInfo, schedule, onConfirm, onBa
   const [policyAgreed, setPolicyAgreed] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inst = INSTRUCTORS[instructor];
-  const pricing = getPricingForAge(swimmerInfo.swimmerAge);
+  const tier = effectiveLessonTier(swimmerInfo.swimmerAge, swimmerInfo.lessonTier ?? "auto");
+  const pricing =
+    instructor === "estee" ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
 
   let scheduleLabel: string;
   let totalLessons: number;
@@ -66,23 +75,23 @@ export function StepConfirm({ instructor, swimmerInfo, schedule, onConfirm, onBa
 
   if (schedule.type === "weekly") {
     const weekDate = new Date(schedule.weekStart + "T12:00:00");
-    const timeLabel = format(new Date(`2000-01-01T${schedule.time}`), "h:mm a");
-    scheduleLabel = `Mon – Fri at ${timeLabel}, week of ${format(weekDate, "MMM d, yyyy")}`;
+    const timeLabel = formatLessonTimeHm(schedule.time);
+    scheduleLabel = `Mon – Fri at ${timeLabel} (${SITE_TIMEZONE_LABEL}), week of ${format(weekDate, "MMM d, yyyy")}`;
     totalLessons = 5;
     price = pricing.price;
   } else {
     const [y, m] = schedule.month.split("-");
     const monthDate = new Date(Number(y), Number(m) - 1, 1);
-    const timeLabel = format(new Date(`2000-01-01T${schedule.primaryTime}`), "h:mm a");
-    const monthlyPrice = PRICING.esteeMonthly.price;
+    const timeLabel = formatLessonTimeHm(schedule.primaryTime);
+    const monthlyPrice = pricing.price;
     if (schedule.secondDay && schedule.secondDayTime) {
       const otherDay = schedule.primaryDay === "wednesday" ? "Thursday" : "Wednesday";
-      const secondLabel = format(new Date(`2000-01-01T${schedule.secondDayTime}`), "h:mm a");
-      scheduleLabel = `${capitalize(schedule.primaryDay)} at ${timeLabel} + ${otherDay} at ${secondLabel}, ${format(monthDate, "MMMM yyyy")}`;
+      const secondLabel = formatLessonTimeHm(schedule.secondDayTime);
+      scheduleLabel = `${capitalize(schedule.primaryDay)} at ${timeLabel} + ${otherDay} at ${secondLabel}, ${format(monthDate, "MMMM yyyy")} (${SITE_TIMEZONE_LABEL})`;
       totalLessons = 8;
       price = monthlyPrice * 2;
     } else {
-      scheduleLabel = `Every ${capitalize(schedule.primaryDay)} at ${timeLabel}, ${format(monthDate, "MMMM yyyy")}`;
+      scheduleLabel = `Every ${capitalize(schedule.primaryDay)} at ${timeLabel}, ${format(monthDate, "MMMM yyyy")} (${SITE_TIMEZONE_LABEL})`;
       totalLessons = 4;
       price = monthlyPrice;
     }

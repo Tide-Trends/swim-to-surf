@@ -19,11 +19,12 @@ export function Footer() {
             <p className="text-ocean-light/70 max-w-sm mb-8 leading-relaxed">
               Empowering swimmers from 0 to 99 with private, one-on-one lessons in American Fork. Water safety and confidence taught with a smile.
             </p>
-            <div className="flex space-x-4">
-              <Link href="/book">
-                <button className="bg-sunshine/20 hover:bg-sunshine/30 transition-colors text-sunshine text-sm font-medium py-2 px-6 rounded-full border border-sunshine/30">
-                  Book Now
-                </button>
+            <div className="flex flex-wrap gap-4">
+              <Link
+                href="/book"
+                className="btn-cta-primary inline-flex min-h-12 items-center justify-center rounded-full px-8 py-3 text-sm font-bold uppercase tracking-wider"
+              >
+                Book swim lessons
               </Link>
             </div>
           </div>
