@@ -104,7 +104,7 @@ export function InstructorProfilesEditor({ editor }: { editor: InstructorSlug })
           onChange={(e) => patchField("heroImage", e.target.value)}
         />
         <Textarea
-          label="Qualifications (one per line)"
+          label="Training and experience (one short paragraph or sentence per line)"
           value={profile.qualifications.join("\n")}
           onChange={(e) => patchQualifications(e.target.value)}
           className="min-h-[180px]"

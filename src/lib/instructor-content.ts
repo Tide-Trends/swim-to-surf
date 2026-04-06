@@ -10,7 +10,7 @@ export interface InstructorProfile {
   idealFor: string;
   scheduleSummary: string;
   heroImage: string;
-  /** Credentials & experience — shown as a dedicated section on the profile page. */
+  /** Training and experience lines (shown on the profile under the bio). */
   qualifications: string[];
 }
 
@@ -30,12 +30,12 @@ export const DEFAULT_PROFILES: Record<InstructorSlug, InstructorProfile> = {
     scheduleSummary: "Wednesday & Thursday, 8:00 AM–11:30 AM & 12:30 PM–4:00 PM",
     heroImage: "/instructors/estee.jpeg",
     qualifications: [
-      "Water Safety Instructor (WSI) certified",
-      "CPR, first aid, and medical assisting background — safety and calm under pressure",
-      "Eight years teaching private swim lessons across ages and skill levels",
-      "Former behavioral technician supporting children with special needs and sensory profiles",
-      "Professional nanny for infants through school-age kids; patient, warm, and consistent",
-      "Third-grade classroom aide — skilled at clear instruction, encouragement, and routine",
+      "Water Safety Instructor (WSI) certified.",
+      "CPR, first aid, and medical assisting background. That training shows up as steady, safety-first habits in every lesson.",
+      "Eight years of private swim lessons with swimmers of different ages and comfort levels.",
+      "Former behavioral technician for children with special needs and a range of sensory profiles.",
+      "Professional nanny for infants through school-age kids: patient, warm, and consistent day to day.",
+      "Third-grade classroom aide experience, so she’s used to breaking ideas into clear steps and cheering on small wins.",
     ],
   },
   lukaah: {
@@ -53,12 +53,12 @@ export const DEFAULT_PROFILES: Record<InstructorSlug, InstructorProfile> = {
     scheduleSummary: "Monday-Friday, 8:00 AM-11:30 AM",
     heroImage: "/instructors/lukaah.png",
     qualifications: [
-      "CPR and first aid certified through the American Red Cross and American Heart Association",
-      "Water Safety Instructor (WSI) and Red Cross Lifeguard Instructor",
-      "4.5 years lifeguarding; currently manages lifeguard operations at American Fork Recreation Center",
-      "Five years of private swim instruction — structured progress, real confidence in the water",
-      "Medical assistant training — composed, clear communication around health and safety",
-      "PADI Open Water Diver; Molchanovs Wave 1 freediver — deep respect for water, breath, and control",
+      "CPR and first aid certified through the American Red Cross and American Heart Association.",
+      "Water Safety Instructor (WSI) and Red Cross Lifeguard Instructor.",
+      "About four and a half years of lifeguarding, and he currently helps run lifeguard operations at American Fork Recreation Center.",
+      "Five years of private swim instruction focused on structured progress and lasting confidence in the water.",
+      "Medical assistant training, so he’s comfortable with calm, clear communication around health and safety.",
+      "PADI Open Water Diver and Molchanovs Wave 1 freediver, with a deep respect for breath, control, and reading the water.",
     ],
   },
 };

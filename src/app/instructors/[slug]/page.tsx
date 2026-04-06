@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { useParams } from "next/navigation";
 import { DEFAULT_PROFILES, getProfilesFromStorage, type InstructorSlug } from "@/lib/instructor-content";
-import { FadeIn, Parallax } from "@/components/ui/animate";
+import { FadeIn } from "@/components/ui/animate";
 
 export default function InstructorProfilePage() {
   const params = useParams<{ slug: string }>();
@@ -52,6 +52,21 @@ export default function InstructorProfilePage() {
               <div className="space-y-8 text-lg font-body font-light text-[#86868B] leading-relaxed">
                 <p className="text-[#1D1D1F] text-xl md:text-2xl">{profile.shortBio}</p>
                 <p>{profile.longBio}</p>
+                {profile.qualifications.length > 0 && (
+                  <div className="pt-2">
+                    <h3 className="font-display text-2xl md:text-3xl font-medium tracking-tight text-[#1D1D1F] mb-5">
+                      Training and experience
+                    </h3>
+                    <ul className="space-y-3.5 text-[#1D1D1F]/88 text-base md:text-lg leading-relaxed">
+                      {profile.qualifications.map((line) => (
+                        <li key={line.slice(0, 56)} className="flex gap-3 pl-0">
+                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#0077B6]" aria-hidden />
+                          <span>{line}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </FadeIn>
           </div>
@@ -91,36 +106,6 @@ export default function InstructorProfilePage() {
         </div>
       </section>
 
-      {profile.qualifications.length > 0 && (
-        <section className="border-t border-black/5 bg-[#F5F5F7] py-20 md:py-28">
-          <div className="mx-auto max-w-4xl px-6 md:px-8">
-            <FadeIn>
-              <p className="mb-3 font-ui text-[11px] font-semibold uppercase tracking-[0.22em] text-[#86868B]">
-                Trust &amp; training
-              </p>
-              <h2 className="mb-10 font-display text-3xl font-medium tracking-tight text-[#1D1D1F] md:text-4xl md:mb-14">
-                Qualifications &amp; experience
-              </h2>
-              <ul className="grid gap-4 md:gap-5">
-                {profile.qualifications.map((line) => (
-                  <li
-                    key={line.slice(0, 48)}
-                    className="flex gap-4 rounded-2xl border border-black/5 bg-white px-5 py-4 shadow-sm md:px-7 md:py-5"
-                  >
-                    <span
-                      className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#0077B6]"
-                      aria-hidden
-                    />
-                    <span className="font-body text-[15px] leading-relaxed text-[#1D1D1F]/90 md:text-base">
-                      {line}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </FadeIn>
-          </div>
-        </section>
-      )}
     </main>
   );
 }
