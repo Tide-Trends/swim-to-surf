@@ -1,6 +1,54 @@
 # Booking announcement email (free options)
 
-The HTML template here works with **any** tool you use to send. The script uses **[Resend](https://resend.com)** (same as the site). Free tier is typically **3,000 emails/month** — enough for 500+ recipients if you haven’t used the quota elsewhere.
+The HTML template **`announcement.html`** works with **any** tool. Pick one path below.
+
+---
+
+## Gmail SMTP (works without Resend / DNS) — **recommended if you have `swimtosurfemail@gmail.com`**
+
+Google lets you send from that inbox using an **App Password** (not your normal password). Free Gmail has a **rolling limit of about 500 messages per 24 hours** — if your list is ~550, send **~450 today** and the rest **tomorrow** using the sent log.
+
+### One-time setup
+
+1. Open the Google account: [Google Account → Security](https://myaccount.google.com/security).
+2. Enable **2-Step Verification** (required for app passwords).
+3. Go to [App passwords](https://myaccount.google.com/apppasswords), create one for “Mail” / “Other”, copy the **16-character** password.
+
+### Add to `.env.local` (never commit this file)
+
+```env
+GMAIL_USER=swimtosurfemail@gmail.com
+GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx
+```
+
+Spaces in the app password are optional; the script strips them.
+
+### Commands
+
+```bash
+# Preview
+npm run email:announce:gmail -- --dry-run --csv ~/Downloads/cleaned_emails.csv
+
+# Send yourself one test
+npm run email:announce:gmail -- --csv ~/Downloads/cleaned_emails.csv --to you@gmail.com --send
+
+# First batch (~450) + log file so you can resume tomorrow
+npm run email:announce:gmail -- --csv ~/Downloads/cleaned_emails.csv --send --limit 450 --sent-log scripts/email-blast/sent.log
+
+# Next day: same command skips addresses already in sent.log
+npm run email:announce:gmail -- --csv ~/Downloads/cleaned_emails.csv --send --sent-log scripts/email-blast/sent.log
+```
+
+Optional: `--delay-ms 1500` to slow down if Google throttles (default 1400).
+
+- **`send-via-gmail.mjs`** — nodemailer + Gmail SMTP.
+- **`send-announcement.mjs`** — Resend batch API (needs verified domain).
+
+---
+
+## Resend (same as the site)
+
+The script uses **[Resend](https://resend.com)**. Free tier is typically **3,000 emails/month** — enough for 500+ recipients if you’ve verified a domain.
 
 ## Domain on Wix and you can’t add DNS until later?
 

@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "email:announce": "node scripts/email-blast/send-announcement.mjs"
+    "email:announce": "node scripts/email-blast/send-announcement.mjs",
+    "email:announce:gmail": "node scripts/email-blast/send-via-gmail.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -35,6 +36,7 @@
     "@types/react-dom": "^19.1.2",
     "eslint": "^9.24.0",
     "eslint-config-next": "^15.3.1",
+    "nodemailer": "^8.0.4",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.1.3",
     "typescript": "^5.8.3"

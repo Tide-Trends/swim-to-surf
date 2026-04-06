@@ -5,3 +5,7 @@ out/
 build/
 *.tsbuildinfo
 next-env.d.ts
+
+# Local email blast progress (never commit recipient logs)
+scripts/email-blast/sent.log
+scripts/email-blast/*.log
