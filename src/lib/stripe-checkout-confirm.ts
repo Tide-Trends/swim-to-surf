@@ -226,6 +226,87 @@ export async function verifyStripeCheckoutPaid(sessionId: string): Promise<boole
   return session.payment_status === "paid";
 }
 
+export type StripeSessionSyncOutcome = "promoted" | "cancelled" | "pending";
+
+/**
+ * Pulls the latest Checkout session from Stripe and either promotes paid rows,
+ * or cancels pending rows when the session is expired / past expires_at.
+ * Used by the success-page API and by cron — no webhooks required.
+ */
+export async function syncStripeCheckoutSessionFromApi(
+  checkoutSessionId: string,
+  origin: string
+): Promise<StripeSessionSyncOutcome> {
+  const sk = process.env.STRIPE_SECRET_KEY?.trim();
+  if (!sk || sk === "sk_test_placeholder" || sk.length < 20) return "pending";
+
+  const stripe = new Stripe(sk, { apiVersion: "2025-03-31.basil" as Stripe.LatestApiVersion });
+  let session: Stripe.Checkout.Session;
+  try {
+    session = await stripe.checkout.sessions.retrieve(checkoutSessionId);
+  } catch (e) {
+    console.warn("[stripe sync] retrieve failed", checkoutSessionId, e);
+    return "pending";
+  }
+
+  if (session.payment_status === "paid") {
+    const r = await promotePaidCheckoutSession(checkoutSessionId, origin);
+    return r.ok ? "promoted" : "pending";
+  }
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  const expiredByStripe = session.status === "expired";
+  const openPastExpiry =
+    session.status === "open" && session.expires_at != null && session.expires_at < nowSec;
+
+  if (expiredByStripe || openPastExpiry) {
+    await cancelPendingCheckoutSession(checkoutSessionId);
+    return "cancelled";
+  }
+
+  return "pending";
+}
+
+export async function reconcileAllPendingStripeSessions(origin: string): Promise<{
+  sessionCount: number;
+  promoted: number;
+  cancelled: number;
+}> {
+  const supabase = getSupabaseServerClient();
+  if (!supabase) {
+    return { sessionCount: 0, promoted: 0, cancelled: 0 };
+  }
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("stripe_checkout_session_id")
+    .eq("status", "pending_payment")
+    .not("stripe_checkout_session_id", "is", null);
+
+  if (error || !data?.length) {
+    if (error) console.error("[stripe reconcile] select failed", error);
+    return { sessionCount: 0, promoted: 0, cancelled: 0 };
+  }
+
+  const ids = [
+    ...new Set(
+      data
+        .map((r) => r.stripe_checkout_session_id as string | null)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+
+  let promoted = 0;
+  let cancelled = 0;
+  for (const id of ids) {
+    const outcome = await syncStripeCheckoutSessionFromApi(id, origin);
+    if (outcome === "promoted") promoted += 1;
+    if (outcome === "cancelled") cancelled += 1;
+  }
+
+  return { sessionCount: ids.length, promoted, cancelled };
+}
+
 export async function expireStripeCheckoutSession(sessionId: string): Promise<void> {
   const sk = process.env.STRIPE_SECRET_KEY?.trim();
   if (!sk || sk === "sk_test_placeholder" || sk.length < 20) return;

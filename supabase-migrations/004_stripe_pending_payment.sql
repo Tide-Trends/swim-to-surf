@@ -1,4 +1,4 @@
--- Stripe checkout: hold slots as pending_payment until payment succeeds (webhook or verify-session).
+-- Stripe checkout: hold slots as pending_payment until payment succeeds (verify-session or cron reconcile).
 -- Run in Supabase SQL editor after 003_booking_interval_overlaps.sql
 
 ALTER TABLE public.bookings DROP CONSTRAINT IF EXISTS bookings_status_check;

@@ -20,6 +20,17 @@ import { BookingSuccess } from "@/components/booking/booking-success";
 
 const steps = ["Instructor", "Swimmers", "Schedule", "Confirm"];
 
+type VerifySessionResponse = {
+  ok?: boolean;
+  error?: string;
+  bookingIds?: string[];
+  instructor?: "lukaah" | "estee";
+  swimmers?: SwimmerInfo[];
+  schedules?: ScheduleSelection[];
+  customerEmailSent?: boolean;
+  adminEmailSent?: boolean;
+};
+
 const quickFaqs = [
   {
     q: "What age groups do you teach?",
@@ -64,42 +75,52 @@ export function BookingWizard() {
       let cancelled = false;
       setSubmitting(true);
       void (async () => {
+        const maxAttempts = 8;
+        const delaysMs = [0, 400, 800, 1200, 2000, 3000, 4000, 5000];
+
+        const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
         try {
-          const res = await fetch(
-            `/api/book/verify-session?session_id=${encodeURIComponent(sessionId)}`
-          );
-          const data = (await res.json()) as {
-            ok?: boolean;
-            error?: string;
-            bookingIds?: string[];
-            instructor?: "lukaah" | "estee";
-            swimmers?: SwimmerInfo[];
-            schedules?: ScheduleSelection[];
-            customerEmailSent?: boolean;
-            adminEmailSent?: boolean;
-          };
-          if (cancelled) return;
-          if (!res.ok || !data.ok || !data.bookingIds?.length) {
-            alert(
-              typeof data.error === "string"
-                ? data.error
-                : "We couldn’t confirm your payment yet. If checkout finished, wait for your email or contact us with your Stripe receipt."
+          let lastData: VerifySessionResponse | null = null;
+
+          for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            if (cancelled) return;
+            await sleep(delaysMs[attempt] ?? 1500);
+            if (cancelled) return;
+
+            const res = await fetch(
+              `/api/book/verify-session?session_id=${encodeURIComponent(sessionId)}`
             );
-            window.history.replaceState({}, "", "/book");
-            setSubmitting(false);
-            return;
+            const data = (await res.json()) as VerifySessionResponse;
+            lastData = data;
+
+            if (res.ok && data.ok && data.bookingIds?.length) {
+              setState({
+                step: 3,
+                instructor: data.instructor ?? null,
+                swimmers: data.swimmers ?? null,
+                swimmerSchedules: data.schedules ?? null,
+              });
+              setBookingId(data.bookingIds[0]!);
+              setEmailDelivery({
+                customer: Boolean(data.customerEmailSent),
+                admin: Boolean(data.adminEmailSent),
+              });
+              window.history.replaceState({}, "", "/book");
+              return;
+            }
+
+            // Stripe sometimes lags a moment after redirect before payment_status is "paid"
+            if (res.status === 402 && attempt < maxAttempts - 1) continue;
+            break;
           }
-          setState({
-            step: 3,
-            instructor: data.instructor ?? null,
-            swimmers: data.swimmers ?? null,
-            swimmerSchedules: data.schedules ?? null,
-          });
-          setBookingId(data.bookingIds[0]!);
-          setEmailDelivery({
-            customer: Boolean(data.customerEmailSent),
-            admin: Boolean(data.adminEmailSent),
-          });
+
+          if (cancelled) return;
+          alert(
+            typeof lastData?.error === "string"
+              ? lastData.error
+              : "We couldn’t confirm your payment yet. If checkout finished, you’ll get an email within a few minutes — or contact us with your Stripe receipt."
+          );
           window.history.replaceState({}, "", "/book");
         } catch {
           if (!cancelled) {

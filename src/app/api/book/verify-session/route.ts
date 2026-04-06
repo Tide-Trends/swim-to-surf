@@ -16,7 +16,8 @@ function requestOrigin(req: Request): string {
 
 /**
  * Called from the booking success page after Stripe redirects with ?session_id=...
- * Confirms payment with Stripe, promotes pending rows to confirmed, sends emails (idempotent with webhook).
+ * Confirms payment by retrieving the Checkout session from Stripe, then promotes
+ * pending rows and sends emails. Idempotent. Webhooks are not required.
  */
 export async function GET(req: Request) {
   const sessionId = new URL(req.url).searchParams.get("session_id")?.trim();
