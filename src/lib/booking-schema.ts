@@ -105,7 +105,7 @@ export interface BookingState {
   step: number;
   instructor: "lukaah" | "estee" | null;
   swimmers: SwimmerInfo[] | null;
-  /** One schedule per swimmer (same week/month/day options; each may pick a different time). */
+  /** One schedule per swimmer (week/month/times can differ per swimmer). */
   swimmerSchedules: ScheduleSelection[] | null;
 }
 

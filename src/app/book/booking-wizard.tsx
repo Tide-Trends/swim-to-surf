@@ -13,8 +13,9 @@ import {
   unitPriceCentsForSwimmerSchedule,
 } from "@/lib/constants";
 import { StepInstructor } from "@/components/booking/step-instructor";
-import { StepSwimmers } from "@/components/booking/step-swimmers";
+import { StepSwimmers, MAX_SWIMMERS_PER_BOOKING } from "@/components/booking/step-swimmers";
 import { StepSchedule } from "@/components/booking/step-schedule";
+import { Button } from "@/components/ui/button";
 import { StepConfirm } from "@/components/booking/step-confirm";
 import { BookingSuccess } from "@/components/booking/booking-success";
 
@@ -38,11 +39,11 @@ const quickFaqs = [
   },
   {
     q: "How does booking with Lukaah work?",
-    a: "Pick one summer week, then each swimmer chooses their own daily start time (same time Mon–Fri for that swimmer). 5 lessons per swimmer for the week.",
+    a: "You add one swimmer at a time. Each swimmer gets their own summer week and daily start time (Mon–Fri). Different swimmers can pick different weeks on the same booking.",
   },
   {
     q: "How does booking with Estee work?",
-    a: "Pick the month and primary weekday, then each swimmer picks their own start times (and optional second weekday). 4 or 8 lessons per swimmer depending on whether you add the second day.",
+    a: "You add one swimmer at a time. Each swimmer picks their own month, weekday pattern, times, and optional second day. 4 or 8 lessons that month depending on the second day. Patterns can differ between swimmers.",
   },
   {
     q: "Do you offer group lessons?",
@@ -54,6 +55,13 @@ const quickFaqs = [
   },
 ];
 
+function totalLessonsInBooking(schedules: ScheduleSelection[]): number {
+  return schedules.reduce((sum, sch) => {
+    if (sch.type === "weekly") return sum + 5;
+    return sum + (sch.secondDay && sch.secondDayTime ? 8 : 4);
+  }, 0);
+}
+
 export function BookingWizard() {
   const searchParams = useSearchParams();
 
@@ -63,6 +71,11 @@ export function BookingWizard() {
     swimmers: null,
     swimmerSchedules: null,
   });
+
+  /** Sequential booking: one swimmer → schedule → optional repeat */
+  const [seqSwimmers, setSeqSwimmers] = useState<SwimmerInfo[]>([]);
+  const [seqSchedules, setSeqSchedules] = useState<ScheduleSelection[]>([]);
+  const [postSchedulePrompt, setPostSchedulePrompt] = useState(false);
 
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [emailDelivery, setEmailDelivery] = useState<{ customer: boolean; admin: boolean } | null>(null);
@@ -140,27 +153,79 @@ export function BookingWizard() {
 
     const inst = searchParams.get("instructor");
     if (inst === "lukaah" || inst === "estee") {
-      setState((s) => ({ ...s, instructor: inst, step: 1 }));
+      setSeqSwimmers([]);
+      setSeqSchedules([]);
+      setPostSchedulePrompt(false);
+      setState((s) => ({ ...s, instructor: inst, step: 1, swimmers: null, swimmerSchedules: null }));
     }
   }, [searchParams]);
 
   function selectInstructor(id: "lukaah" | "estee") {
-    setState((s) => ({ ...s, instructor: id, step: 1 }));
+    setSeqSwimmers([]);
+    setSeqSchedules([]);
+    setPostSchedulePrompt(false);
+    setState({ step: 1, instructor: id, swimmers: null, swimmerSchedules: null });
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   }
 
-  function setSwimmers(swimmers: SwimmerInfo[]) {
-    setState((s) => ({ ...s, swimmers, step: 2 }));
+  function appendSwimmerForSchedule(swimmers: SwimmerInfo[]) {
+    const next = swimmers[0]!;
+    setSeqSwimmers((prev) => [...prev, next]);
+    setPostSchedulePrompt(false);
+    setState((s) => ({ ...s, step: 2 }));
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   }
 
-  function setSwimmerSchedules(swimmerSchedules: ScheduleSelection[]) {
-    setState((s) => ({ ...s, swimmerSchedules, step: 3 }));
+  function onScheduleStepComplete(newSchedules: ScheduleSelection[]) {
+    setSeqSchedules((prev) => [...prev, ...newSchedules]);
+    setPostSchedulePrompt(true);
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   }
 
-  function goBack() {
-    setState((s) => ({ ...s, step: Math.max(0, s.step - 1) }));
+  function scheduleStepBack() {
+    setSeqSwimmers((prev) => prev.slice(0, -1));
+    setPostSchedulePrompt(false);
+    setState((s) => ({ ...s, step: 1 }));
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+  }
+
+  function swimmerStepBack() {
+    if (seqSwimmers.length === 0) {
+      setState((s) => ({ ...s, step: 0, instructor: null }));
+      setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+      return;
+    }
+    setPostSchedulePrompt(true);
+    setState((s) => ({ ...s, step: 2 }));
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+  }
+
+  function postScheduleStepBack() {
+    setSeqSchedules((prev) => prev.slice(0, -1));
+    setPostSchedulePrompt(false);
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+  }
+
+  function addAnotherSwimmerFromPrompt() {
+    setPostSchedulePrompt(false);
+    setState((s) => ({ ...s, step: 1 }));
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+  }
+
+  function continueToReview() {
+    setPostSchedulePrompt(false);
+    setState((s) => ({
+      ...s,
+      step: 3,
+      swimmers: seqSwimmers,
+      swimmerSchedules: seqSchedules,
+    }));
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+  }
+
+  function confirmStepBack() {
+    setPostSchedulePrompt(true);
+    setState((s) => ({ ...s, step: 2 }));
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   }
 
@@ -170,9 +235,7 @@ export function BookingWizard() {
 
     const swimmers = state.swimmers;
     const schedules = state.swimmerSchedules;
-    const firstSch = schedules[0]!;
-    const totalLessons =
-      firstSch.type === "weekly" ? 5 : firstSch.secondDay && firstSch.secondDayTime ? 8 : 4;
+    const totalLessons = totalLessonsInBooking(schedules);
 
     const price = swimmers.reduce(
       (sum, sw, i) => sum + unitPriceCentsForSwimmerSchedule(state.instructor!, sw, schedules[i]!),
@@ -253,15 +316,16 @@ export function BookingWizard() {
             <h1 className="text-xl md:text-2xl font-display font-medium tracking-tight">
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={state.step}
+                  key={`${state.step}-${postSchedulePrompt}`}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 10 }}
                   transition={{ duration: 0.3 }}
                 >
                   {state.step === 0 && "Choose an instructor"}
-                  {state.step === 1 && "Swimmer details"}
-                  {state.step === 2 && "Select a schedule"}
+                  {state.step === 1 && (seqSwimmers.length === 0 ? "First swimmer" : "Next swimmer")}
+                  {state.step === 2 && postSchedulePrompt && "Anyone else?"}
+                  {state.step === 2 && !postSchedulePrompt && "Select a schedule"}
                   {state.step === 3 && "Review and confirm"}
                 </motion.div>
               </AnimatePresence>
@@ -279,7 +343,10 @@ export function BookingWizard() {
               <div key={label} className="flex-1">
                 <div
                   className={`h-1 rounded-full transition-all duration-700 ${
-                    i <= state.step ? "bg-[#1D1D1F]" : "bg-[#E8E8ED]"
+                    i <=
+                    (state.step === 3 ? 3 : state.step === 2 && postSchedulePrompt ? 2 : state.step)
+                      ? "bg-[#1D1D1F]"
+                      : "bg-[#E8E8ED]"
                   }`}
                 />
               </div>
@@ -292,7 +359,7 @@ export function BookingWizard() {
         <div className="mx-auto max-w-4xl flex flex-col h-full">
           <AnimatePresence mode="wait">
             <motion.div
-              key={state.step}
+              key={`${state.step}-${postSchedulePrompt}`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
@@ -303,24 +370,65 @@ export function BookingWizard() {
               {state.step === 1 && (
                 <StepSwimmers
                   instructor={state.instructor || "lukaah"}
-                  defaultPrimary={state.swimmers?.[0]}
-                  defaultExtras={
-                    state.swimmers && state.swimmers.length > 1
-                      ? state.swimmers.slice(1).map((s) => ({
-                          swimmerName: s.swimmerName,
-                          swimmerAge: s.swimmerAge,
-                          swimmerMonths: s.swimmerMonths,
-                          lessonTier: s.lessonTier ?? "auto",
-                          notes: s.notes,
-                        }))
-                      : undefined
-                  }
-                  onSubmit={setSwimmers}
-                  onBack={goBack}
+                  sequential
+                  sequentialRole={seqSwimmers.length === 0 ? "first" : "additional"}
+                  primaryContact={seqSwimmers[0]}
+                  onSubmit={appendSwimmerForSchedule}
+                  onBack={swimmerStepBack}
                 />
               )}
-              {state.step === 2 && state.instructor && state.swimmers?.length && (
-                <StepSchedule instructor={state.instructor} swimmers={state.swimmers} onSelect={setSwimmerSchedules} onBack={goBack} />
+              {state.step === 2 &&
+                !postSchedulePrompt &&
+                state.instructor &&
+                seqSwimmers.length > 0 && (
+                  <StepSchedule
+                    instructor={state.instructor}
+                    swimmers={[seqSwimmers[seqSwimmers.length - 1]!]}
+                    committedSwimmers={seqSwimmers.slice(0, -1)}
+                    committedSchedules={seqSchedules}
+                    onSelect={onScheduleStepComplete}
+                    onBack={scheduleStepBack}
+                  />
+                )}
+              {state.step === 2 && postSchedulePrompt && (
+                <div className="space-y-8">
+                  <div>
+                    <h3 className="font-display text-3xl font-medium tracking-tight text-[#1D1D1F] mb-3">
+                      Add another swimmer?
+                    </h3>
+                    <p className="text-[#86868B] font-body text-sm leading-relaxed max-w-xl">
+                      Same booking and contact info. You’ll enter their details, then choose their week or month and
+                      times.
+                    </p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="rounded-full py-6 order-3 sm:order-1"
+                      onClick={postScheduleStepBack}
+                    >
+                      Edit last schedule
+                    </Button>
+                    {seqSwimmers.length < MAX_SWIMMERS_PER_BOOKING && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-full py-6 order-2 sm:order-2 flex-1"
+                        onClick={addAnotherSwimmerFromPrompt}
+                      >
+                        Add another swimmer
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      className="rounded-full py-6 bg-[#1D1D1F] text-white hover:bg-black order-1 sm:order-3 flex-1"
+                      onClick={continueToReview}
+                    >
+                      Continue to review
+                    </Button>
+                  </div>
+                </div>
               )}
               {state.step === 3 && state.instructor && state.swimmers?.length && state.swimmerSchedules && (
                 <StepConfirm
@@ -330,7 +438,7 @@ export function BookingWizard() {
                   onConfirm={(m) => {
                     void confirmBooking(m);
                   }}
-                  onBack={goBack}
+                  onBack={confirmStepBack}
                   loading={submitting}
                 />
               )}

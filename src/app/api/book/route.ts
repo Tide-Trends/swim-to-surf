@@ -48,7 +48,7 @@ export async function POST(req: Request) {
         parentPhone?: string;
         notes?: string;
       };
-      /** One schedule per swimmer (same week/month/day options; times may differ). */
+      /** One schedule per swimmer (week/month/pattern may differ per swimmer). */
       schedules?: ScheduleSelection[];
       /** @deprecated single-schedule; use schedules */
       schedule?: ScheduleSelection;
@@ -84,25 +84,13 @@ export async function POST(req: Request) {
     }
 
     const firstSch = schedulesList[0]!;
-    function schedulesAligned(): boolean {
-      for (const s of schedulesList) {
-        if (s.type !== firstSch.type) return false;
-        if (s.type === "weekly" && firstSch.type === "weekly") {
-          if (s.weekStart !== firstSch.weekStart) return false;
-        }
-        if (s.type === "monthly" && firstSch.type === "monthly") {
-          if (s.month !== firstSch.month || s.primaryDay !== firstSch.primaryDay || s.secondDay !== firstSch.secondDay) {
-            return false;
-          }
-        }
+    for (const sch of schedulesList) {
+      if (instructor === "lukaah" && sch.type !== "weekly") {
+        return NextResponse.json({ error: "Invalid schedule type for Lukaah." }, { status: 400 });
       }
-      return true;
-    }
-    if (!schedulesAligned()) {
-      return NextResponse.json(
-        { error: "All swimmers must share the same week (Lukaah) or month and day pattern (Estee). Only the times may differ." },
-        { status: 400 }
-      );
+      if (instructor === "estee" && sch.type !== "monthly") {
+        return NextResponse.json({ error: "Invalid schedule type for Estee." }, { status: 400 });
+      }
     }
 
     const host = req.headers.get("host") || "localhost:3000";
@@ -126,10 +114,12 @@ export async function POST(req: Request) {
     const n = swimmersList.length;
 
     const instKey = instructor as "lukaah" | "estee";
-    const expectedLessonsPerSwimmer =
-      firstSch.type === "weekly" ? 5 : firstSch.secondDay && firstSch.secondDayTime ? 8 : 4;
+    const expectedTotalLessons = schedulesList.reduce((sum, sch) => {
+      if (sch.type === "weekly") return sum + 5;
+      return sum + (sch.secondDay && sch.secondDayTime ? 8 : 4);
+    }, 0);
 
-    if (expectedLessonsPerSwimmer !== priceInfo.totalLessons) {
+    if (expectedTotalLessons !== priceInfo.totalLessons) {
       return NextResponse.json(
         { error: "Lesson count does not match. Please refresh and try again." },
         { status: 400 }
@@ -142,7 +132,7 @@ export async function POST(req: Request) {
       const sch = schedulesList[i]!;
       const tier = effectiveLessonTier(s.swimmerAge, s.lessonTier ?? "auto");
       const base = instructor === "estee" ? getEsteePricingForTier(tier) : getLukaahPricingForTier(tier);
-      if (firstSch.type === "weekly") {
+      if (sch.type === "weekly") {
         expectedTotalCents += base.price;
       } else if (sch.type === "monthly") {
         expectedTotalCents += sch.secondDay && sch.secondDayTime ? base.price * 2 : base.price;
@@ -163,13 +153,6 @@ export async function POST(req: Request) {
       );
     }
 
-    if (firstSch.type === "weekly" && instructor !== "lukaah") {
-      return NextResponse.json({ error: "Invalid instructor for weekly booking." }, { status: 400 });
-    }
-    if (firstSch.type === "monthly" && instructor !== "estee") {
-      return NextResponse.json({ error: "Invalid instructor for monthly booking." }, { status: 400 });
-    }
-
     if (paymentMethod === "stripe" && !canPersist) {
       return NextResponse.json(
         {
@@ -188,51 +171,57 @@ export async function POST(req: Request) {
       let existing: BookingSlotRow[] = [];
 
       if (firstSch.type === "weekly") {
-        const { data: conf, error: cErr } = await supabase
-          .from("bookings")
-          .select("lesson_time, week_start, lesson_duration")
-          .eq("instructor", instructor)
-          .eq("week_start", firstSch.weekStart)
-          .eq("status", "confirmed");
-        if (cErr) {
-          console.error("Slot check error:", cErr);
-          return NextResponse.json({ error: "Could not verify availability. Try again." }, { status: 500 });
+        const weekSet = [...new Set(schedulesList.filter((s) => s.type === "weekly").map((s) => s.weekStart))];
+        for (const wk of weekSet) {
+          const { data: conf, error: cErr } = await supabase
+            .from("bookings")
+            .select("lesson_time, week_start, lesson_duration")
+            .eq("instructor", instructor)
+            .eq("week_start", wk)
+            .eq("status", "confirmed");
+          if (cErr) {
+            console.error("Slot check error:", cErr);
+            return NextResponse.json({ error: "Could not verify availability. Try again." }, { status: 500 });
+          }
+          const { data: held, error: hErr } = await supabase
+            .from("bookings")
+            .select("lesson_time, week_start, lesson_duration")
+            .eq("instructor", instructor)
+            .eq("week_start", wk)
+            .eq("status", "pending_payment")
+            .gt("payment_hold_expires_at", nowIso);
+          if (hErr) {
+            console.error("Slot hold check error:", hErr);
+            return NextResponse.json({ error: "Could not verify availability. Try again." }, { status: 500 });
+          }
+          existing = [...existing, ...((conf || []) as BookingSlotRow[]), ...((held || []) as BookingSlotRow[])];
         }
-        const { data: held, error: hErr } = await supabase
-          .from("bookings")
-          .select("lesson_time, week_start, lesson_duration")
-          .eq("instructor", instructor)
-          .eq("week_start", firstSch.weekStart)
-          .eq("status", "pending_payment")
-          .gt("payment_hold_expires_at", nowIso);
-        if (hErr) {
-          console.error("Slot hold check error:", hErr);
-          return NextResponse.json({ error: "Could not verify availability. Try again." }, { status: 500 });
-        }
-        existing = [...(conf || []), ...(held || [])] as BookingSlotRow[];
       } else {
-        const { data: conf, error: cErr } = await supabase
-          .from("bookings")
-          .select("lesson_time, second_day_time, day_of_week, lesson_duration, month")
-          .eq("instructor", "estee")
-          .eq("month", firstSch.month)
-          .eq("status", "confirmed");
-        if (cErr) {
-          console.error("Slot check error:", cErr);
-          return NextResponse.json({ error: "Could not verify availability. Try again." }, { status: 500 });
+        const monthSet = [...new Set(schedulesList.filter((s) => s.type === "monthly").map((s) => s.month))];
+        for (const mo of monthSet) {
+          const { data: conf, error: cErr } = await supabase
+            .from("bookings")
+            .select("lesson_time, second_day_time, day_of_week, lesson_duration, month")
+            .eq("instructor", "estee")
+            .eq("month", mo)
+            .eq("status", "confirmed");
+          if (cErr) {
+            console.error("Slot check error:", cErr);
+            return NextResponse.json({ error: "Could not verify availability. Try again." }, { status: 500 });
+          }
+          const { data: held, error: hErr } = await supabase
+            .from("bookings")
+            .select("lesson_time, second_day_time, day_of_week, lesson_duration, month")
+            .eq("instructor", "estee")
+            .eq("month", mo)
+            .eq("status", "pending_payment")
+            .gt("payment_hold_expires_at", nowIso);
+          if (hErr) {
+            console.error("Slot hold check error:", hErr);
+            return NextResponse.json({ error: "Could not verify availability. Try again." }, { status: 500 });
+          }
+          existing = [...existing, ...((conf || []) as BookingSlotRow[]), ...((held || []) as BookingSlotRow[])];
         }
-        const { data: held, error: hErr } = await supabase
-          .from("bookings")
-          .select("lesson_time, second_day_time, day_of_week, lesson_duration, month")
-          .eq("instructor", "estee")
-          .eq("month", firstSch.month)
-          .eq("status", "pending_payment")
-          .gt("payment_hold_expires_at", nowIso);
-        if (hErr) {
-          console.error("Slot hold check error:", hErr);
-          return NextResponse.json({ error: "Could not verify availability. Try again." }, { status: 500 });
-        }
-        existing = [...(conf || []), ...(held || [])] as BookingSlotRow[];
       }
 
       const pool: BookingSlotRow[] = [...existing];
@@ -276,9 +265,7 @@ export async function POST(req: Request) {
       }
 
       const stripeDescription =
-        n > 1
-          ? `${n} swimmers × ${priceInfo.totalLessons} lessons each`
-          : `${priceInfo.totalLessons} lessons`;
+        n > 1 ? `${n} swimmers · ${priceInfo.totalLessons} lessons total` : `${priceInfo.totalLessons} lessons`;
 
       let checkoutSessionId: string | null = null;
       let holdExpiresIso: string | null = null;
@@ -353,6 +340,8 @@ export async function POST(req: Request) {
           const perSwimmerPrice =
             sch.type === "weekly" ? base.price : sch.secondDay ? base.price * 2 : base.price;
           const durInsert = lessonDurationMinutesForSwimmer(instKey, s);
+          const lessonsThisSwimmer =
+            sch.type === "weekly" ? 5 : sch.secondDay && sch.secondDayTime ? 8 : 4;
 
           const { data: booking, error: dbError } = await supabase
             .from("bookings")
@@ -369,7 +358,7 @@ export async function POST(req: Request) {
               stripe_checkout_session_id: checkoutSessionId,
               payment_hold_expires_at: holdExpiresIso,
               price: perSwimmerPrice,
-              total_lessons: expectedLessonsPerSwimmer,
+              total_lessons: lessonsThisSwimmer,
               month: sch.type === "monthly" ? sch.month : null,
               week_start: sch.type === "weekly" ? sch.weekStart : null,
               day_of_week:

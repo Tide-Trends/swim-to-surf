@@ -204,8 +204,10 @@ export function esteeProposalConflicts(
     slots.push({ day: other, time: proposed.secondDayTime });
   }
 
+  const pm = normalizeMonthYm(proposed.month);
   for (const s of slots) {
     for (const b of existing) {
+      if (normalizeMonthYm(b.month) !== pm) continue;
       if (esteeSlotOverlapsBooking(b, s.day, s.time, proposedDurationMinutes)) return true;
     }
   }

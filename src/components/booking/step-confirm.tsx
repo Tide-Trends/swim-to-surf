@@ -85,8 +85,10 @@ export function StepConfirm({ instructor, swimmers, schedules, onConfirm, onBack
   const scrollRef = useRef<HTMLDivElement>(null);
   const inst = INSTRUCTORS[instructor];
 
-  const totalLessons =
-    firstSch.type === "weekly" ? 5 : firstSch.secondDay && firstSch.secondDayTime ? 8 : 4;
+  const totalLessons = schedules.reduce((sum, sch) => {
+    if (sch.type === "weekly") return sum + 5;
+    return sum + (sch.secondDay && sch.secondDayTime ? 8 : 4);
+  }, 0);
 
   const perSwimmer = swimmers.map((s, i) => ({
     ...s,
@@ -141,7 +143,17 @@ export function StepConfirm({ instructor, swimmers, schedules, onConfirm, onBack
             <Row label={swimmers.length > 1 ? "Schedules" : "Schedule"} value={scheduleSummaryText} />
             <Row
               label="Lessons"
-              value={multi ? `${swimmers.length} × ${totalLessons} lessons each` : String(totalLessons)}
+              value={
+                multi
+                  ? swimmers
+                      .map((sw, i) => {
+                        const sch = schedules[i]!;
+                        const n = sch.type === "weekly" ? 5 : sch.secondDay && sch.secondDayTime ? 8 : 4;
+                        return `${sw.swimmerName}: ${n}`;
+                      })
+                      .join(" · ")
+                  : String(totalLessons)
+              }
             />
             <Row label="Guardian" value={swimmerInfo.parentName || ""} />
             <Row label="Contact" value={`${swimmerInfo.parentEmail || ""} \n ${swimmerInfo.parentPhone || ""}`} />

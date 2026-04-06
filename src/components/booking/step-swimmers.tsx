@@ -19,7 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
-const MAX_SWIMMERS = 5;
+export const MAX_SWIMMERS_PER_BOOKING = 5;
+const MAX_SWIMMERS = MAX_SWIMMERS_PER_BOOKING;
 
 /** Form row for additional swimmers — age starts blank until the parent fills it in. */
 type ExtraDraft = {
@@ -46,6 +47,12 @@ interface Props {
   defaultExtras?: AdditionalSwimmer[];
   onSubmit: (swimmers: SwimmerInfo[]) => void;
   onBack: () => void;
+  /** One swimmer at a time: after this step you pick their schedule, then you can add another. */
+  sequential?: boolean;
+  /** With `sequential`: first swimmer (full form) or additional (name/age only; contact from primary). */
+  sequentialRole?: "first" | "additional";
+  /** Required when `sequentialRole === "additional"` — first swimmer’s contact is copied. */
+  primaryContact?: SwimmerInfo;
 }
 
 function emptyExtra(): ExtraDraft {
@@ -57,8 +64,29 @@ function emptyExtra(): ExtraDraft {
   };
 }
 
-export function StepSwimmers({ instructor, defaultPrimary, defaultExtras, onSubmit, onBack }: Props) {
+
+export function StepSwimmers({
+  instructor,
+  defaultPrimary,
+  defaultExtras,
+  onSubmit,
+  onBack,
+  sequential,
+  sequentialRole = "first",
+  primaryContact,
+}: Props) {
   const [extras, setExtras] = useState<ExtraDraft[]>(() => defaultExtras?.map(extraDraftFromSaved) ?? []);
+  const [additionalOnly, setAdditionalOnly] = useState<ExtraDraft>(() =>
+    sequential && sequentialRole === "additional"
+      ? {
+          swimmerName: defaultPrimary?.swimmerName ?? "",
+          swimmerAge: (defaultPrimary?.swimmerAge ?? "") as number | "",
+          swimmerMonths: defaultPrimary?.swimmerMonths,
+          lessonTier: defaultPrimary?.lessonTier ?? "auto",
+          notes: defaultPrimary?.notes ?? "",
+        }
+      : emptyExtra()
+  );
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -100,8 +128,46 @@ export function StepSwimmers({ instructor, defaultPrimary, defaultExtras, onSubm
     setExtras((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function submitAdditionalOnly() {
+    setFormError(null);
+    if (!primaryContact) {
+      setFormError("Something went wrong. Go back and try again.");
+      return;
+    }
+    if (additionalOnly.swimmerAge === "") {
+      setFormError("Please enter this swimmer’s age.");
+      return;
+    }
+    const candidate: AdditionalSwimmer = {
+      swimmerName: additionalOnly.swimmerName,
+      swimmerAge: additionalOnly.swimmerAge as number,
+      swimmerMonths: additionalOnly.swimmerMonths,
+      lessonTier: additionalOnly.lessonTier ?? "auto",
+      notes: additionalOnly.notes,
+    };
+    const r = additionalSwimmerSchema.safeParse(candidate);
+    if (!r.success) {
+      const msg = r.error.flatten().fieldErrors;
+      const first = Object.values(msg).flat()[0];
+      setFormError(first || "Please check this swimmer’s details.");
+      return;
+    }
+    onSubmit([
+      {
+        ...r.data,
+        parentName: primaryContact.parentName,
+        parentEmail: primaryContact.parentEmail,
+        parentPhone: primaryContact.parentPhone,
+      },
+    ]);
+  }
+
   function submitAll(primary: SwimmerInfo) {
     setFormError(null);
+    if (sequential && sequentialRole === "first") {
+      onSubmit([primary]);
+      return;
+    }
     const validatedExtras: AdditionalSwimmer[] = [];
     for (let i = 0; i < extras.length; i++) {
       const row = extras[i]!;
@@ -128,17 +194,143 @@ export function StepSwimmers({ instructor, defaultPrimary, defaultExtras, onSubm
     onSubmit(mergeSwimmersWithPrimary(primary, validatedExtras));
   }
 
+  if (sequential && sequentialRole === "additional") {
+    if (!primaryContact) {
+      return (
+        <p className="text-sm text-red-600 font-ui" role="alert">
+          Missing contact info. Go back one step.
+        </p>
+      );
+    }
+    const row = additionalOnly;
+    const addAgeNum = row.swimmerAge === "" ? null : row.swimmerAge;
+    const validAddAge =
+      typeof addAgeNum === "number" && addAgeNum >= 0 && addAgeNum <= 99;
+    const addTier = validAddAge ? effectiveLessonTier(addAgeNum, row.lessonTier ?? "auto") : null;
+    const addPricing =
+      validAddAge && addTier
+        ? instructor === "estee"
+          ? getEsteePricingForTier(addTier)
+          : getLukaahPricingForTier(addTier)
+        : null;
+
+    return (
+      <div className="space-y-10">
+        <div>
+          <h3 className="font-display text-3xl font-medium tracking-tight text-[#1D1D1F] mb-2">Next swimmer</h3>
+          <p className="font-ui text-sm text-[#86868B] mb-8 max-w-xl leading-relaxed">
+            Same booking as {primaryContact.swimmerName}. Next you’ll choose their week or month and times.
+          </p>
+        </div>
+        <div className="grid md:grid-cols-2 gap-6">
+          <Input
+            label="First name"
+            placeholder="e.g. Leo"
+            value={row.swimmerName}
+            onChange={(e) => setAdditionalOnly((p) => ({ ...p, swimmerName: e.target.value }))}
+          />
+          <Input
+            label="Age"
+            type="number"
+            placeholder="e.g. 4"
+            min={0}
+            max={99}
+            value={row.swimmerAge === "" ? "" : row.swimmerAge}
+            onChange={(e) => {
+              const v = e.target.value;
+              setAdditionalOnly((p) => ({ ...p, swimmerAge: v === "" ? "" : Number(v) }));
+            }}
+          />
+        </div>
+        {row.swimmerAge !== "" && row.swimmerAge === 0 && (
+          <Input
+            label="Months (0–11)"
+            type="number"
+            min={0}
+            max={11}
+            value={row.swimmerMonths ?? ""}
+            onChange={(e) =>
+              setAdditionalOnly((p) => ({
+                ...p,
+                swimmerMonths: e.target.value === "" ? undefined : Number(e.target.value),
+              }))
+            }
+          />
+        )}
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              { v: "auto" as const, label: "Auto length" },
+              { v: "infant" as const, label: "15 min" },
+              { v: "standard" as const, label: "30 min" },
+            ]
+          ).map((opt) => (
+            <button
+              key={opt.v}
+              type="button"
+              onClick={() => setAdditionalOnly((p) => ({ ...p, lessonTier: opt.v }))}
+              className={`rounded-full border px-3 py-2 font-ui text-xs font-semibold ${
+                (row.lessonTier ?? "auto") === opt.v
+                  ? "border-ocean-deep bg-ocean-surf/60 text-ocean-deep"
+                  : "border-black/12 bg-white text-[#1D1D1F]"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {addPricing && (
+          <div className="rounded-2xl px-4 py-3 bg-[#F5F5F7] border border-black/5 text-sm font-ui text-[#86868B]">
+            <span className="font-semibold text-[#1D1D1F]">
+              {addPricing.duration === 15 ? "Infant" : "Standard"}
+            </span>{" "}
+            · {addPricing.label}
+            {instructor === "lukaah" ? "/week" : "/month"}
+          </div>
+        )}
+        <Textarea
+          label="Notes (optional)"
+          value={row.notes ?? ""}
+          onChange={(e) => setAdditionalOnly((p) => ({ ...p, notes: e.target.value }))}
+        />
+        {formError && (
+          <p className="text-sm text-red-600 font-ui" role="alert">
+            {formError}
+          </p>
+        )}
+        <div className="flex flex-col sm:flex-row gap-4 pt-4">
+          <Button type="button" variant="outline" onClick={onBack} className="order-2 sm:order-1 rounded-full py-6">
+            Back
+          </Button>
+          <Button
+            type="button"
+            onClick={submitAdditionalOnly}
+            className="flex-1 order-1 sm:order-2 rounded-full py-6 bg-[#1D1D1F] text-white hover:bg-black"
+          >
+            Continue to their schedule
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit(submitAll)} className="space-y-10">
       <div>
-        <h3 className="font-display text-3xl font-medium tracking-tight text-[#1D1D1F] mb-2">Swimmers</h3>
+        <h3 className="font-display text-3xl font-medium tracking-tight text-[#1D1D1F] mb-2">
+          {sequential ? "First swimmer" : "Swimmers"}
+        </h3>
         <p className="font-ui text-sm text-[#86868B] mb-8 max-w-xl leading-relaxed">
-          Add every child (or adult) on this booking. You’ll share the same week (Lukaah) or month and day pattern (Estee); each swimmer picks their own start times. Lesson length follows each swimmer’s age (15 min for 0–2, 30 min for 3+) unless you override it — mixed lengths on one booking are fine.
+          {sequential
+            ? "Enter this swimmer’s details, then choose their week or month and times. You can add more swimmers after that."
+            : "Add everyone on this booking on one form. Each swimmer gets their own week or month and times in the next step."}
         </p>
 
-        <div className="rounded-2xl border border-ocean-deep/20 bg-ocean-surf/20 px-4 py-3 mb-8">
-          <p className="font-ui text-xs font-semibold text-ocean-deep">First swimmer</p>
-        </div>
+        {!sequential && (
+          <div className="rounded-2xl border border-ocean-deep/20 bg-ocean-surf/20 px-4 py-3 mb-8">
+            <p className="font-ui text-xs font-semibold text-ocean-deep">First swimmer</p>
+          </div>
+        )}
 
         <div className="grid md:grid-cols-2 gap-6">
           <Input
@@ -285,7 +477,7 @@ export function StepSwimmers({ instructor, defaultPrimary, defaultExtras, onSubm
         />
       </div>
 
-      {extras.length > 0 && (
+      {!sequential && extras.length > 0 && (
         <div className="border-t border-black/5 pt-10 space-y-8">
           <h3 className="font-display text-2xl font-medium tracking-tight text-[#1D1D1F]">Additional swimmers</h3>
           {extras.map((row, index) => (
@@ -396,7 +588,7 @@ export function StepSwimmers({ instructor, defaultPrimary, defaultExtras, onSubm
         </div>
       )}
 
-      {extras.length < MAX_SWIMMERS - 1 && (
+      {!sequential && extras.length < MAX_SWIMMERS - 1 && (
         <Button
           type="button"
           variant="outline"
@@ -418,7 +610,7 @@ export function StepSwimmers({ instructor, defaultPrimary, defaultExtras, onSubm
           Back
         </Button>
         <Button type="submit" className="flex-1 order-1 sm:order-2 rounded-full py-6 bg-[#1D1D1F] text-white hover:bg-black">
-          Continue to Schedule
+          {sequential ? "Continue to their schedule" : "Continue to Schedule"}
         </Button>
       </div>
     </form>
