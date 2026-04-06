@@ -40,11 +40,11 @@ const quickFaqs = [
   },
   {
     q: "How does booking with Lukaah work?",
-    a: "You add one swimmer at a time. Each swimmer gets their own summer week and daily start time (Mon–Fri). Different swimmers can pick different weeks on the same booking.",
+    a: "You can enter several swimmers on the first page, then we walk through each person’s summer week and daily start time (Mon–Fri). Or add one swimmer, pick their schedule, then add a sibling. Different weeks are fine on the same booking.",
   },
   {
     q: "How does booking with Estee work?",
-    a: "You add one swimmer at a time. Each swimmer picks their own month, weekday pattern, times, and optional second day. 4 or 8 lessons that month depending on the second day. Patterns can differ between swimmers.",
+    a: "Same idea: add swimmers on the first step if you want, or one at a time after each schedule. Each swimmer picks their own month, weekday pattern, times, and optional second day (4 or 8 lessons that month).",
   },
   {
     q: "Do you offer group lessons?",
@@ -135,6 +135,8 @@ export function BookingWizard() {
 
   /** Sequential booking: one swimmer → schedule → optional repeat */
   const [seqSwimmers, setSeqSwimmers] = useState<SwimmerInfo[]>([]);
+  /** Swimmers queued from the first step — scheduled automatically after each prior swimmer. */
+  const [seqSwimmerQueue, setSeqSwimmerQueue] = useState<SwimmerInfo[]>([]);
   const [seqSchedules, setSeqSchedules] = useState<ScheduleSelection[]>([]);
   const [postSchedulePrompt, setPostSchedulePrompt] = useState(false);
 
@@ -215,6 +217,7 @@ export function BookingWizard() {
     const inst = searchParams.get("instructor");
     if (inst === "lukaah" || inst === "estee") {
       setSeqSwimmers([]);
+      setSeqSwimmerQueue([]);
       setSeqSchedules([]);
       setPostSchedulePrompt(false);
       setState((s) => ({ ...s, instructor: inst, step: 1, swimmers: null, swimmerSchedules: null }));
@@ -223,6 +226,7 @@ export function BookingWizard() {
 
   function selectInstructor(id: "lukaah" | "estee") {
     setSeqSwimmers([]);
+    setSeqSwimmerQueue([]);
     setSeqSchedules([]);
     setPostSchedulePrompt(false);
     setState({ step: 1, instructor: id, swimmers: null, swimmerSchedules: null });
@@ -230,8 +234,10 @@ export function BookingWizard() {
   }
 
   function appendSwimmerForSchedule(swimmers: SwimmerInfo[]) {
-    const next = swimmers[0]!;
-    setSeqSwimmers((prev) => [...prev, next]);
+    const [first, ...rest] = swimmers;
+    if (!first) return;
+    setSeqSwimmers([first]);
+    setSeqSwimmerQueue(rest);
     setPostSchedulePrompt(false);
     setState((s) => ({ ...s, step: 2 }));
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
@@ -239,14 +245,34 @@ export function BookingWizard() {
 
   function onScheduleStepComplete(newSchedules: ScheduleSelection[]) {
     setSeqSchedules((prev) => [...prev, ...newSchedules]);
-    setPostSchedulePrompt(true);
+    setSeqSwimmerQueue((queue) => {
+      if (queue.length > 0) {
+        const [next, ...rest] = queue;
+        setSeqSwimmers((prev) => [...prev, next!]);
+        setPostSchedulePrompt(false);
+        return rest;
+      }
+      setPostSchedulePrompt(true);
+      return queue;
+    });
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   }
 
   function scheduleStepBack() {
-    setSeqSwimmers((prev) => prev.slice(0, -1));
+    setSeqSwimmers((prev) => {
+      if (prev.length === 0) return prev;
+      const dropped = prev[prev.length - 1]!;
+      setSeqSwimmerQueue((q) => [dropped, ...q]);
+      const next = prev.slice(0, -1);
+      if (next.length === 0) {
+        setSeqSchedules([]);
+        setState((s) => ({ ...s, step: 1 }));
+      } else {
+        setState((s) => ({ ...s, step: 2 }));
+      }
+      return next;
+    });
     setPostSchedulePrompt(false);
-    setState((s) => ({ ...s, step: 1 }));
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   }
 
@@ -269,12 +295,14 @@ export function BookingWizard() {
 
   function addAnotherSwimmerFromPrompt() {
     setPostSchedulePrompt(false);
+    setSeqSwimmerQueue([]);
     setState((s) => ({ ...s, step: 1 }));
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   }
 
   function continueToReview() {
     setPostSchedulePrompt(false);
+    setSeqSwimmerQueue([]);
     setState((s) => ({
       ...s,
       step: 3,
@@ -384,7 +412,7 @@ export function BookingWizard() {
                   transition={{ duration: 0.3 }}
                 >
                   {state.step === 0 && "Choose an instructor"}
-                  {state.step === 1 && (seqSwimmers.length === 0 ? "First swimmer" : "Next swimmer")}
+                  {state.step === 1 && (seqSwimmers.length === 0 ? "Swimmer details" : "Next swimmer")}
                   {state.step === 2 && "Schedule"}
                   {state.step === 3 && "Review and confirm"}
                 </motion.div>

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { getSupabaseServerClient } from "@/lib/supabase-server";
+import { canSelfServeManageBooking } from "@/lib/booking-first-lesson";
+import { lukaahWeekOverlapsBlackout } from "@/lib/lukaah-availability";
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "Swim to Surf <onboarding@resend.dev>";
 
@@ -31,7 +33,18 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       return NextResponse.json({ error: "Booking not found" }, { status: 404 });
     }
 
+    const policyOk = canSelfServeManageBooking(booking);
+
     if (action === "cancel") {
+      if (!policyOk) {
+        return NextResponse.json(
+          {
+            error:
+              "Self-serve changes aren’t available within 7 days of your first lesson. Please email or call us for help.",
+          },
+          { status: 403 }
+        );
+      }
       if (!usingServiceRole) {
         return NextResponse.json(
           {
@@ -67,6 +80,15 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     }
 
     if (action === "reschedule") {
+      if (!policyOk) {
+        return NextResponse.json(
+          {
+            error:
+              "Self-serve changes aren’t available within 7 days of your first lesson. Please email or call us for help.",
+          },
+          { status: 403 }
+        );
+      }
       if (!usingServiceRole) {
         return NextResponse.json(
           {
@@ -76,6 +98,13 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
           { status: 503 }
         );
       }
+      if (booking.instructor === "lukaah" && newData.week_start && lukaahWeekOverlapsBlackout(newData.week_start)) {
+        return NextResponse.json(
+          { error: "That summer week is unavailable. Please pick a different week." },
+          { status: 400 }
+        );
+      }
+
       // Validate slot availability
       let query = supabase.from("bookings").select("id").eq("status", "confirmed").eq("instructor", booking.instructor);
       if (booking.instructor === "lukaah") {

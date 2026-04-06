@@ -165,7 +165,34 @@ export function StepSwimmers({
   function submitAll(primary: SwimmerInfo) {
     setFormError(null);
     if (sequential && sequentialRole === "first") {
-      onSubmit([primary]);
+      if (extras.length === 0) {
+        onSubmit([primary]);
+        return;
+      }
+      const validatedExtras: AdditionalSwimmer[] = [];
+      for (let i = 0; i < extras.length; i++) {
+        const row = extras[i]!;
+        if (row.swimmerAge === "") {
+          setFormError(`Please enter swimmer ${i + 2}'s age.`);
+          return;
+        }
+        const candidate: AdditionalSwimmer = {
+          swimmerName: row.swimmerName,
+          swimmerAge: row.swimmerAge,
+          swimmerMonths: row.swimmerMonths,
+          lessonTier: row.lessonTier ?? "auto",
+          notes: row.notes,
+        };
+        const r = additionalSwimmerSchema.safeParse(candidate);
+        if (!r.success) {
+          const msg = r.error.flatten().fieldErrors;
+          const first = Object.values(msg).flat()[0];
+          setFormError(first || `Please check swimmer ${i + 2}'s details.`);
+          return;
+        }
+        validatedExtras.push(r.data);
+      }
+      onSubmit(mergeSwimmersWithPrimary(primary, validatedExtras));
       return;
     }
     const validatedExtras: AdditionalSwimmer[] = [];
@@ -318,11 +345,11 @@ export function StepSwimmers({
     <form onSubmit={handleSubmit(submitAll)} className="space-y-10">
       <div>
         <h3 className="font-display text-3xl font-medium tracking-tight text-[#1D1D1F] mb-2">
-          {sequential ? "First swimmer" : "Swimmers"}
+          {sequential ? "Swimmer details" : "Swimmers"}
         </h3>
         <p className="font-ui text-sm text-[#86868B] mb-8 max-w-xl leading-relaxed">
           {sequential
-            ? "Enter this swimmer’s details, then choose their week or month and times. You can add more swimmers after that."
+            ? "Enter each swimmer on this page if you like — we’ll walk through week or month and times one at a time. Or add one swimmer now and add siblings after their schedule."
             : "Add everyone on this booking on one form. Each swimmer gets their own week or month and times in the next step."}
         </p>
 
@@ -469,15 +496,15 @@ export function StepSwimmers({
       )}
 
       <div className="border-t border-black/5 pt-10">
-        <h3 className="font-display text-3xl font-medium tracking-tight text-[#1D1D1F] mb-8">Notes (first swimmer)</h3>
+        <h3 className="font-display text-3xl font-medium tracking-tight text-[#1D1D1F] mb-8">Notes (optional)</h3>
         <Textarea
-          label="Special needs or notes (optional)"
+          label="Special needs or notes for this swimmer"
           placeholder="Anything we should know? Sensory needs, fears, medical conditions, etc."
           {...register("notes")}
         />
       </div>
 
-      {!sequential && extras.length > 0 && (
+      {(!sequential || (sequential && sequentialRole === "first")) && extras.length > 0 && (
         <div className="border-t border-black/5 pt-10 space-y-8">
           <h3 className="font-display text-2xl font-medium tracking-tight text-[#1D1D1F]">Additional swimmers</h3>
           {extras.map((row, index) => (
@@ -588,7 +615,7 @@ export function StepSwimmers({
         </div>
       )}
 
-      {!sequential && extras.length < MAX_SWIMMERS - 1 && (
+      {(!sequential || (sequential && sequentialRole === "first")) && extras.length < MAX_SWIMMERS - 1 && (
         <Button
           type="button"
           variant="outline"

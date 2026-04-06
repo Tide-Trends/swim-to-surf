@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabase-server";
+import { canSelfServeManageBooking } from "@/lib/booking-first-lesson";
 import { ManageBookingClient } from "./client";
 
 export const metadata: Metadata = {
@@ -42,10 +43,12 @@ export default async function ManageBookingPage({ params }: { params: Promise<{ 
       notFound();
     }
 
+    const canSelfServe = canSelfServeManageBooking(booking);
+
     return (
       <div className="min-h-screen bg-warm-white pt-24 pb-20">
         <div className="max-w-2xl mx-auto px-6">
-          <ManageBookingClient booking={booking} />
+          <ManageBookingClient booking={booking} canSelfServe={canSelfServe} />
         </div>
       </div>
     );

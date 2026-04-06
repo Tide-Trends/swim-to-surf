@@ -22,6 +22,13 @@ import { formatLessonTimeHm, timezoneBookingHint } from "@/lib/timezone";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { generateSlotStartTimes, TimeSlotGrid } from "@/components/booking/time-slot-grid";
+import { lukaahWeekOverlapsBlackout } from "@/lib/lukaah-availability";
+
+/** Clear selected state for week/month/day pickers (parent can see what they chose). */
+const selectedPickClasses =
+  "border-[#0077B6] bg-[#0077B6] text-white shadow-md ring-2 ring-[#0077B6]/20";
+const selectedPickSubtle = "text-white/90";
+const selectedPickMuted = "text-white/75";
 
 export interface StepScheduleProps {
   instructor: "lukaah" | "estee";
@@ -224,7 +231,11 @@ function LukaahScheduleStep({
   onSelect: (schedules: ScheduleSelection[]) => void;
   onBack: () => void;
 }) {
-  const weeks = getSummerWeeks();
+  const weeks = useMemo(
+    () =>
+      getSummerWeeks().filter((w) => !lukaahWeekOverlapsBlackout(format(w.start, "yyyy-MM-dd"))),
+    []
+  );
   const [selectedWeeks, setSelectedWeeks] = useState<(string | null)[]>(() => swimmers.map(() => null));
   const [selectedTimes, setSelectedTimes] = useState<(string | null)[]>(() => swimmers.map(() => null));
   const [rowsByWeek, setRowsByWeek] = useState<Record<string, BookingSlotRow[]>>({});
@@ -339,6 +350,9 @@ function LukaahScheduleStep({
       <p className="text-sm text-[#86868B] font-body max-w-2xl">
         Each swimmer picks their own summer week and daily start time. Weeks can differ within the same family booking.
       </p>
+      <p className="rounded-xl border border-[#0077B6]/20 bg-[#E8F4FD]/80 px-4 py-3 font-ui text-xs leading-relaxed text-[#1D3557]">
+        Lukaah is away <strong className="font-semibold">July 27 – August 7</strong> — those weeks aren’t offered.
+      </p>
 
       {swimmers.map((sw, i) => {
         const wk = selectedWeeks[i];
@@ -367,16 +381,20 @@ function LukaahScheduleStep({
                       onClick={() => setWeekAt(i, val)}
                       className={`px-5 py-4 rounded-[1.5rem] border text-left transition-all duration-300 cursor-pointer ${
                         active
-                          ? "border-[#1D1D1F] bg-[#1D1D1F]/5 shadow-sm"
+                          ? selectedPickClasses
                           : "border-black/5 bg-white hover:border-black/10 hover:shadow-md"
                       }`}
                     >
                       <div
-                        className={`font-ui text-[10px] uppercase tracking-[0.2em] mb-1 ${active ? "text-[#1D1D1F] font-semibold" : "text-[#86868B] font-medium"}`}
+                        className={`font-ui text-[10px] uppercase tracking-[0.2em] mb-1 ${
+                          active ? `${selectedPickSubtle} font-semibold` : "text-[#86868B] font-medium"
+                        }`}
                       >
                         Week of
                       </div>
-                      <div className="font-display text-lg text-[#1D1D1F]">{w.label}</div>
+                      <div className={`font-display text-lg ${active ? "text-white" : "text-[#1D1D1F]"}`}>
+                        {w.label}
+                      </div>
                     </button>
                   );
                 })}
@@ -704,12 +722,12 @@ function EsteeScheduleStep({
                       onClick={() => setMonthAt(i, mo.value)}
                       className={`px-5 py-4 rounded-[1.5rem] border text-center transition-all duration-300 cursor-pointer ${
                         active
-                          ? "border-[#1D1D1F] bg-[#1D1D1F]/5 text-[#1D1D1F] shadow-sm font-semibold"
+                          ? `${selectedPickClasses} font-semibold`
                           : "border-black/5 bg-white hover:border-black/10 hover:shadow-md text-[#86868B]"
                       }`}
                     >
-                      <div className="font-ui text-sm font-medium">{mo.label}</div>
-                      <div className={`font-ui text-[10px] mt-1 ${active ? "text-[#1D1D1F]/60" : "text-[#86868B]/60"}`}>
+                      <div className={`font-ui text-sm font-medium ${active ? "text-white" : ""}`}>{mo.label}</div>
+                      <div className={`font-ui text-[10px] mt-1 ${active ? selectedPickMuted : "text-[#86868B]/60"}`}>
                         {dates.wednesdays.length} Wed &middot; {dates.thursdays.length} Thu
                       </div>
                     </button>
@@ -766,15 +784,19 @@ function EsteeScheduleStep({
                         onClick={() => setPrimaryDayAt(i, day)}
                         className={`px-5 py-4 rounded-[1.5rem] border text-center transition-all duration-300 cursor-pointer ${
                           active
-                            ? "border-[#1D1D1F] bg-[#1D1D1F]/5 shadow-sm"
+                            ? selectedPickClasses
                             : "border-black/5 bg-white hover:border-black/10 hover:shadow-md"
                         }`}
                       >
-                        <span className="capitalize font-display text-lg mb-1 block text-[#1D1D1F]">{day}</span>
-                        <span className={`text-xs font-ui ${active ? "text-[#1D1D1F]/80 font-medium" : "text-[#86868B]"}`}>
+                        <span
+                          className={`capitalize font-display text-lg mb-1 block ${active ? "text-white" : "text-[#1D1D1F]"}`}
+                        >
+                          {day}
+                        </span>
+                        <span className={`text-xs font-ui ${active ? `${selectedPickSubtle} font-medium` : "text-[#86868B]"}`}>
                           8:00 AM – 11:30 AM & 12:30 PM – 4:00 PM
                         </span>
-                        <span className={`text-[10px] font-ui block mt-1 ${active ? "text-[#1D1D1F]/60" : "text-[#86868B]/60"}`}>
+                        <span className={`text-[10px] font-ui block mt-1 ${active ? selectedPickMuted : "text-[#86868B]/60"}`}>
                           {numDates} lessons this month
                         </span>
                       </button>

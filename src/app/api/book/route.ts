@@ -23,6 +23,7 @@ import {
   type SwimmerPayload,
 } from "@/lib/booking-emails";
 import { expireStripeCheckoutSession } from "@/lib/stripe-checkout-confirm";
+import { lukaahWeekOverlapsBlackout } from "@/lib/lukaah-availability";
 
 export async function POST(req: Request) {
   try {
@@ -90,6 +91,15 @@ export async function POST(req: Request) {
       }
       if (instructor === "estee" && sch.type !== "monthly") {
         return NextResponse.json({ error: "Invalid schedule type for Estee." }, { status: 400 });
+      }
+      if (sch.type === "weekly" && lukaahWeekOverlapsBlackout(sch.weekStart)) {
+        return NextResponse.json(
+          {
+            error:
+              "That summer week is unavailable (instructor away). Please choose a different week.",
+          },
+          { status: 400 }
+        );
       }
     }
 

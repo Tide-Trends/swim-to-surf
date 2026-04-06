@@ -6,7 +6,24 @@ import { StepSchedule } from "@/components/booking/step-schedule";
 import { Button } from "@/components/ui/button";
 import type { ScheduleSelection } from "@/lib/booking-schema";
 
-export function ManageBookingClient({ booking }: { booking: any }) {
+export function ManageBookingClient({
+  booking,
+  canSelfServe,
+}: {
+  booking: Record<string, unknown> & {
+    id: string;
+    instructor: "lukaah" | "estee";
+    swimmer_name: string;
+    swimmer_age: number;
+    week_start?: string | null;
+    month?: string | null;
+    day_of_week: string[];
+    lesson_time: string;
+    second_day_time?: string | null;
+    status: string;
+  };
+  canSelfServe: boolean;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"view" | "reschedule">("view");
@@ -32,6 +49,12 @@ export function ManageBookingClient({ booking }: { booking: any }) {
   }
 
   async function handleCancel() {
+    if (!canSelfServe) {
+      alert(
+        "Self-serve cancellation isn’t available within 7 days of your first lesson. Please contact us by email or phone."
+      );
+      return;
+    }
     if (!confirm("Are you sure you want to cancel your entire booking? This action cannot be undone.")) return;
     setLoading(true);
     try {
@@ -51,6 +74,12 @@ export function ManageBookingClient({ booking }: { booking: any }) {
   }
 
   async function handleReschedule(sel: ScheduleSelection) {
+    if (!canSelfServe) {
+      alert(
+        "Self-serve rescheduling isn’t available within 7 days of your first lesson. Please contact us by email or phone."
+      );
+      return;
+    }
     setLoading(true);
     const newData: any = {};
     let scheduleText = "";
@@ -157,19 +186,26 @@ export function ManageBookingClient({ booking }: { booking: any }) {
           </div>
         </div>
 
+        {!canSelfServe && (
+          <p className="text-sm text-[#1D3557] bg-[#E8F4FD] border border-[#B8DFF0] rounded-xl px-4 py-3 mb-6 font-ui leading-relaxed">
+            Your first lesson is within 7 days (or has already started). Self-serve cancel and reschedule are turned off —
+            please email or call us and we’ll help.
+          </p>
+        )}
+
         <div className="flex flex-col sm:flex-row gap-4 border-t border-black/5 pt-8">
-          <Button 
-            onClick={() => setMode("reschedule")} 
-            disabled={loading} 
-            className="flex-1 rounded-full py-6 bg-[#0077B6] text-white hover:bg-[#005f92]"
+          <Button
+            onClick={() => setMode("reschedule")}
+            disabled={loading || !canSelfServe}
+            className="flex-1 rounded-full py-6 bg-[#0077B6] text-white hover:bg-[#005f92] disabled:opacity-50 disabled:pointer-events-none"
           >
             Reschedule Lesson
           </Button>
-          <Button 
-            onClick={handleCancel} 
-            disabled={loading} 
-            variant="outline" 
-            className="flex-1 rounded-full py-6 text-[#EF476F] hover:text-[#EF476F] hover:bg-[#EF476F]/5 border-[#EF476F]/20"
+          <Button
+            onClick={handleCancel}
+            disabled={loading || !canSelfServe}
+            variant="outline"
+            className="flex-1 rounded-full py-6 text-[#EF476F] hover:text-[#EF476F] hover:bg-[#EF476F]/5 border-[#EF476F]/20 disabled:opacity-50 disabled:pointer-events-none"
           >
             Cancel Entire Booking
           </Button>
