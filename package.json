@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "email:announce": "node scripts/email-blast/send-announcement.mjs",
-    "email:announce:gmail": "node scripts/email-blast/send-via-gmail.mjs"
+    "email:announce:gmail": "node scripts/email-blast/send-via-gmail.mjs",
+    "email:announce:brevo": "node scripts/email-blast/send-via-brevo.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

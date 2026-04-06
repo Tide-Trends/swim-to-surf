@@ -4,7 +4,39 @@ The HTML template **`announcement.html`** works with **any** tool. Pick one path
 
 ---
 
-## Gmail SMTP (works without Resend / DNS) — **recommended if you have `swimtosurfemail@gmail.com`**
+## Brevo (best if Gmail “App Password” is disabled) — **no DNS, no app password**
+
+Google often **won’t allow App Passwords** (Workspace rules, account type, etc.). **Brevo** (free) uses a normal **API key** and you only **verify your Gmail in their dashboard** (they email you a link — click it).
+
+- **Free tier:** **300 emails per day** (then run again tomorrow with `--sent-log`).
+- **Setup:**
+  1. Sign up: [brevo.com](https://www.brevo.com)
+  2. **Senders** → add `swimtosurfemail@gmail.com` → confirm the email from your inbox.
+  3. **Settings → SMTP & API → API keys** → create key → copy (starts with `xkeysib-`).
+
+**`.env.local`:**
+
+```env
+BREVO_API_KEY=xkeysib-...
+BREVO_SENDER_EMAIL=swimtosurfemail@gmail.com
+```
+
+Optional: `BREVO_SENDER_NAME=Swim To Surf`
+
+```bash
+npm run email:announce:brevo -- --dry-run --csv ~/Downloads/cleaned_emails.csv
+npm run email:announce:brevo -- --csv ~/Downloads/cleaned_emails.csv --to YOUR@gmail.com --send
+# Day 1: up to 300
+npm run email:announce:brevo -- --csv ~/Downloads/cleaned_emails.csv --send --limit 300 --sent-log scripts/email-blast/sent-brevo.log
+# Day 2: skips addresses in the log
+npm run email:announce:brevo -- --csv ~/Downloads/cleaned_emails.csv --send --sent-log scripts/email-blast/sent-brevo.log
+```
+
+Script: **`send-via-brevo.mjs`**
+
+---
+
+## Gmail SMTP (only if App Passwords work on your account)
 
 Google lets you send from that inbox using an **App Password** (not your normal password). Free Gmail has a **rolling limit of about 500 messages per 24 hours** — if your list is ~550, send **~450 today** and the rest **tomorrow** using the sent log.
 
