@@ -18,7 +18,7 @@ function cronOrigin(req: Request): string {
  * - paid sessions → confirm bookings + emails (e.g. customer closed tab before success page)
  * - expired / past-expires open sessions → cancel pending rows
  *
- * Schedule in vercel.json (e.g. every 10 minutes). Protect with CRON_SECRET.
+ * Schedule in vercel.json (Hobby: once daily; Pro can use a tighter schedule). Protect with CRON_SECRET.
  */
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization");

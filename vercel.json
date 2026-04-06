@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/stripe-pending",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 18 * * *"
     }
   ]
 }

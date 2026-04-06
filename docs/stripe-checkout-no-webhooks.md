@@ -25,12 +25,16 @@ You do **not** need `STRIPE_WEBHOOK_SECRET` or a Dashboard webhook endpoint.
 
 ## 2. Cron reconciliation (backup)
 
-Some customers pay and **close the tab** before the success page runs. A Vercel Cron job calls **`GET /api/cron/stripe-pending`** every 10 minutes (see `vercel.json`). It:
+Some customers pay and **close the tab** before the success page runs. A Vercel Cron job calls **`GET /api/cron/stripe-pending`** on a schedule defined in `vercel.json`. It:
 
 - Finds all `pending_payment` rows with a `stripe_checkout_session_id`
 - For each session, calls the Stripe API: if **paid** → same confirm + emails as above; if **expired** (or open past `expires_at`) → marks those rows **cancelled**
 
 **Auth:** Same as your other crons — `Authorization: Bearer $CRON_SECRET`. Vercel injects this automatically for scheduled invocations.
+
+**Vercel Hobby:** Cron is limited to **at most once per day**. This repo uses **`0 18 * * *`** (18:00 UTC daily) so deploys work on Hobby. The success redirect still confirms most payments immediately; cron catches stragglers within about a day.
+
+**Vercel Pro:** You can use a more frequent schedule (for example every 10 minutes: `*/10 * * * *`) if you want faster reconciliation without webhooks.
 
 ## Local testing
 

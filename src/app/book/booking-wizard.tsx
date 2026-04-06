@@ -132,7 +132,7 @@ export function BookingWizard() {
           alert(
             typeof lastData?.error === "string"
               ? lastData.error
-              : "We couldn’t confirm your payment yet. If checkout finished, you’ll get an email within a few minutes — or contact us with your Stripe receipt."
+              : "We couldn’t confirm your payment yet. If checkout finished, you should get an email once it processes (often the same day), or contact us with your Stripe receipt."
           );
           window.history.replaceState({}, "", "/book");
         } catch {
