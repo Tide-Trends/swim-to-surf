@@ -33,10 +33,7 @@ export default function AdminPage() {
   }, [router]);
 
   const fetchBookings = useCallback(async () => {
-    let url = "/api/admin/bookings";
-    if (filter !== "all") {
-      url += `?instructor=${filter}`;
-    }
+    const url = "/api/admin/bookings";
 
     try {
       setFetchError(null);
@@ -55,7 +52,7 @@ export default function AdminPage() {
       console.error("Fetch error:", err);
       setFetchError(err instanceof Error ? err.message : "Failed to load bookings.");
     }
-  }, [filter]);
+  }, []);
 
   useEffect(() => {
     if (authedUser) void fetchBookings();
@@ -102,19 +99,6 @@ export default function AdminPage() {
 
   if (!authedUser) return null;
 
-  const today = new Date().toISOString().slice(0, 10);
-  const todayBookings = bookings.filter((b) => {
-    if (b.status === "cancelled") return false;
-    if (b.week_start) {
-      const ws = new Date(b.week_start);
-      const we = new Date(ws);
-      we.setDate(we.getDate() + 4);
-      const t = new Date(today);
-      return t >= ws && t <= we;
-    }
-    return true;
-  });
-
   return (
     <section className="bg-warm-white min-h-[80vh] pt-28 pb-12">
       <div className="mx-auto max-w-7xl px-6 md:px-8">
@@ -122,7 +106,8 @@ export default function AdminPage() {
           <div>
             <h1 className="text-3xl font-display font-bold text-[#1D1D1F]">Dashboard</h1>
             <p className="text-[#86868B] font-ui text-sm mt-1">
-              Signed in as {authedUser === "lukaah" ? "Lukaah" : "Estee"} · {bookings.filter((b) => b.status === "confirmed").length} active bookings
+              Signed in as {authedUser === "lukaah" ? "Lukaah" : "Estee"} ·{" "}
+              {bookings.filter((b) => b.status === "confirmed").length} active bookings
             </p>
           </div>
           <Button variant="ghost" onClick={handleLogout}>
@@ -190,8 +175,15 @@ export default function AdminPage() {
           </div>
         )}
 
-        {tab === "bookings" && <BookingTable bookings={bookings} onCancel={cancelBooking} />}
-        {tab === "schedule" && <ScheduleView bookings={todayBookings} />}
+        {tab === "bookings" && (
+          <BookingTable
+            bookings={
+              filter === "all" ? bookings : bookings.filter((b) => b.instructor === filter)
+            }
+            onCancel={cancelBooking}
+          />
+        )}
+        {tab === "schedule" && <ScheduleView bookings={bookings} />}
         {tab === "instructors" && <InstructorProfilesEditor editor={authedUser} />}
       </div>
     </section>
