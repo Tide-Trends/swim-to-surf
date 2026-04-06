@@ -10,7 +10,8 @@ import {
   PAYMENT_OPTIONS_COPY,
   unitPriceCentsForSwimmerSchedule,
 } from "@/lib/constants";
-import { formatLessonTimeHm, SITE_TIMEZONE_LABEL } from "@/lib/timezone";
+import { formatLessonTimeHm } from "@/lib/timezone";
+import { fullScheduleSummary } from "@/lib/booking-schedule-summary";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -57,23 +58,6 @@ interface Props {
   loading: boolean;
 }
 
-function summarizeSchedule(s: ScheduleSelection): string {
-  if (s.type === "weekly") {
-    const weekDate = new Date(s.weekStart + "T12:00:00");
-    const timeLabel = formatLessonTimeHm(s.time);
-    return `Mon – Fri at ${timeLabel} (${SITE_TIMEZONE_LABEL}), week of ${format(weekDate, "MMM d, yyyy")}`;
-  }
-  const [y, m] = s.month.split("-");
-  const monthDate = new Date(Number(y), Number(m) - 1, 1);
-  const timeLabel = formatLessonTimeHm(s.primaryTime);
-  if (s.secondDay && s.secondDayTime) {
-    const otherDay = s.primaryDay === "wednesday" ? "Thursday" : "Wednesday";
-    const secondLabel = formatLessonTimeHm(s.secondDayTime);
-    return `${s.primaryDay.charAt(0).toUpperCase() + s.primaryDay.slice(1)} at ${timeLabel} + ${otherDay} at ${secondLabel}, ${format(monthDate, "MMMM yyyy")} (${SITE_TIMEZONE_LABEL})`;
-  }
-  return `Every ${s.primaryDay.charAt(0).toUpperCase() + s.primaryDay.slice(1)} at ${timeLabel}, ${format(monthDate, "MMMM yyyy")} (${SITE_TIMEZONE_LABEL})`;
-}
-
 export function StepConfirm({ instructor, swimmers, schedules, onConfirm, onBack, loading }: Props) {
   const swimmerInfo = swimmers[0]!;
   const firstSch = schedules[0]!;
@@ -98,8 +82,8 @@ export function StepConfirm({ instructor, swimmers, schedules, onConfirm, onBack
 
   const scheduleSummaryText =
     swimmers.length > 1
-      ? swimmers.map((sw, i) => `${sw.swimmerName}: ${summarizeSchedule(schedules[i]!)}`).join("\n\n")
-      : summarizeSchedule(firstSch);
+      ? swimmers.map((sw, i) => `${sw.swimmerName}: ${fullScheduleSummary(schedules[i]!)}`).join("\n\n")
+      : fullScheduleSummary(firstSch);
 
   const price = perSwimmer.reduce((a, p) => a + p.unit, 0);
   const multi = swimmers.length > 1;

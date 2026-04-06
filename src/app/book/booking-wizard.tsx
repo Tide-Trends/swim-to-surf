@@ -18,6 +18,7 @@ import { StepSchedule } from "@/components/booking/step-schedule";
 import { Button } from "@/components/ui/button";
 import { StepConfirm } from "@/components/booking/step-confirm";
 import { BookingSuccess } from "@/components/booking/booking-success";
+import { compactScheduleForMatcher } from "@/lib/booking-schedule-summary";
 
 const steps = ["Instructor", "Swimmers", "Schedule", "Confirm"];
 
@@ -60,6 +61,66 @@ function totalLessonsInBooking(schedules: ScheduleSelection[]): number {
     if (sch.type === "weekly") return sum + 5;
     return sum + (sch.secondDay && sch.secondDayTime ? 8 : 4);
   }, 0);
+}
+
+/** Swimmers who already have a schedule locked in for this signup (same length as schedules array). */
+function BookingContextSoFar({
+  swimmers,
+  schedules,
+  variant = "default",
+  heading,
+}: {
+  swimmers: SwimmerInfo[];
+  schedules: ScheduleSelection[];
+  variant?: "default" | "schedule-step";
+  heading?: string;
+}) {
+  if (schedules.length === 0) return null;
+  const n = Math.min(swimmers.length, schedules.length);
+  const defaultHeading =
+    variant === "schedule-step"
+      ? "Already on this booking (match these times if you want)"
+      : "On this booking so far";
+  return (
+    <div
+      className={`rounded-2xl border border-black/10 px-4 py-3.5 md:px-5 md:py-4 ${
+        variant === "schedule-step" ? "bg-[#eef7fb] border-[#0b5c79]/15 mb-8" : "bg-[#F5F5F7] mb-6"
+      }`}
+    >
+      <p className="font-ui text-[10px] uppercase tracking-[0.2em] text-[#1D1D1F]/50 font-semibold mb-2.5">
+        {heading ?? defaultHeading}
+      </p>
+      <ul className="space-y-1.5">
+        {Array.from({ length: n }).map((_, i) => (
+          <li key={`${swimmers[i]!.swimmerName}-${i}`} className="text-sm md:text-[15px] text-[#1D1D1F] leading-snug">
+            {compactScheduleForMatcher(swimmers[i]!.swimmerName, schedules[i]!)}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function JustFinishedSwimmerCallout({
+  swimmer,
+  schedule,
+}: {
+  swimmer: SwimmerInfo;
+  schedule: ScheduleSelection;
+}) {
+  return (
+    <div className="rounded-2xl border border-black/10 bg-white px-4 py-4 md:px-5 md:py-5 shadow-sm mb-6">
+      <p className="font-ui text-[10px] uppercase tracking-[0.2em] text-[#86868B] font-semibold mb-2">
+        Last swimmer you set up
+      </p>
+      <p className="text-base md:text-lg text-[#1D1D1F] font-medium leading-snug font-body">
+        {compactScheduleForMatcher(swimmer.swimmerName, schedule)}
+      </p>
+      <p className="mt-3 text-sm text-[#86868B] leading-relaxed">
+        Adding someone else? You can pick the same week and start time so lessons line up, or choose a different slot.
+      </p>
+    </div>
+  );
 }
 
 export function BookingWizard() {
@@ -316,7 +377,7 @@ export function BookingWizard() {
             <h1 className="text-xl md:text-2xl font-display font-medium tracking-tight">
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={`${state.step}-${postSchedulePrompt}`}
+                  key={state.step}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 10 }}
@@ -324,8 +385,7 @@ export function BookingWizard() {
                 >
                   {state.step === 0 && "Choose an instructor"}
                   {state.step === 1 && (seqSwimmers.length === 0 ? "First swimmer" : "Next swimmer")}
-                  {state.step === 2 && postSchedulePrompt && "Anyone else?"}
-                  {state.step === 2 && !postSchedulePrompt && "Select a schedule"}
+                  {state.step === 2 && "Schedule"}
                   {state.step === 3 && "Review and confirm"}
                 </motion.div>
               </AnimatePresence>
@@ -359,7 +419,7 @@ export function BookingWizard() {
         <div className="mx-auto max-w-4xl flex flex-col h-full">
           <AnimatePresence mode="wait">
             <motion.div
-              key={`${state.step}-${postSchedulePrompt}`}
+              key={state.step}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
@@ -368,68 +428,93 @@ export function BookingWizard() {
             >
               {state.step === 0 && <StepInstructor onSelect={selectInstructor} />}
               {state.step === 1 && (
-                <StepSwimmers
-                  instructor={state.instructor || "lukaah"}
-                  sequential
-                  sequentialRole={seqSwimmers.length === 0 ? "first" : "additional"}
-                  primaryContact={seqSwimmers[0]}
-                  onSubmit={appendSwimmerForSchedule}
-                  onBack={swimmerStepBack}
-                />
+                <>
+                  {seqSwimmers.length > 0 && seqSchedules.length > 0 && (
+                    <BookingContextSoFar
+                      swimmers={seqSwimmers.slice(0, seqSchedules.length)}
+                      schedules={seqSchedules}
+                    />
+                  )}
+                  <StepSwimmers
+                    instructor={state.instructor || "lukaah"}
+                    sequential
+                    sequentialRole={seqSwimmers.length === 0 ? "first" : "additional"}
+                    primaryContact={seqSwimmers[0]}
+                    onSubmit={appendSwimmerForSchedule}
+                    onBack={swimmerStepBack}
+                  />
+                </>
               )}
               {state.step === 2 &&
-                !postSchedulePrompt &&
                 state.instructor &&
-                seqSwimmers.length > 0 && (
-                  <StepSchedule
-                    instructor={state.instructor}
-                    swimmers={[seqSwimmers[seqSwimmers.length - 1]!]}
-                    committedSwimmers={seqSwimmers.slice(0, -1)}
-                    committedSchedules={seqSchedules}
-                    onSelect={onScheduleStepComplete}
-                    onBack={scheduleStepBack}
-                  />
-                )}
-              {state.step === 2 && postSchedulePrompt && (
-                <div className="space-y-8">
-                  <div>
-                    <h3 className="font-display text-3xl font-medium tracking-tight text-[#1D1D1F] mb-3">
-                      Add another swimmer?
-                    </h3>
-                    <p className="text-[#86868B] font-body text-sm leading-relaxed max-w-xl">
-                      Same booking and contact info. You’ll enter their details, then choose their week or month and
-                      times.
-                    </p>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="rounded-full py-6 order-3 sm:order-1"
-                      onClick={postScheduleStepBack}
-                    >
-                      Edit last schedule
-                    </Button>
-                    {seqSwimmers.length < MAX_SWIMMERS_PER_BOOKING && (
+                seqSwimmers.length > 0 &&
+                (postSchedulePrompt ? (
+                  <div className="space-y-6">
+                    {seqSwimmers.length >= 1 &&
+                      seqSchedules.length >= 1 &&
+                      (() => {
+                        const lastI = seqSchedules.length - 1;
+                        return (
+                          <JustFinishedSwimmerCallout
+                            swimmer={seqSwimmers[lastI]!}
+                            schedule={seqSchedules[lastI]!}
+                          />
+                        );
+                      })()}
+                    {seqSwimmers.length > 1 && seqSchedules.length > 1 && (
+                      <BookingContextSoFar
+                        swimmers={seqSwimmers.slice(0, -1)}
+                        schedules={seqSchedules.slice(0, -1)}
+                        heading="Earlier on this signup"
+                      />
+                    )}
+                    <div className="flex flex-col gap-3 border-t border-black/5 pt-6 sm:flex-row sm:flex-wrap sm:items-center">
                       <Button
                         type="button"
                         variant="outline"
-                        className="rounded-full py-6 order-2 sm:order-2 flex-1"
-                        onClick={addAnotherSwimmerFromPrompt}
+                        className="rounded-full py-5 sm:py-6 sm:min-w-[10rem]"
+                        onClick={postScheduleStepBack}
                       >
-                        Add another swimmer
+                        Edit last schedule
                       </Button>
-                    )}
-                    <Button
-                      type="button"
-                      className="rounded-full py-6 bg-[#1D1D1F] text-white hover:bg-black order-1 sm:order-3 flex-1"
-                      onClick={continueToReview}
-                    >
-                      Continue to review
-                    </Button>
+                      {seqSwimmers.length < MAX_SWIMMERS_PER_BOOKING && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="rounded-full py-5 sm:py-6 sm:flex-1"
+                          onClick={addAnotherSwimmerFromPrompt}
+                        >
+                          Add another swimmer
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        className="rounded-full py-5 sm:py-6 bg-[#1D1D1F] text-white hover:bg-black sm:flex-1 sm:min-w-[12rem]"
+                        onClick={continueToReview}
+                      >
+                        Continue to review
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <>
+                    {seqSchedules.length > 0 && (
+                      <BookingContextSoFar
+                        swimmers={seqSwimmers.slice(0, -1)}
+                        schedules={seqSchedules}
+                        variant="schedule-step"
+                      />
+                    )}
+                    <StepSchedule
+                      instructor={state.instructor}
+                      swimmers={[seqSwimmers[seqSwimmers.length - 1]!]}
+                      committedSwimmers={seqSwimmers.slice(0, -1)}
+                      committedSchedules={seqSchedules}
+                      onSelect={onScheduleStepComplete}
+                      onBack={scheduleStepBack}
+                    />
+                  </>
+                ))}
               {state.step === 3 && state.instructor && state.swimmers?.length && state.swimmerSchedules && (
                 <StepConfirm
                   instructor={state.instructor}
@@ -445,19 +530,19 @@ export function BookingWizard() {
             </motion.div>
           </AnimatePresence>
 
-          <div className="mx-auto max-w-2xl pb-16 px-2 min-h-[26rem] md:min-h-[28rem]">
+          <div className="mx-auto w-full max-w-4xl pb-16 min-h-[26rem] md:min-h-[28rem]">
             <p className="font-ui text-xs font-semibold uppercase tracking-widest text-[#86868B] mb-4">Quick answers</p>
-            <div className="space-y-4 min-h-[22rem] md:min-h-[24rem]">
+            <div className="space-y-4 min-h-[22rem] md:min-h-[24rem] w-full">
               {quickFaqs.map((f) => (
                 <details
                   key={f.q}
-                  className="group rounded-2xl border border-black/10 bg-white/80 px-4 py-3 open:shadow-sm"
+                  className="group w-full rounded-2xl border border-black/10 bg-white px-4 py-4 md:px-5 md:py-4 open:shadow-sm"
                 >
-                  <summary className="cursor-pointer list-none font-ui text-sm font-semibold text-[#1D1D1F] marker:hidden [&::-webkit-details-marker]:hidden flex justify-between gap-2">
-                    {f.q}
-                    <span className="text-[#86868B] text-xs shrink-0 group-open:rotate-180 transition-transform">▼</span>
+                  <summary className="cursor-pointer list-none font-ui text-sm font-semibold text-[#1D1D1F] marker:hidden [&::-webkit-details-marker]:hidden flex justify-between gap-4 items-start w-full text-left">
+                    <span className="min-w-0 flex-1 pr-2">{f.q}</span>
+                    <span className="text-[#86868B] text-xs shrink-0 pt-0.5 group-open:rotate-180 transition-transform">▼</span>
                   </summary>
-                  <p className="mt-3 text-sm text-[#86868B] leading-relaxed">{f.a}</p>
+                  <p className="mt-3 text-sm text-[#86868B] leading-relaxed max-w-none">{f.a}</p>
                 </details>
               ))}
             </div>
