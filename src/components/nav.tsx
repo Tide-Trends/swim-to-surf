@@ -1,25 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function Nav() {
   const pathname = usePathname();
-  const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const forceVisible = pathname !== "/";
-  const navStyleActive = isScrolled || forceVisible;
 
   const links = [
     { href: "/", label: "Home" },
@@ -35,18 +23,12 @@ export function Nav() {
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 border-b ${
-          navStyleActive
-            ? "glass py-3 border-black/5"
-            : "bg-transparent py-5 border-transparent"
-        }`}
+        className="fixed top-0 left-0 right-0 z-50 border-b border-black/[0.06] bg-white/92 py-3 shadow-[0_1px_0_rgba(0,0,0,0.04)] backdrop-blur-md transition-all duration-300 supports-[backdrop-filter]:bg-white/85"
       >
         <div className="container mx-auto px-6 lg:px-8 max-w-7xl flex items-center justify-between">
           <Link
             href="/"
-            className={`text-xl font-semibold tracking-tight transition-opacity hover:opacity-70 ${
-              navStyleActive ? "text-ocean-deep" : "text-dark"
-            }`}
+            className="text-xl font-semibold tracking-tight text-ocean-deep transition-opacity hover:opacity-70"
             onClick={() => setMobileMenuOpen(false)}
           >
             Swim to Surf.
@@ -60,7 +42,7 @@ export function Nav() {
                   key={link.href}
                   href={link.href}
                   className={`relative py-1 transition-colors hover:text-ocean-deep ${
-                    pathname === link.href ? (navStyleActive ? "text-ocean-deep" : "text-ocean-deep opacity-100") : (navStyleActive ? "text-dark/90" : "text-dark/85")
+                    pathname === link.href ? "text-ocean-deep" : "text-dark/88"
                   }`}
                 >
                   {link.label}
@@ -82,12 +64,12 @@ export function Nav() {
             aria-label="Toggle Menu"
           >
             <span
-              className={`block w-6 h-[1.5px] transition-transform duration-300 ${navStyleActive ? 'bg-ocean-deep' : 'bg-dark'} ${
+              className={`block w-6 h-[1.5px] bg-ocean-deep transition-transform duration-300 ${
                 mobileMenuOpen ? "rotate-45 translate-y-[1.5px]" : "-translate-y-1"
               }`}
             />
             <span
-              className={`block w-6 h-[1.5px] transition-transform duration-300 ${navStyleActive ? 'bg-ocean-deep' : 'bg-dark'} ${
+              className={`block w-6 h-[1.5px] bg-ocean-deep transition-transform duration-300 ${
                 mobileMenuOpen ? "-rotate-45 -translate-y-[1.5px]" : "translate-y-1"
               }`}
             />

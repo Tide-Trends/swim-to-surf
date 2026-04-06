@@ -133,6 +133,14 @@ node scripts/email-blast/send-announcement.mjs --csv ~/Downloads/cleaned_emails.
 - **`announcement.html`** — HTML body (edit copy/design here).
 - **`send-announcement.mjs`** — reads CSV, dedupes emails, sends in batches of 100 via `resend.batch.send`.
 
+## “Send everything at once” — can I use Gmail?
+
+**One identical email to everyone:** yes. In **Gmail → Compose**, paste your subject + body (or paste HTML from `announcement.html` using a browser extension, or send a simple rich-text version). Put **your own address** in **To**, put **all recipients in BCC** (blind carbon copy). Gmail allows **up to 500 addresses per message** (To + CC + BCC combined). For ~550 people you’d send **two messages** (e.g. 300 BCC + 250 BCC) or trim the list.
+
+Caveats: everyone gets the **same** email (no per-person tracking), some inboxes are stricter on bulk BCC (spam folder), and you must still only mail people who opted in.
+
+**Separate emails to each address (better for deliverability):** use **Brevo** in two days at 300/day, or a paid email tool — Gmail is not meant to fire hundreds of individual SMTP sends in a few minutes.
+
 ## Legal / polite use
 
 Only send to people who agreed to hear from you (customers, waitlist, etc.). The template includes a simple reply-to **UNSUBSCRIBE** line.

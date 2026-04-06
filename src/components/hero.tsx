@@ -7,29 +7,30 @@ import Link from "next/link";
 export function Hero() {
   return (
     <section className="relative flex min-h-[100dvh] w-full flex-col overflow-hidden bg-[#062a36]">
-      {/* Image: focal point nudged slightly right; light scale to calm edge clutter */}
+      {/* Image: focal point lower in frame so the subject sits “down” in the photo; text sits higher in the layout */}
       <div className="absolute inset-0">
         <Image
           src="/images/confidence-in-the-pool.png"
           alt="A happy swimmer underwater in the pool during a lesson"
           fill
-          className="object-cover object-[62%_36%] scale-[1.04] sm:object-[58%_34%]"
+          className="object-cover object-[56%_62%] scale-[1.06] sm:object-[54%_52%] md:object-[52%_48%]"
           sizes="100vw"
           priority
         />
-        <div className="absolute inset-0 bg-[#062a36]/30" aria-hidden />
+        <div className="absolute inset-0 bg-[#062a36]/28" aria-hidden />
         <div
-          className="absolute inset-0 bg-gradient-to-t from-[#062a36] from-0% via-[#062a36]/88 via-40% to-transparent to-55%"
+          className="absolute inset-0 bg-gradient-to-b from-[#062a36]/50 via-transparent via-45% to-[#062a36]/90 to-100%"
           aria-hidden
         />
         <div
-          className="absolute inset-0 bg-[radial-gradient(ellipse_90%_60%_at_50%_100%,rgba(6,42,54,0.75)_0%,transparent_70%)]"
+          className="absolute inset-0 bg-gradient-to-t from-[#062a36] from-0% via-[#062a36]/55 via-35% to-transparent to-65%"
           aria-hidden
         />
       </div>
 
-      <div className="relative z-10 flex min-h-[100dvh] flex-col pt-20 md:pt-24">
-        <div className="flex flex-1 flex-col justify-end px-5 pb-10 pt-6 sm:px-8 md:px-10 md:pb-14">
+      {/* Text block sits higher (centered in viewport) instead of pinned to the bottom */}
+      <div className="relative z-10 flex min-h-[100dvh] flex-col">
+        <div className="flex flex-1 flex-col justify-center px-5 pb-16 pt-28 sm:px-8 md:px-10 md:pb-14 md:pt-32">
           <div className="mx-auto w-full max-w-2xl text-center text-white">
             <motion.div
               initial={{ opacity: 0, y: 8 }}
