@@ -4,7 +4,8 @@
  *
  * Prereqs:
  *   - RESEND_API_KEY in .env.local or environment (same as the site)
- *   - RESEND_FROM_EMAIL using your verified domain, e.g. Swim To Surf <hello@swimtosurf.co>
+ *   - RESEND_FROM_EMAIL using a verified domain (see README if Wix blocks DNS)
+ *   - Optional: RESEND_REPLY_TO — inbox where replies go (e.g. your Gmail) if "from" uses another domain
  *
  * Usage:
  *   node scripts/email-blast/send-announcement.mjs --dry-run --csv /path/to/cleaned_emails.csv
@@ -101,6 +102,13 @@ async function main() {
 
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const fromRaw = process.env.RESEND_FROM_EMAIL?.trim() || "Swim To Surf <onboarding@resend.dev>";
+  const replyTo = process.env.RESEND_REPLY_TO?.trim();
+
+  const baseFields = () => {
+    const o = {};
+    if (replyTo) o.replyTo = replyTo;
+    return o;
+  };
 
   if (!args.csv) {
     console.error("Usage: node scripts/email-blast/send-announcement.mjs --csv /path/to/cleaned_emails.csv [--dry-run] [--send] [--to test@email.com]");
@@ -129,6 +137,7 @@ async function main() {
       subject: SUBJECT,
       html,
       text: PLAIN_TEXT,
+      ...baseFields(),
     });
     if (error) {
       console.error(error);
@@ -168,6 +177,7 @@ async function main() {
       subject: SUBJECT,
       html,
       text: PLAIN_TEXT,
+      ...baseFields(),
     }));
 
     const { data, error } = await resend.batch.send(payload);
