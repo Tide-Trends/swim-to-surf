@@ -470,7 +470,14 @@ export async function POST(req: Request) {
       });
     }
 
-    const { customerEmailSent, adminEmailSent } = await sendBookingEmails(emailPayload);
+    let emailResult = await sendBookingEmails(emailPayload);
+    if (hasResend && (!emailResult.customerEmailSent || !emailResult.adminEmailSent)) {
+      console.warn("[book] resend failed; retrying once", emailResult);
+      await new Promise((r) => setTimeout(r, 1200));
+      emailResult = await sendBookingEmails(emailPayload);
+    }
+
+    const { customerEmailSent, adminEmailSent } = emailResult;
 
     return NextResponse.json({
       id: bookingIds[0]!,
