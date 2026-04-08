@@ -177,7 +177,7 @@ export async function promotePaidCheckoutSession(
   const hasResend = resendApiKeyConfigured();
   const resend = hasResend ? new Resend(process.env.RESEND_API_KEY!.trim()) : null;
 
-  const { customerEmailSent, adminEmailSent } = await sendBookingEmails({
+  const emailArgs = {
     resend,
     bookingIds,
     swimmers: swimmersPayload,
@@ -195,7 +195,21 @@ export async function promotePaidCheckoutSession(
     },
     paymentMethod: "stripe",
     origin,
-  });
+  } as const;
+
+  // Resend can occasionally have transient hiccups right after redirect/payment.
+  // Retry once to avoid falsely reporting "not sent" to users.
+  let emailResult = await sendBookingEmails(emailArgs);
+  if (hasResend && (!emailResult.customerEmailSent || !emailResult.adminEmailSent)) {
+    console.warn("[stripe confirm] resend had failures; retrying once", {
+      customer: emailResult.customerEmailSent,
+      admin: emailResult.adminEmailSent,
+    });
+    await new Promise((r) => setTimeout(r, 1200));
+    emailResult = await sendBookingEmails(emailArgs);
+  }
+
+  const { customerEmailSent, adminEmailSent } = emailResult;
 
   return {
     ok: true,

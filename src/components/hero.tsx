@@ -13,16 +13,16 @@ export function Hero() {
           src="/images/confidence-in-the-pool.png"
           alt="A happy swimmer underwater in the pool during a lesson"
           fill
-          className="object-cover object-[58%_42%] scale-[1.03] sm:object-[56%_38%] md:object-[54%_34%]"
+          className="object-cover object-[58%_42%] scale-[1.03] brightness-110 contrast-95 saturate-110 sm:object-[56%_38%] md:object-[54%_34%]"
           sizes="100vw"
           priority
         />
-        <div className="absolute inset-0 bg-[#0ea5e9]/8" aria-hidden />
+        <div className="absolute inset-0 bg-[#0ea5e9]/6" aria-hidden />
         <div
-          className="absolute inset-0 bg-gradient-to-t from-[#0b5f82]/26 via-[#0b5f82]/8 via-50% to-transparent"
+          className="absolute inset-0 bg-gradient-to-t from-[#0b5f82]/20 via-[#0b5f82]/6 via-50% to-transparent"
           aria-hidden
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-white/8 via-transparent to-transparent" aria-hidden />
+        <div className="absolute inset-0 bg-gradient-to-r from-white/6 via-transparent to-transparent" aria-hidden />
       </div>
 
       <div className="relative z-10 flex min-h-[100dvh] flex-col">
