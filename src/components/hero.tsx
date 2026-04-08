@@ -44,16 +44,16 @@ export function Hero() {
 
       <div className="relative z-10 flex min-h-[100dvh] flex-col justify-between">
         {/* Top spacer so the image and face are clearly visible with minimal overlap */}
-        <div className="h-[18vh] sm:h-[20vh] md:h-[22vh]" />
+        <div className="h-[10vh] sm:h-[12vh] md:h-[14vh]" />
 
         {/* Title + CTA band anchored toward bottom, not over the swimmer's face */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="px-4 pb-16 sm:px-6 md:px-10 lg:px-16"
+          className="px-4 pb-10 sm:px-6 md:px-10 lg:px-16"
         >
-          <div className="mx-auto max-w-3xl rounded-[1.75rem] border border-white/45 bg-white/22 px-5 py-6 shadow-[0_18px_42px_-22px_rgba(0,60,90,0.4)] backdrop-blur-[6px] sm:rounded-[2rem] sm:px-9 sm:py-7 md:px-10 md:py-8">
+          <div className="mx-auto max-w-3xl rounded-[1.75rem] border border-white/35 bg-white/14 px-5 py-6 shadow-[0_16px_40px_-22px_rgba(0,60,90,0.35)] backdrop-blur-[5px] sm:rounded-[2rem] sm:px-9 sm:py-7 md:px-10 md:py-8">
             <div className="text-center text-[#07324a]">
               <p className="mb-4 font-ui text-[10px] font-semibold uppercase tracking-[0.22em] text-[#0b5f82]/90 md:mb-5 md:text-[11px]">
                 Private lessons · American Fork, Utah
@@ -66,6 +66,22 @@ export function Hero() {
               <p className="mx-auto mb-7 max-w-xl text-[15px] font-normal leading-relaxed text-[#07324a]/92 md:text-[17px] md:leading-relaxed">
                 Calm, one-on-one swim lessons that build real water confidence and joy from day one.
               </p>
+
+              <div className="mx-auto mb-7 flex max-w-xl flex-wrap items-center justify-center gap-2">
+                {[
+                  "Ages 0–99",
+                  "Safety-first skills",
+                  "Private 1-on-1",
+                  "Utah County",
+                ].map((t) => (
+                  <span
+                    key={t}
+                    className="rounded-full border border-white/35 bg-white/10 px-3 py-1 font-ui text-[11px] font-semibold text-[#07324a]/90 backdrop-blur-[2px]"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
 
               <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-center sm:gap-4">
                 <Link
@@ -81,6 +97,10 @@ export function Hero() {
                   Our philosophy
                 </Link>
               </div>
+
+              <p className="mt-7 font-ui text-[10px] uppercase tracking-[0.18em] text-[#0b5f82]/70">
+                Book online in minutes · Pay by Stripe or pay later (Venmo / cash)
+              </p>
             </div>
           </div>
         </motion.div>
