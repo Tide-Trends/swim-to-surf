@@ -30,6 +30,39 @@ const selectedPickClasses =
 const selectedPickSubtle = "text-white/90";
 const selectedPickMuted = "text-white/75";
 
+function normalizeHm(t: string): string {
+  const s = t.trim();
+  return s.length >= 5 ? s.slice(0, 5) : s;
+}
+
+/** Times already chosen by earlier swimmers on this booking (same week) — for amber highlight. */
+function earlierLukaahTimesForWeek(weekStart: string | null, committed: ScheduleSelection[]): string[] {
+  if (!weekStart) return [];
+  const set = new Set<string>();
+  for (const sch of committed) {
+    if (sch.type !== "weekly" || sch.weekStart !== weekStart) continue;
+    set.add(normalizeHm(sch.time));
+  }
+  return [...set];
+}
+
+/** All start times earlier swimmers booked on this weekday in this month (primary and optional second day). */
+function earlierEsteeTimesOnWeekday(
+  month: string | null,
+  weekday: "wednesday" | "thursday",
+  committed: ScheduleSelection[]
+): string[] {
+  if (!month) return [];
+  const set = new Set<string>();
+  for (const sch of committed) {
+    if (sch.type !== "monthly" || sch.month !== month) continue;
+    if (sch.primaryDay === weekday) set.add(normalizeHm(sch.primaryTime));
+    const other: "wednesday" | "thursday" = sch.primaryDay === "wednesday" ? "thursday" : "wednesday";
+    if (other === weekday && sch.secondDayTime) set.add(normalizeHm(sch.secondDayTime));
+  }
+  return [...set];
+}
+
 export interface StepScheduleProps {
   instructor: "lukaah" | "estee";
   swimmers: SwimmerInfo[];
@@ -347,8 +380,22 @@ function LukaahScheduleStep({
         {timezoneBookingHint()}
       </p>
 
+      {committedSwimmers.length > 0 && swimmers.length > 0 && (
+        <div className="rounded-2xl border border-amber-200/80 bg-amber-50/95 px-4 py-3.5 md:px-5">
+          <p className="font-ui text-sm font-semibold text-amber-950">
+            Scheduling {swimmers[0]?.swimmerName}
+          </p>
+          <p className="mt-1 font-ui text-xs leading-relaxed text-amber-950/85">
+            Pick a week, then a daily start time. Amber times match another swimmer on this booking — you can choose the
+            same slot if it&apos;s still free.
+          </p>
+        </div>
+      )}
+
       <p className="text-sm text-[#86868B] font-body max-w-2xl">
-        Each swimmer picks their own summer week and daily start time. Weeks can differ within the same family booking.
+        {committedSwimmers.length > 0
+          ? "Choose their week and daily time below."
+          : "Each swimmer picks their own summer week and daily start time. Weeks can differ within the same family booking."}
       </p>
       <p className="rounded-xl border border-[#0077B6]/20 bg-[#E8F4FD]/80 px-4 py-3 font-ui text-xs leading-relaxed text-[#1D3557]">
         Lukaah is away <strong className="font-semibold">July 27 – August 7</strong> — those weeks aren’t offered.
@@ -356,6 +403,7 @@ function LukaahScheduleStep({
 
       {swimmers.map((sw, i) => {
         const wk = selectedWeeks[i];
+        const earlierTimes = wk ? earlierLukaahTimesForWeek(wk, committedSchedules) : [];
         const { duration: durI, candidates: candI } = perSwimmerSlots[i]!;
         const fromDb = wk ? rowsByWeek[wk] ?? [] : [];
         const fromCommitted = wk ? committedLukaahRowsForWeek(committedSwimmers, committedSchedules, wk) : [];
@@ -413,6 +461,7 @@ function LukaahScheduleStep({
                   duration={durI}
                   selected={selectedTimes[i] ?? null}
                   takenSlots={taken}
+                  earlierSwimmerSlots={earlierTimes}
                   onSelect={(t) => setTimeAt(i, t)}
                   showTimezoneHint={i === 0}
                 />
@@ -693,9 +742,22 @@ function EsteeScheduleStep({
         {timezoneBookingHint()}
       </p>
 
+      {committedSwimmers.length > 0 && swimmers.length > 0 && (
+        <div className="rounded-2xl border border-amber-200/80 bg-amber-50/95 px-4 py-3.5 md:px-5">
+          <p className="font-ui text-sm font-semibold text-amber-950">
+            Scheduling {swimmers[0]?.swimmerName}
+          </p>
+          <p className="mt-1 font-ui text-xs leading-relaxed text-amber-950/85">
+            Choose month, weekday, then times. Amber = another swimmer on this booking already chose that time on that
+            day (you can pick it if it&apos;s open).
+          </p>
+        </div>
+      )}
+
       <p className="text-sm text-[#86868B] font-body max-w-2xl">
-        Each swimmer picks their own month, weekday pattern, and times. Months and patterns can differ within the same
-        booking.
+        {committedSwimmers.length > 0
+          ? "Choose their month, days, and times below."
+          : "Each swimmer picks their own month, weekday pattern, and times. Months and patterns can differ within the same booking."}
       </p>
 
       {swimmers.map((sw, i) => {
@@ -704,6 +766,8 @@ function EsteeScheduleStep({
         const pd = primaryDays[i] ?? "wednesday";
         const otherDay = pd === "wednesday" ? "thursday" : "wednesday";
         const sd = secondDays[i] ?? false;
+        const earlierOnPrimary = m ? earlierEsteeTimesOnWeekday(m, pd, committedSchedules) : [];
+        const earlierOnSecond = m ? earlierEsteeTimesOnWeekday(m, otherDay, committedSchedules) : [];
 
         return (
           <div key={sw.swimmerName + i} className="space-y-8 border-t border-black/5 pt-10 first:border-t-0 first:pt-0">
@@ -736,39 +800,77 @@ function EsteeScheduleStep({
               </div>
             </div>
 
-            {m && monthDates && (
-              <div className="bg-ocean-surf/30 border border-ocean-light/30 rounded-[1.5rem] p-6">
-                <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-3">Lesson dates</p>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <p className="font-ui text-xs text-[#86868B] mb-2">Wednesdays</p>
-                    <div className="flex flex-wrap gap-2">
-                      {monthDates.wednesdays.map((d) => (
-                        <span
-                          key={d}
-                          className="inline-block px-3 py-1.5 rounded-full bg-white text-xs font-ui font-medium text-[#1D1D1F] border border-black/5"
-                        >
-                          {format(new Date(d + "T12:00:00"), "MMM d")}
-                        </span>
-                      ))}
+            {m && monthDates &&
+              (committedSwimmers.length > 0 ? (
+                <details className="group rounded-[1.5rem] border border-ocean-light/30 bg-ocean-surf/20 px-4 py-3 md:px-6 md:py-4">
+                  <summary className="cursor-pointer list-none font-ui text-sm font-medium text-ocean-deep [&::-webkit-details-marker]:hidden">
+                    <span className="inline-flex items-center gap-2">
+                      Lesson dates this month
+                      <span className="text-xs font-normal text-[#86868B]">(tap to expand)</span>
+                    </span>
+                  </summary>
+                  <div className="mt-4 grid sm:grid-cols-2 gap-4 pb-2">
+                    <div>
+                      <p className="font-ui text-xs text-[#86868B] mb-2">Wednesdays</p>
+                      <div className="flex flex-wrap gap-2">
+                        {monthDates.wednesdays.map((d) => (
+                          <span
+                            key={d}
+                            className="inline-block px-3 py-1.5 rounded-full bg-white text-xs font-ui font-medium text-[#1D1D1F] border border-black/5"
+                          >
+                            {format(new Date(d + "T12:00:00"), "MMM d")}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="font-ui text-xs text-[#86868B] mb-2">Thursdays</p>
+                      <div className="flex flex-wrap gap-2">
+                        {monthDates.thursdays.map((d) => (
+                          <span
+                            key={d}
+                            className="inline-block px-3 py-1.5 rounded-full bg-white text-xs font-ui font-medium text-[#1D1D1F] border border-black/5"
+                          >
+                            {format(new Date(d + "T12:00:00"), "MMM d")}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <p className="font-ui text-xs text-[#86868B] mb-2">Thursdays</p>
-                    <div className="flex flex-wrap gap-2">
-                      {monthDates.thursdays.map((d) => (
-                        <span
-                          key={d}
-                          className="inline-block px-3 py-1.5 rounded-full bg-white text-xs font-ui font-medium text-[#1D1D1F] border border-black/5"
-                        >
-                          {format(new Date(d + "T12:00:00"), "MMM d")}
-                        </span>
-                      ))}
+                </details>
+              ) : (
+                <div className="bg-ocean-surf/30 border border-ocean-light/30 rounded-[1.5rem] p-6">
+                  <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-3">Lesson dates</p>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <p className="font-ui text-xs text-[#86868B] mb-2">Wednesdays</p>
+                      <div className="flex flex-wrap gap-2">
+                        {monthDates.wednesdays.map((d) => (
+                          <span
+                            key={d}
+                            className="inline-block px-3 py-1.5 rounded-full bg-white text-xs font-ui font-medium text-[#1D1D1F] border border-black/5"
+                          >
+                            {format(new Date(d + "T12:00:00"), "MMM d")}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="font-ui text-xs text-[#86868B] mb-2">Thursdays</p>
+                      <div className="flex flex-wrap gap-2">
+                        {monthDates.thursdays.map((d) => (
+                          <span
+                            key={d}
+                            className="inline-block px-3 py-1.5 rounded-full bg-white text-xs font-ui font-medium text-[#1D1D1F] border border-black/5"
+                          >
+                            {format(new Date(d + "T12:00:00"), "MMM d")}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              ))}
 
             {m && (
               <div id={`estee-day-${i}`} className="space-y-6">
@@ -820,6 +922,7 @@ function EsteeScheduleStep({
                       duration={perSwimmerEstee[i]!.duration}
                       selected={primaryTimes[i] ?? null}
                       takenSlots={takenPrimaryForSwimmer(i, "am")}
+                      earlierSwimmerSlots={earlierOnPrimary}
                       onSelect={(t) => setPrimaryAt(i, t)}
                       showTimezoneHint={i === 0}
                     />
@@ -836,6 +939,7 @@ function EsteeScheduleStep({
                       duration={perSwimmerEstee[i]!.duration}
                       selected={primaryTimes[i] ?? null}
                       takenSlots={takenPrimaryForSwimmer(i, "pm")}
+                      earlierSwimmerSlots={earlierOnPrimary}
                       onSelect={(t) => setPrimaryAt(i, t)}
                     />
                   </div>
@@ -871,6 +975,7 @@ function EsteeScheduleStep({
                         duration={perSwimmerEstee[i]!.duration}
                         selected={secondTimes[i] ?? null}
                         takenSlots={takenSecondForSwimmer(i, "am")}
+                        earlierSwimmerSlots={earlierOnSecond}
                         onSelect={(t) => setSecondAt(i, t)}
                       />
                     </div>
@@ -886,6 +991,7 @@ function EsteeScheduleStep({
                         duration={perSwimmerEstee[i]!.duration}
                         selected={secondTimes[i] ?? null}
                         takenSlots={takenSecondForSwimmer(i, "pm")}
+                        earlierSwimmerSlots={earlierOnSecond}
                         onSelect={(t) => setSecondAt(i, t)}
                       />
                     </div>

@@ -75,7 +75,7 @@ export function BookingSuccess({
             {emailDelivery?.customer
               ? ` · Confirmation sent to ${primary.parentEmail}`
               : emailDelivery && !emailDelivery.customer
-                ? " · Email could not be delivered — see note below"
+                ? " · Confirmation email is still processing — see note below"
                 : primary.parentEmail
                   ? ` · We will email ${primary.parentEmail}`
                   : ""}
@@ -90,9 +90,9 @@ export function BookingSuccess({
               role="status"
               className="rounded-2xl border border-amber-200/80 bg-amber-50 px-5 py-4 text-left text-sm leading-relaxed text-amber-950 shadow-sm"
             >
-              <p className="font-ui font-semibold text-amber-950">Confirmation email not sent</p>
+              <p className="font-ui font-semibold text-amber-950">Confirmation email still processing</p>
               <p className="mt-2 text-amber-900/90">
-                Your booking is saved. If you don’t see an email within a few minutes, check spam, then text or email us at{" "}
+                Your booking is saved. If you do not see the email within 10-15 minutes, check spam, then text or email us at{" "}
                 <a href="mailto:swimtosurfemail@gmail.com" className="font-semibold underline underline-offset-2">
                   swimtosurfemail@gmail.com
                 </a>{" "}
@@ -100,7 +100,7 @@ export function BookingSuccess({
               </p>
               {!emailDelivery.admin && (
                 <p className="mt-2 text-amber-900/85">
-                  Our team notification also failed — please contact us so we can confirm your spot.
+                  Team notification is also pending, so please contact us and we will confirm your spot manually.
                 </p>
               )}
             </div>

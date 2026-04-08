@@ -14,6 +14,8 @@ interface Props {
   selected: string | null;
   /** HH:mm starts that overlap existing bookings (already computed for this duration). */
   takenSlots: string[];
+  /** HH:mm starts another swimmer on this booking already chose (same week/month context) — highlighted, still clickable if not taken. */
+  earlierSwimmerSlots?: string[];
   onSelect: (time: string) => void;
   showTimezoneHint?: boolean;
 }
@@ -55,9 +57,11 @@ export function TimeSlotGrid({
   gridStepMinutes = 15,
   selected,
   takenSlots,
+  earlierSwimmerSlots = [],
   onSelect,
   showTimezoneHint = false,
 }: Props) {
+  const earlierSet = new Set(earlierSwimmerSlots.map((s) => s.slice(0, 5)));
   const slots = generateSlotStartTimes(
     startHour,
     startMinute,
@@ -84,10 +88,18 @@ export function TimeSlotGrid({
           )}
         </div>
       )}
+      {earlierSet.size > 0 && (
+        <p className="mb-3 font-ui text-[11px] leading-snug text-amber-900/90">
+          <span className="inline-block h-2 w-2 rounded-full bg-amber-400 align-middle mr-1.5" aria-hidden />
+          <strong className="font-semibold">Amber</strong> = time another swimmer on this booking already chose (you can
+          pick it too if it&apos;s open).
+        </p>
+      )}
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
         {slots.map((slot) => {
           const taken = takenSlots.includes(slot);
           const active = selected === slot;
+          const earlier = !taken && !active && earlierSet.has(slot.slice(0, 5));
           const display = formatLessonTimeHm(slot);
           const ampm = display.slice(-2).toUpperCase();
           const clock = display.replace(/ am$/i, "").replace(/ pm$/i, "").trim();
@@ -103,19 +115,23 @@ export function TimeSlotGrid({
                   ? "cursor-not-allowed border-sand/50 bg-sand/30 text-muted/40 line-through"
                   : active
                     ? "border-primary bg-primary font-medium text-white shadow-md"
-                    : "border-sand/50 bg-white text-dark hover:border-sand hover:shadow-sm"
+                    : earlier
+                      ? "border-amber-400 bg-amber-50 text-amber-950 shadow-sm ring-1 ring-amber-200/80 hover:bg-amber-100"
+                      : "border-sand/50 bg-white text-dark hover:border-sand hover:shadow-sm"
               }`}
             >
               <span className="block font-ui text-sm font-semibold">{clock}</span>
               <span
-                className={`font-ui text-[10px] uppercase tracking-wider ${active ? "text-white/80" : "text-muted"}`}
+                className={`font-ui text-[10px] uppercase tracking-wider ${
+                  active ? "text-white/80" : earlier ? "text-amber-800/90" : "text-muted"
+                }`}
               >
                 {ampm}
               </span>
               {duration > gridStepMinutes && (
                 <span
                   className={`mt-1 block font-ui text-[9px] font-bold uppercase tracking-wide ${
-                    active ? "text-white/90" : "text-ocean-deep"
+                    active ? "text-white/90" : earlier ? "text-amber-900" : "text-ocean-deep"
                   }`}
                 >
                   {duration} min

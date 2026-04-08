@@ -33,6 +33,12 @@ type VerifySessionResponse = {
   adminEmailSent?: boolean;
 };
 
+async function verifyStripeSession(sessionId: string): Promise<{ status: number; data: VerifySessionResponse }> {
+  const res = await fetch(`/api/book/verify-session?session_id=${encodeURIComponent(sessionId)}`);
+  const data = (await res.json()) as VerifySessionResponse;
+  return { status: res.status, data };
+}
+
 const quickFaqs = [
   {
     q: "What age groups do you teach?",
@@ -164,30 +170,41 @@ export function BookingWizard() {
             await sleep(delaysMs[attempt] ?? 1500);
             if (cancelled) return;
 
-            const res = await fetch(
-              `/api/book/verify-session?session_id=${encodeURIComponent(sessionId)}`
-            );
-            const data = (await res.json()) as VerifySessionResponse;
+            const { status, data } = await verifyStripeSession(sessionId);
             lastData = data;
 
-            if (res.ok && data.ok && data.bookingIds?.length) {
+            if (status >= 200 && status < 300 && data.ok && data.bookingIds?.length) {
+              // Mobile Safari can hit transient email-provider hiccups right after redirect.
+              // Retry one quick verify before showing an email failure warning.
+              let finalData = data;
+              if (!data.customerEmailSent) {
+                await sleep(1200);
+                const retried = await verifyStripeSession(sessionId);
+                if (retried.status >= 200 && retried.status < 300 && retried.data.ok && retried.data.bookingIds?.length) {
+                  finalData = retried.data;
+                }
+              }
+
+              const confirmedBookingId = finalData.bookingIds?.[0];
+              if (!confirmedBookingId) continue;
+
               setState({
                 step: 3,
-                instructor: data.instructor ?? null,
-                swimmers: data.swimmers ?? null,
-                swimmerSchedules: data.schedules ?? null,
+                instructor: finalData.instructor ?? null,
+                swimmers: finalData.swimmers ?? null,
+                swimmerSchedules: finalData.schedules ?? null,
               });
-              setBookingId(data.bookingIds[0]!);
+              setBookingId(confirmedBookingId);
               setEmailDelivery({
-                customer: Boolean(data.customerEmailSent),
-                admin: Boolean(data.adminEmailSent),
+                customer: Boolean(finalData.customerEmailSent),
+                admin: Boolean(finalData.adminEmailSent),
               });
               window.history.replaceState({}, "", "/book");
               return;
             }
 
             // Stripe sometimes lags a moment after redirect before payment_status is "paid"
-            if (res.status === 402 && attempt < maxAttempts - 1) continue;
+            if (status === 402 && attempt < maxAttempts - 1) continue;
             break;
           }
 
