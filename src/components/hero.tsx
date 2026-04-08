@@ -50,17 +50,17 @@ export function Hero() {
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           className="px-4 py-10 sm:px-6 md:px-10 lg:px-16"
         >
-          <div className="mx-auto max-w-3xl rounded-[1.75rem] border border-white/35 bg-white/14 px-5 py-6 shadow-[0_16px_40px_-22px_rgba(0,60,90,0.35)] backdrop-blur-[5px] sm:rounded-[2rem] sm:px-9 sm:py-7 md:px-10 md:py-8">
-            <div className="text-center text-[#07324a]">
-              <p className="mb-4 font-ui text-[10px] font-semibold uppercase tracking-[0.22em] text-[#0b5f82]/90 md:mb-5 md:text-[11px]">
+          <div className="mx-auto max-w-3xl rounded-[1.75rem] border border-white/40 bg-white/18 px-5 py-6 shadow-[0_16px_40px_-22px_rgba(0,40,60,0.55)] backdrop-blur-[6px] sm:rounded-[2rem] sm:px-9 sm:py-7 md:px-10 md:py-8">
+            <div className="text-center text-[#021723]">
+              <p className="mb-4 font-ui text-[10px] font-semibold uppercase tracking-[0.22em] text-[#04324c] md:mb-5 md:text-[11px]">
                 Private lessons · American Fork, Utah
               </p>
 
-              <h1 className="mb-3 font-display text-[clamp(2.4rem,6.5vw,4.25rem)] font-light leading-[0.98] tracking-[-0.03em] text-[#053149] md:mb-4">
+              <h1 className="mb-3 font-display text-[clamp(2.4rem,6.5vw,4.25rem)] font-light leading-[0.98] tracking-[-0.03em] text-[#021018] md:mb-4">
                 Swim to <span className="hero-surf-word font-normal text-[#0077B6]">Surf.</span>
               </h1>
 
-              <p className="mx-auto mb-7 max-w-xl text-[15px] font-normal leading-relaxed text-[#07324a]/92 md:text-[17px] md:leading-relaxed">
+              <p className="mx-auto mb-7 max-w-xl text-[15px] font-normal leading-relaxed text-[#021723] md:text-[17px] md:leading-relaxed">
                 Calm, one-on-one swim lessons that build real water confidence and joy from day one.
               </p>
 
@@ -73,7 +73,7 @@ export function Hero() {
                 ].map((t) => (
                   <span
                     key={t}
-                    className="rounded-full border border-white/35 bg-white/10 px-3 py-1 font-ui text-[11px] font-semibold text-[#07324a]/90 backdrop-blur-[2px]"
+                    className="rounded-full border border-white/50 bg-white/16 px-3 py-1 font-ui text-[11px] font-semibold text-[#021723] backdrop-blur-[3px]"
                   >
                     {t}
                   </span>
