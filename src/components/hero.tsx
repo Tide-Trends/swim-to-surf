@@ -42,16 +42,13 @@ export function Hero() {
         <div className="absolute inset-0 bg-gradient-to-r from-white/6 via-transparent to-transparent" aria-hidden />
       </motion.div>
 
-      <div className="relative z-10 flex min-h-[100dvh] flex-col justify-between">
-        {/* Top spacer so the image and face are clearly visible with minimal overlap */}
-        <div className="h-[10vh] sm:h-[12vh] md:h-[14vh]" />
-
-        {/* Title + CTA band anchored toward bottom, not over the swimmer's face */}
+      <div className="relative z-10 flex min-h-[100dvh] flex-col justify-center">
+        {/* Title + CTA band */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="px-4 pb-10 sm:px-6 md:px-10 lg:px-16"
+          className="px-4 py-10 sm:px-6 md:px-10 lg:px-16"
         >
           <div className="mx-auto max-w-3xl rounded-[1.75rem] border border-white/35 bg-white/14 px-5 py-6 shadow-[0_16px_40px_-22px_rgba(0,60,90,0.35)] backdrop-blur-[5px] sm:rounded-[2rem] sm:px-9 sm:py-7 md:px-10 md:py-8">
             <div className="text-center text-[#07324a]">
@@ -97,10 +94,6 @@ export function Hero() {
                   Our philosophy
                 </Link>
               </div>
-
-              <p className="mt-7 font-ui text-[10px] uppercase tracking-[0.18em] text-[#0b5f82]/70">
-                Book online in minutes · Pay by Stripe or pay later (Venmo / cash)
-              </p>
             </div>
           </div>
         </motion.div>
