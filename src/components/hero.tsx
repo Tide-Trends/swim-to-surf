@@ -53,7 +53,7 @@ export function Hero() {
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           className="px-4 pb-16 sm:px-6 md:px-10 lg:px-16"
         >
-          <div className="mx-auto max-w-3xl rounded-[1.75rem] border border-white/55 bg-white/36 px-5 py-6 shadow-[0_18px_42px_-22px_rgba(0,60,90,0.45)] backdrop-blur-sm sm:rounded-[2rem] sm:px-9 sm:py-7 md:px-10 md:py-8">
+          <div className="mx-auto max-w-3xl rounded-[1.75rem] border border-white/45 bg-white/22 px-5 py-6 shadow-[0_18px_42px_-22px_rgba(0,60,90,0.4)] backdrop-blur-[6px] sm:rounded-[2rem] sm:px-9 sm:py-7 md:px-10 md:py-8">
             <div className="text-center text-[#07324a]">
               <p className="mb-4 font-ui text-[10px] font-semibold uppercase tracking-[0.22em] text-[#0b5f82]/90 md:mb-5 md:text-[11px]">
                 Private lessons · American Fork, Utah
@@ -81,17 +81,6 @@ export function Hero() {
                   Our philosophy
                 </Link>
               </div>
-            </div>
-          </div>
-
-          {/* Explicit scroll affordance */}
-          <div className="mt-8 flex flex-col items-center gap-2 text-[#0b5f82]/85">
-            <p className="font-ui text-[11px] uppercase tracking-[0.22em]">Scroll to see how it works</p>
-            <div className="h-8 w-px bg-[#0b5f82]/35" />
-            <div className="animate-bounce-slow">
-              <span className="inline-block rounded-full border border-[#0b5f82]/40 px-3 py-1 font-ui text-[11px] uppercase tracking-[0.2em]">
-                ↓ Keep scrolling
-              </span>
             </div>
           </div>
         </motion.div>

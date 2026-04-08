@@ -1,0 +1,34 @@
+# Swim to Surf
+
+## About
+Swim to Surf provides private, one-on-one swim lessons in American Fork, Utah. We focus on calm coaching, real water confidence, and strong safety fundamentals for swimmers of all ages (0–99).
+
+## Services
+- Private swim lessons (1:1)
+- Infant lessons (15 minutes) and standard lessons (30 minutes)
+- Summer scheduling with two instructors:
+  - Lukaah: weekly (Mon–Fri) at a consistent daily start time
+  - Estee: monthly (Wed/Thu) with optional second weekday
+
+## Locations / Service Area
+- American Fork, Utah (Utah County)
+
+## Contact
+- Email: swimtosurfemail@gmail.com
+- Phone: 385-499-8036
+- Website: https://swimtosurf.co
+
+## Key Links
+- Home: https://swimtosurf.co/
+- Book: https://swimtosurf.co/book
+- Instructors: https://swimtosurf.co/instructors
+- FAQ: https://swimtosurf.co/faq
+- About: https://swimtosurf.co/about
+- Contact: https://swimtosurf.co/contact
+
+## What to Know
+- Bookings are confirmed by email with a confirmation code.
+- Payments:
+  - Online checkout via Stripe (card / Apple Pay)
+  - Pay later options (Venmo / cash / in person)
+

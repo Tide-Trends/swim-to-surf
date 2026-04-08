@@ -12,6 +12,45 @@ export default function Home() {
     <>
       <Hero />
 
+      {/* Quick value strip (above the fold continuation) */}
+      <section className="bg-warm-white -mt-10 pb-10 md:pb-12 relative">
+        <div className="container mx-auto px-6 max-w-7xl">
+          <FadeIn className="mx-auto max-w-5xl">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="glass rounded-[2rem] px-7 py-7 md:px-8 md:py-8">
+                <p className="font-ui text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">Safety</p>
+                <p className="mt-2 font-display text-2xl tracking-tight text-dark">Confidence first</p>
+                <p className="mt-3 text-sm text-muted leading-relaxed font-light">
+                  We teach survival skills and calm breathing before anything else.
+                </p>
+              </div>
+              <div className="glass rounded-[2rem] px-7 py-7 md:px-8 md:py-8">
+                <p className="font-ui text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">Private</p>
+                <p className="mt-2 font-display text-2xl tracking-tight text-dark">One swimmer. One coach.</p>
+                <p className="mt-3 text-sm text-muted leading-relaxed font-light">
+                  No crowded classes — your swimmer gets full attention every lesson.
+                </p>
+              </div>
+              <div className="glass rounded-[2rem] px-7 py-7 md:px-8 md:py-8">
+                <p className="font-ui text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">Simple</p>
+                <p className="mt-2 font-display text-2xl tracking-tight text-dark">Book in minutes</p>
+                <p className="mt-3 text-sm text-muted leading-relaxed font-light">
+                  Pick your week/month, choose times, and you&apos;re set.
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-center">
+              <Link
+                href="/book"
+                className="inline-flex items-center justify-center rounded-full border border-ocean-deep/20 bg-white px-7 py-3 font-ui text-xs font-bold uppercase tracking-[0.18em] text-ocean-deep hover:border-ocean-deep/30 hover:bg-ocean-surf/30 transition-colors"
+              >
+                Check availability
+              </Link>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
       {/* Philosophy Section */}
       <section className="bg-warm-white pt-14 pb-20 md:pt-16 md:pb-28 overflow-hidden relative">
         <WaterLineArt />
