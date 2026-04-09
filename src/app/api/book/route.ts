@@ -20,6 +20,7 @@ import {
   FROM_EMAIL,
   resendApiKeyConfigured,
   sendBookingEmails,
+  shouldUseGmailForBookingEmails,
   type SwimmerPayload,
 } from "@/lib/booking-emails";
 import { expireStripeCheckoutSession } from "@/lib/stripe-checkout-confirm";
@@ -112,13 +113,22 @@ export async function POST(req: Request) {
 
     const hasResend = resendApiKeyConfigured();
     const resend = hasResend ? new Resend(process.env.RESEND_API_KEY!.trim()) : null;
-    if (!hasResend) {
-      console.warn("Resend not configured — set RESEND_API_KEY (and verify RESEND_FROM_EMAIL domain in Resend).");
-    }
-    if (FROM_EMAIL.includes("resend.dev")) {
-      console.warn(
-        "[Resend] Using a resend.dev \"from\" address — set RESEND_FROM_EMAIL to an address on a verified domain so mail reaches the inbox."
+    const bookViaGmail = shouldUseGmailForBookingEmails();
+    if (bookViaGmail) {
+      console.log(
+        "[book] Confirmations will use Gmail SMTP (set by GMAIL_USER + GMAIL_APP_PASSWORD; avoids Resend domain verification)."
       );
+    } else {
+      if (!hasResend) {
+        console.warn(
+          "No booking email transport: set GMAIL_USER + GMAIL_APP_PASSWORD (Gmail App Password) or RESEND_API_KEY."
+        );
+      }
+      if (FROM_EMAIL.includes("resend.dev")) {
+        console.warn(
+          "[Resend] resend.dev \"from\" limits who receives mail — add Gmail App Password env vars so confirmations use SMTP."
+        );
+      }
     }
 
     const n = swimmersList.length;

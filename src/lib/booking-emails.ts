@@ -1,4 +1,6 @@
 import { Resend } from "resend";
+import nodemailer from "nodemailer";
+import type { SendMailOptions, Transporter } from "nodemailer";
 import { getArrivalDetailsHtml, getManageBookingLinkHtml } from "@/lib/email-templates";
 import type { ScheduleSelection } from "@/lib/booking-schema";
 import { formatLessonTimeHm, lessonLocalToUtcIso } from "@/lib/timezone";
@@ -40,6 +42,35 @@ export function resendApiKeyConfigured(): boolean {
   return Boolean(k && k.length > 10 && !k.includes("your-resend"));
 }
 
+/** Same env as `scripts/email-blast/send-via-gmail.mjs` — App Password, not your normal Gmail password. */
+export function gmailBookingTransportConfigured(): boolean {
+  const user = process.env.GMAIL_USER?.trim();
+  const pass = process.env.GMAIL_APP_PASSWORD?.replace(/\s/g, "").trim();
+  return Boolean(user && pass && user.includes("@"));
+}
+
+/**
+ * Use Gmail SMTP for booking confirmations when Resend’s “from” is still the default test domain
+ * (delivery to arbitrary customer addresses is blocked), or when BOOKING_USE_GMAIL_SMTP=1.
+ */
+export function shouldUseGmailForBookingEmails(): boolean {
+  if (!gmailBookingTransportConfigured()) return false;
+  const force = process.env.BOOKING_USE_GMAIL_SMTP?.trim();
+  if (force === "1" || force?.toLowerCase() === "true") return true;
+  return FROM_EMAIL.includes("resend.dev");
+}
+
+function getBookingGmailTransporter(): Transporter {
+  const user = process.env.GMAIL_USER!.trim();
+  const pass = process.env.GMAIL_APP_PASSWORD!.replace(/\s/g, "").trim();
+  return nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: { user, pass },
+  });
+}
+
 function logResendFailure(label: string, err: unknown) {
   const detail =
     err && typeof err === "object"
@@ -77,6 +108,25 @@ async function resendSendWithRetries(
       logResendFailure(`${label} attempt ${attempt + 1}`, result.error);
     } catch (e) {
       logResendFailure(`${label} attempt ${attempt + 1}`, e);
+    }
+  }
+  return false;
+}
+
+async function smtpSendWithRetries(
+  transporter: Transporter,
+  label: string,
+  mail: SendMailOptions
+): Promise<boolean> {
+  const delays = [0, 1200, 2500, 5000, 8000];
+  for (let attempt = 0; attempt < delays.length; attempt++) {
+    if (delays[attempt]! > 0) await sleep(delays[attempt]!);
+    try {
+      await transporter.sendMail(mail);
+      console.log(`[Gmail SMTP] ${label} ok (attempt ${attempt + 1})`);
+      return true;
+    } catch (e) {
+      logResendFailure(`[SMTP] ${label} attempt ${attempt + 1}`, e);
     }
   }
   return false;
@@ -217,14 +267,19 @@ export async function sendBookingEmails(args: {
     : `<strong>${priceInfo.totalLessons} lessons</strong>`;
   const confirmCodes = bookingIds.map((id) => id.slice(0, 8).toUpperCase()).join(" · ");
 
-  if (!resend) {
+  const useGmail = shouldUseGmailForBookingEmails();
+  if (!useGmail && !resend) {
     return { customerEmailSent: false, adminEmailSent: false };
   }
 
-  if (FROM_EMAIL.includes("resend.dev")) {
+  if (useGmail) {
+    console.log(
+      "[Booking email] Using Gmail SMTP for confirmations — delivers to any customer inbox without Resend domain DNS."
+    );
+  } else if (FROM_EMAIL.includes("resend.dev")) {
     console.error(
-      "[Resend] FROM is onboarding@resend.dev — in production, Resend often only delivers to your Resend account email until you verify a domain. " +
-        "Set RESEND_FROM_EMAIL to e.g. Bookings <bookings@swimtosurf.co> (verified in Resend)."
+      "[Resend] FROM is onboarding@resend.dev — set GMAIL_USER + GMAIL_APP_PASSWORD in production so bookings use Gmail SMTP, " +
+        "or set RESEND_FROM_EMAIL on a verified domain."
     );
   }
 
@@ -370,36 +425,91 @@ export async function sendBookingEmails(args: {
   const idempotencyAdmin = `sts-${sortedIds}-admin-${paymentMethod}`;
   const idempotencyCustomer = `sts-${sortedIds}-customer-${paymentMethod}`;
 
+  const adminSubject = `New booking: ${swimmerNamesSubject} · ${instructorName} · ${payLabel}`;
+  const customerSubject = multi
+    ? `You're booked — Swim to Surf (${confirmCodes})`
+    : `You're booked — Swim to Surf (confirmation ${bookingId.slice(0, 8).toUpperCase()})`;
+
   const adminBcc = bccOpsIfUseful(adminEmail);
-  const adminEmailSent = await resendSendWithRetries(
-    resend,
+  let adminEmailSent: boolean;
+  let customerEmailSent = false;
+
+  if (useGmail) {
+    const transporter = getBookingGmailTransporter();
+    const gmailFrom = `"Swim to Surf" <${process.env.GMAIL_USER!.trim()}>`;
+    adminEmailSent = await smtpSendWithRetries(transporter, `admin → ${adminEmail}`, {
+      from: gmailFrom,
+      to: adminEmail,
+      ...(adminBcc.length ? { bcc: adminBcc } : {}),
+      replyTo: REPLY_TO,
+      subject: adminSubject,
+      html: adminHtml,
+    });
+    if (customerTo) {
+      const custBcc = bccOpsIfUseful(customerTo);
+      customerEmailSent = await smtpSendWithRetries(transporter, `customer → ${customerTo}`, {
+        from: gmailFrom,
+        to: customerTo,
+        ...(custBcc.length ? { bcc: custBcc } : {}),
+        replyTo: REPLY_TO,
+        subject: customerSubject,
+        html: customerHtml,
+      });
+    } else {
+      console.warn("No customer email — admin notification still attempted.");
+    }
+    if (!adminEmailSent || (customerTo && !customerEmailSent)) {
+      const ops = opsInboxEmail();
+      const lines = [
+        "One or more booking emails failed after retries. Re-send manually if needed.",
+        `Admin delivered: ${adminEmailSent ? "yes" : "no"} (to ${adminEmail})`,
+        customerTo
+          ? `Customer delivered: ${customerEmailSent ? "yes" : "no"} (to ${customerTo})`
+          : "Customer email: not provided on booking",
+        "",
+        `Confirm codes: ${confirmCodes}`,
+        `Payment: ${payLabel}`,
+        `Schedule: ${scheduleText}`,
+        `${specificDays}`,
+        `Total: ${priceFormatted}`,
+      ];
+      const body = lines.join("\n");
+      await smtpSendWithRetries(transporter, `ops-alert → ${ops}`, {
+        from: gmailFrom,
+        to: ops,
+        replyTo: REPLY_TO,
+        subject: `[Swim to Surf] Booking email delivery issue — ${confirmCodes}`,
+        html: `<pre style="font-family:system-ui;font-size:14px;line-height:1.55;white-space:pre-wrap">${escapeHtml(body)}</pre>`,
+      });
+    }
+    return { customerEmailSent, adminEmailSent };
+  }
+
+  adminEmailSent = await resendSendWithRetries(
+    resend!,
     `admin → ${adminEmail}`,
     {
       from: FROM_EMAIL,
       to: [adminEmail],
       ...(adminBcc.length ? { bcc: adminBcc } : {}),
       replyTo: REPLY_TO,
-      subject: `New booking: ${swimmerNamesSubject} · ${instructorName} · ${payLabel}`,
+      subject: adminSubject,
       html: adminHtml,
     },
     idempotencyAdmin
   );
 
-  let customerEmailSent = false;
   if (customerTo) {
     const custBcc = bccOpsIfUseful(customerTo);
     customerEmailSent = await resendSendWithRetries(
-      resend,
+      resend!,
       `customer → ${customerTo}`,
       {
         from: FROM_EMAIL,
         to: [customerTo],
         ...(custBcc.length ? { bcc: custBcc } : {}),
         replyTo: REPLY_TO,
-        subject:
-          multi
-            ? `You're booked — Swim to Surf (${confirmCodes})`
-            : `You're booked — Swim to Surf (confirmation ${bookingId.slice(0, 8).toUpperCase()})`,
+        subject: customerSubject,
         html: customerHtml,
       },
       idempotencyCustomer
@@ -426,7 +536,7 @@ export async function sendBookingEmails(args: {
     ];
     const body = lines.join("\n");
     await resendSendWithRetries(
-      resend,
+      resend!,
       `ops-alert → ${ops}`,
       {
         from: FROM_EMAIL,
