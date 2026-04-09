@@ -76,8 +76,8 @@ function rowsToSwimmerInfo(rows: BookingRow[]): SwimmerInfo[] {
 }
 
 /**
- * After Stripe reports payment, flip pending rows to confirmed and send emails once.
- * Idempotent: if rows are already confirmed, skips update and email.
+ * After Stripe reports payment, flip pending rows to confirmed and send confirmation emails.
+ * Safe to call repeatedly: Resend idempotency keys prevent duplicate customer/admin messages on retries.
  */
 export async function promotePaidCheckoutSession(
   checkoutSessionId: string,
@@ -110,49 +110,36 @@ export async function promotePaidCheckoutSession(
 
   const rows = group as unknown as BookingRow[];
   const bookingIds = rows.map((r) => r.id);
-  const allConfirmed = rows.every((r) => r.status === "confirmed");
 
-  if (allConfirmed) {
-    const instructor = rows[0]!.instructor as "lukaah" | "estee";
-    return {
-      ok: true,
-      bookingIds,
-      customerEmailSent: true,
-      adminEmailSent: true,
-      instructor,
-      swimmers: rowsToSwimmerInfo(rows),
-      schedules: rows.map(rowToSchedule),
-    };
+  const hasPending = rows.some((r) => r.status === "pending_payment");
+  if (hasPending) {
+    const { error: upErr } = await supabase
+      .from("bookings")
+      .update({ status: "confirmed", payment_hold_expires_at: null })
+      .eq("stripe_checkout_session_id", checkoutSessionId)
+      .eq("status", "pending_payment");
+
+    if (upErr) {
+      console.error("[stripe confirm] update failed", upErr);
+      return { ok: false, reason: "update_failed", bookingIds, customerEmailSent: false, adminEmailSent: false };
+    }
   }
 
-  const { data: updated, error: upErr } = await supabase
+  const { data: fresh, error: freshErr } = await supabase
     .from("bookings")
-    .update({ status: "confirmed", payment_hold_expires_at: null })
+    .select("*")
     .eq("stripe_checkout_session_id", checkoutSessionId)
-    .eq("status", "pending_payment")
-    .select("id");
+    .order("created_at", { ascending: true });
 
-  if (upErr) {
-    console.error("[stripe confirm] update failed", upErr);
-    return { ok: false, reason: "update_failed", bookingIds, customerEmailSent: false, adminEmailSent: false };
+  if (freshErr || !fresh?.length) {
+    console.error("[stripe confirm] refetch failed", freshErr);
+    return { ok: false, reason: "refetch_failed", bookingIds, customerEmailSent: false, adminEmailSent: false };
   }
 
-  if (!updated?.length) {
-    const instructor = rows[0]!.instructor as "lukaah" | "estee";
-    return {
-      ok: true,
-      bookingIds,
-      customerEmailSent: true,
-      adminEmailSent: true,
-      instructor,
-      swimmers: rowsToSwimmerInfo(rows),
-      schedules: rows.map(rowToSchedule),
-    };
+  const freshRows = fresh as unknown as BookingRow[];
+  if (!freshRows.every((r) => r.status === "confirmed")) {
+    return { ok: false, reason: "not_confirmed", bookingIds, customerEmailSent: false, adminEmailSent: false };
   }
-
-  const { data: fresh } = await supabase.from("bookings").select("*").in("id", bookingIds).order("created_at", { ascending: true });
-
-  const freshRows = (fresh || rows) as unknown as BookingRow[];
   const instructor = freshRows[0]!.instructor as "lukaah" | "estee";
   const instKey = instructor;
   const schedules = freshRows.map(rowToSchedule);
@@ -197,19 +184,7 @@ export async function promotePaidCheckoutSession(
     origin,
   } as const;
 
-  // Resend can occasionally have transient hiccups right after redirect/payment.
-  // Retry once to avoid falsely reporting "not sent" to users.
-  let emailResult = await sendBookingEmails(emailArgs);
-  if (hasResend && (!emailResult.customerEmailSent || !emailResult.adminEmailSent)) {
-    console.warn("[stripe confirm] resend had failures; retrying once", {
-      customer: emailResult.customerEmailSent,
-      admin: emailResult.adminEmailSent,
-    });
-    await new Promise((r) => setTimeout(r, 1200));
-    emailResult = await sendBookingEmails(emailArgs);
-  }
-
-  const { customerEmailSent, adminEmailSent } = emailResult;
+  const { customerEmailSent, adminEmailSent } = await sendBookingEmails(emailArgs);
 
   return {
     ok: true,

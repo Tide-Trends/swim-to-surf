@@ -8,6 +8,33 @@ const ESTEE_EMAIL = "esteemarlowe@gmail.com";
 export const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "Swim to Surf <onboarding@resend.dev>";
 const REPLY_TO = process.env.RESEND_REPLY_TO || "swimtosurfemail@gmail.com";
 
+/** Ops inbox for fallbacks (parse env reply-to or default Gmail). */
+function opsInboxEmail(): string {
+  const raw = REPLY_TO.trim();
+  const m = raw.match(/<([^>]+)>/);
+  const addr = (m?.[1] ?? raw).trim();
+  return addr.includes("@") ? addr : "swimtosurfemail@gmail.com";
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/** Normalize addresses from iOS autofill / unicode spaces so Resend accepts them. */
+export function normalizeBookingEmail(raw: string | undefined | null): string | null {
+  if (!raw) return null;
+  let e = raw.normalize("NFKC").trim().toLowerCase();
+  e = e.replace(/[\u200B-\u200D\uFEFF]/g, "");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return null;
+  return e;
+}
+
+function bccOpsIfUseful(primaryTo: string): string[] {
+  const ops = normalizeBookingEmail(opsInboxEmail());
+  if (!ops || ops.toLowerCase() === primaryTo.toLowerCase()) return [];
+  return [ops];
+}
+
 export function resendApiKeyConfigured(): boolean {
   const k = process.env.RESEND_API_KEY?.trim();
   return Boolean(k && k.length > 10 && !k.includes("your-resend"));
@@ -21,6 +48,38 @@ function logResendFailure(label: string, err: unknown) {
         ? err.message
         : String(err);
   console.error(`[Resend] ${label} failed:`, detail);
+}
+
+type ResendEmailPayload = {
+  from: string;
+  to: string[];
+  subject: string;
+  html: string;
+  replyTo?: string | string[];
+  bcc?: string | string[];
+};
+
+async function resendSendWithRetries(
+  resend: Resend,
+  label: string,
+  payload: ResendEmailPayload,
+  idempotencyKey: string
+): Promise<boolean> {
+  const delays = [0, 1200, 2500, 5000, 8000];
+  for (let attempt = 0; attempt < delays.length; attempt++) {
+    if (delays[attempt]! > 0) await sleep(delays[attempt]!);
+    try {
+      const result = await resend.emails.send(payload, { idempotencyKey });
+      if (!result.error) {
+        console.log(`[Resend] ${label} ok (attempt ${attempt + 1})`);
+        return true;
+      }
+      logResendFailure(`${label} attempt ${attempt + 1}`, result.error);
+    } catch (e) {
+      logResendFailure(`${label} attempt ${attempt + 1}`, e);
+    }
+  }
+  return false;
 }
 
 export function getAdminEmail(instructor: string): string {
@@ -162,7 +221,14 @@ export async function sendBookingEmails(args: {
     return { customerEmailSent: false, adminEmailSent: false };
   }
 
-  const customerTo = swimmerInfo.parentEmail?.trim();
+  if (FROM_EMAIL.includes("resend.dev")) {
+    console.error(
+      "[Resend] FROM is onboarding@resend.dev — in production, Resend often only delivers to your Resend account email until you verify a domain. " +
+        "Set RESEND_FROM_EMAIL to e.g. Bookings <bookings@swimtosurf.co> (verified in Resend)."
+    );
+  }
+
+  const customerTo = normalizeBookingEmail(swimmerInfo.parentEmail);
   const paymentBlurb =
     paymentMethod === "stripe"
       ? "<p style=\"font-size: 16px; line-height: 1.6; color: #1D1D1F;\"><strong>Payment received:</strong> Thank you for paying with Stripe. You&rsquo;ll have a receipt from Stripe. You can also use Apple Pay or a card in person when we meet.</p>"
@@ -300,64 +366,77 @@ export async function sendBookingEmails(args: {
             </div>
           `;
 
-  const baseSend = {
-    from: FROM_EMAIL,
-    replyTo: REPLY_TO,
-  } as const;
+  const sortedIds = [...bookingIds].sort().join("-");
+  const idempotencyAdmin = `sts-${sortedIds}-admin-${paymentMethod}`;
+  const idempotencyCustomer = `sts-${sortedIds}-customer-${paymentMethod}`;
 
-  const adminPromise = resend.emails.send({
-    ...baseSend,
-    to: [adminEmail],
-    subject: `New booking: ${swimmerNamesSubject} · ${instructorName} · ${payLabel}`,
-    html: adminHtml,
-  });
+  const adminBcc = bccOpsIfUseful(adminEmail);
+  const adminEmailSent = await resendSendWithRetries(
+    resend,
+    `admin → ${adminEmail}`,
+    {
+      from: FROM_EMAIL,
+      to: [adminEmail],
+      ...(adminBcc.length ? { bcc: adminBcc } : {}),
+      replyTo: REPLY_TO,
+      subject: `New booking: ${swimmerNamesSubject} · ${instructorName} · ${payLabel}`,
+      html: adminHtml,
+    },
+    idempotencyAdmin
+  );
 
-  const customerPromise =
-    customerTo != null && customerTo.length > 0
-      ? resend.emails.send({
-          ...baseSend,
-          to: [customerTo],
-          subject:
-            multi
-              ? `You're booked — Swim to Surf (${confirmCodes})`
-              : `You're booked — Swim to Surf (confirmation ${bookingId.slice(0, 8).toUpperCase()})`,
-          html: customerHtml,
-        })
-      : Promise.resolve({ data: null, error: null });
-
-  const [adminResult, customerResult] = await Promise.allSettled([adminPromise, customerPromise]);
-
-  let adminEmailSent = false;
   let customerEmailSent = false;
-
-  if (adminResult.status === "fulfilled" && !adminResult.value.error) {
-    adminEmailSent = true;
-    console.log("Admin notification email sent to:", adminEmail);
-  } else {
-    const err =
-      adminResult.status === "rejected"
-        ? adminResult.reason
-        : adminResult.status === "fulfilled"
-          ? adminResult.value.error
-          : null;
-    logResendFailure(`admin → ${adminEmail}`, err);
-  }
-
   if (customerTo) {
-    if (customerResult.status === "fulfilled" && !customerResult.value.error) {
-      customerEmailSent = true;
-      console.log("Customer confirmation email sent to:", customerTo);
-    } else {
-      const err =
-        customerResult.status === "rejected"
-          ? customerResult.reason
-          : customerResult.status === "fulfilled"
-            ? customerResult.value.error
-            : null;
-      logResendFailure(`customer → ${customerTo}`, err);
-    }
+    const custBcc = bccOpsIfUseful(customerTo);
+    customerEmailSent = await resendSendWithRetries(
+      resend,
+      `customer → ${customerTo}`,
+      {
+        from: FROM_EMAIL,
+        to: [customerTo],
+        ...(custBcc.length ? { bcc: custBcc } : {}),
+        replyTo: REPLY_TO,
+        subject:
+          multi
+            ? `You're booked — Swim to Surf (${confirmCodes})`
+            : `You're booked — Swim to Surf (confirmation ${bookingId.slice(0, 8).toUpperCase()})`,
+        html: customerHtml,
+      },
+      idempotencyCustomer
+    );
   } else {
     console.warn("No customer email — admin notification still attempted.");
+  }
+
+  if (!adminEmailSent || (customerTo && !customerEmailSent)) {
+    const ops = opsInboxEmail();
+    const alertKey = `sts-${sortedIds}-ops-deliver-${paymentMethod}`;
+    const lines = [
+      "One or more booking emails failed after retries. Re-send manually if needed.",
+      `Admin delivered: ${adminEmailSent ? "yes" : "no"} (to ${adminEmail})`,
+      customerTo
+        ? `Customer delivered: ${customerEmailSent ? "yes" : "no"} (to ${customerTo})`
+        : "Customer email: not provided on booking",
+      "",
+      `Confirm codes: ${confirmCodes}`,
+      `Payment: ${payLabel}`,
+      `Schedule: ${scheduleText}`,
+      `${specificDays}`,
+      `Total: ${priceFormatted}`,
+    ];
+    const body = lines.join("\n");
+    await resendSendWithRetries(
+      resend,
+      `ops-alert → ${ops}`,
+      {
+        from: FROM_EMAIL,
+        to: [ops],
+        replyTo: REPLY_TO,
+        subject: `[Swim to Surf] Booking email delivery issue — ${confirmCodes}`,
+        html: `<pre style="font-family:system-ui;font-size:14px;line-height:1.55;white-space:pre-wrap">${escapeHtml(body)}</pre>`,
+      },
+      alertKey
+    );
   }
 
   return { customerEmailSent, adminEmailSent };

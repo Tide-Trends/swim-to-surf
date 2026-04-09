@@ -32,3 +32,8 @@ Swim to Surf provides private, one-on-one swim lessons in American Fork, Utah. W
   - Online checkout via Stripe (card / Apple Pay)
   - Pay later options (Venmo / cash / in person)
 
+## Email delivery (for operators)
+- Transactional mail is sent via Resend (`RESEND_API_KEY`).
+- Production should use `RESEND_FROM_EMAIL` on a **verified domain** (e.g. `bookings@swimtosurf.co`). Using Resend’s default `onboarding@resend.dev` often only delivers to the Resend account email, which blocks real customers from receiving confirmations.
+- `RESEND_REPLY_TO` should be the public contact inbox (e.g. swimtosurfemail@gmail.com).
+

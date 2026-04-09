@@ -98,6 +98,9 @@ export function BookingSuccess({
                 </a>{" "}
                 with confirmation <strong>#{bookingId.slice(0, 8).toUpperCase()}</strong>.
               </p>
+              <p className="mt-2 text-amber-900/85">
+                Our system also attempts a backup alert to our main inbox so we can re-send your confirmation if delivery failed.
+              </p>
               {!emailDelivery.admin && (
                 <p className="mt-2 text-amber-900/85">
                   Team notification is also pending, so please contact us and we will confirm your spot manually.
