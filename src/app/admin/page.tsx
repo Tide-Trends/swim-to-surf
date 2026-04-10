@@ -3,14 +3,15 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
-import type { Booking } from "@/lib/database.types";
+import type { Booking, ContactMessage } from "@/lib/database.types";
 import { Button } from "@/components/ui/button";
 import { BookingTable } from "@/components/admin/booking-table";
 import { ScheduleView } from "@/components/admin/schedule-view";
 import { InstructorProfilesEditor } from "@/components/admin/instructor-profiles-editor";
+import { ContactMessagesTable } from "@/components/admin/contact-messages-table";
 import { clearAdminSession, getAdminSession, type InstructorSlug } from "@/lib/instructor-content";
 
-type Tab = "bookings" | "schedule" | "instructors";
+type Tab = "bookings" | "schedule" | "instructors" | "messages";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -21,6 +22,9 @@ export default function AdminPage() {
   const [filter, setFilter] = useState<"all" | "lukaah" | "estee">("all");
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
+  const [messagesError, setMessagesError] = useState<string | null>(null);
+  const [messagesRefreshing, setMessagesRefreshing] = useState(false);
 
   useEffect(() => {
     const session = getAdminSession();
@@ -54,9 +58,33 @@ export default function AdminPage() {
     }
   }, []);
 
+  const fetchContactMessages = useCallback(async () => {
+    try {
+      setMessagesError(null);
+      const res = await fetch("/api/admin/contact-messages", { cache: "no-store" });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        const msg =
+          typeof (errBody as { error?: string }).error === "string"
+            ? (errBody as { error: string }).error
+            : `Could not load messages (${res.status}).`;
+        throw new Error(msg);
+      }
+      const data = await res.json();
+      setContactMessages(Array.isArray(data) ? (data as ContactMessage[]) : []);
+    } catch (err) {
+      console.error("Contact messages fetch error:", err);
+      setMessagesError(err instanceof Error ? err.message : "Failed to load contact messages.");
+    }
+  }, []);
+
   useEffect(() => {
     if (authedUser) void fetchBookings();
   }, [authedUser, fetchBookings]);
+
+  useEffect(() => {
+    if (authedUser && tab === "messages") void fetchContactMessages();
+  }, [authedUser, tab, fetchContactMessages]);
 
   useEffect(() => {
     if (!authedUser || tab !== "bookings") return;
@@ -65,6 +93,14 @@ export default function AdminPage() {
     }, 25000);
     return () => window.clearInterval(t);
   }, [authedUser, tab, fetchBookings]);
+
+  useEffect(() => {
+    if (!authedUser || tab !== "messages") return;
+    const t = window.setInterval(() => {
+      void fetchContactMessages();
+    }, 25000);
+    return () => window.clearInterval(t);
+  }, [authedUser, tab, fetchContactMessages]);
 
   async function cancelBooking(id: string) {
     if (!confirm("Cancel this booking? The parent will be notified.")) return;
@@ -116,8 +152,8 @@ export default function AdminPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-secondary rounded-lg p-1 mb-8 w-fit">
-          {(["bookings", "schedule", "instructors"] as Tab[]).map((t) => (
+        <div className="flex gap-1 bg-secondary rounded-lg p-1 mb-8 w-fit flex-wrap">
+          {(["bookings", "schedule", "instructors", "messages"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -185,6 +221,40 @@ export default function AdminPage() {
         )}
         {tab === "schedule" && <ScheduleView bookings={bookings} />}
         {tab === "instructors" && <InstructorProfilesEditor editor={authedUser} />}
+
+        {tab === "messages" && (
+          <div className="mb-6 flex flex-wrap items-center gap-3">
+            <p className="font-ui text-sm text-muted">
+              {contactMessages.length} message{contactMessages.length === 1 ? "" : "s"}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-auto border-2 border-[#1D1D1F] font-semibold"
+              disabled={messagesRefreshing}
+              onClick={async () => {
+                setMessagesRefreshing(true);
+                await fetchContactMessages();
+                setMessagesRefreshing(false);
+              }}
+            >
+              {messagesRefreshing ? "Refreshing…" : "Refresh"}
+            </Button>
+          </div>
+        )}
+
+        {messagesError && tab === "messages" && (
+          <div
+            className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+            role="alert"
+          >
+            <strong className="font-semibold">Could not load messages.</strong> {messagesError} If you just added
+            the table, run <code className="rounded bg-red-100 px-1">005_contact_messages.sql</code> in the Supabase
+            SQL editor.
+          </div>
+        )}
+
+        {tab === "messages" && <ContactMessagesTable messages={contactMessages} />}
       </div>
     </section>
   );

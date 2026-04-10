@@ -63,3 +63,17 @@ create policy "Anyone can check slot availability"
 -- Optional: run supabase-migrations/002_prevent_double_booking.sql in the SQL editor
 -- to enforce no duplicate slots at the database layer (recommended for production).
 -- Then run 003_booking_interval_overlaps.sql so 15- and 30-minute lessons cannot overlap.
+
+-- Contact form (see supabase-migrations/005_contact_messages.sql)
+create table if not exists public.contact_messages (
+  id uuid default gen_random_uuid() primary key,
+  name text not null,
+  email text not null,
+  phone text,
+  message text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_contact_messages_created_at on public.contact_messages (created_at desc);
+
+alter table public.contact_messages enable row level security;
