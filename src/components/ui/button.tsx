@@ -12,20 +12,19 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const base =
-  "inline-flex items-center justify-center font-ui font-medium rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D1D1F] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer tracking-wide";
+  "inline-flex items-center justify-center rounded-xl font-ui font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-water focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer";
 
 const variants: Record<Variant, string> = {
-  primary:
-    "bg-[#0a4a5c] text-white border border-[#062f3d] shadow-[0_2px_0_rgba(255,255,255,0.12)_inset,0_8px_24px_rgba(6,47,61,0.35)] hover:bg-[#0c5a70] hover:border-[#083848] hover:shadow-[0_2px_0_rgba(255,255,255,0.14)_inset,0_12px_32px_rgba(6,47,61,0.4)] active:translate-y-px active:scale-[0.99]",
-  secondary: "bg-[#E8ECF0] text-[#0f172a] border border-black/10 hover:bg-[#dce3ea]",
-  outline: "border-2 border-[#1D1D1F] text-[#0f172a] bg-white hover:bg-[#f8fafc]",
-  ghost: "text-[#1D1D1F] hover:bg-[#F5F5F7]",
+  primary: "bg-deep text-white hover:bg-navy shadow-sm",
+  secondary: "bg-sand text-navy hover:bg-sand/80 border border-navy/8",
+  outline: "border border-navy/15 bg-white text-navy hover:bg-sand/60",
+  ghost: "text-navy hover:bg-sand/70",
 };
 
 const sizes: Record<Size, string> = {
-  sm: "px-5 py-2.5 text-sm font-semibold",
-  md: "px-8 py-3.5 text-sm font-semibold",
-  lg: "px-10 py-4 text-base font-semibold",
+  sm: "px-4 py-2 text-sm",
+  md: "px-6 py-2.5 text-sm",
+  lg: "px-8 py-3 text-base",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(

@@ -1,42 +1,35 @@
 # Swim to Surf
 
 ## About
-Swim to Surf provides private, one-on-one swim lessons in American Fork, Utah. We focus on calm coaching, real water confidence, and strong safety fundamentals for swimmers of all ages (0–99).
+Swim to Surf provides private, one-on-one swimming lessons in American Fork, Utah. Instruction is safety-first and confidence-focused for infants, kids, teens, and adults.
 
 ## Services
-- Private swim lessons (1:1)
-- Infant lessons (15 minutes) and standard lessons (30 minutes)
-- Summer scheduling with two instructors:
-  - Lukaah: weekly (Mon–Fri) at a consistent daily start time
-  - Estee: monthly (Wed/Thu) with optional second weekday
+- Private lessons (1:1)
+- Infant lessons (15 minutes)
+- Standard lessons (30 minutes)
+- Weekly and monthly scheduling options based on instructor availability
 
-## Locations / Service Area
-- American Fork, Utah (Utah County)
+## Service Area
+- American Fork, Utah
+- Utah County, Utah
 
 ## Contact
+- Website: https://swimtosurf.com
 - Email: swimtosurfemail@gmail.com
 - Phone: 385-499-8036
-- Website: https://swimtosurf.co
 
-## Key Links
-- Home: https://swimtosurf.co/
-- Book: https://swimtosurf.co/book
-- Instructors: https://swimtosurf.co/instructors
-- FAQ: https://swimtosurf.co/faq
-- About: https://swimtosurf.co/about
-- Contact: https://swimtosurf.co/contact
+## Key URLs
+- Home: https://swimtosurf.com/
+- Book: https://swimtosurf.com/book
+- Instructors: https://swimtosurf.com/instructors
+- FAQ: https://swimtosurf.com/faq
+- About: https://swimtosurf.com/about
+- Contact: https://swimtosurf.com/contact
+- Sitemap: https://swimtosurf.com/sitemap.xml
+- Full AI guide: https://swimtosurf.com/llms-full.txt
 
-## What to Know
+## Booking + Payment
 - Bookings are confirmed by email with a confirmation code.
-- Payments:
-  - Online checkout via Stripe (card / Apple Pay)
-  - Pay later options (Venmo / cash / in person)
-
-## Email delivery (for operators)
-- **Booking confirmations (pay later + after Stripe):** If `RESEND_FROM_EMAIL` is still Resend’s test address (`onboarding@resend.dev`), the app automatically sends those emails via **Gmail SMTP** when these are set (same as `scripts/email-blast/send-via-gmail.mjs`):
-  - `GMAIL_USER` — e.g. `swimtosurfemail@gmail.com`
-  - `GMAIL_APP_PASSWORD` — Google App Password (2FA required), not the normal login password
-  - Optional: `BOOKING_USE_GMAIL_SMTP=1` forces Gmail for confirmations even after you verify a Resend domain.
-- **Resend** (`RESEND_API_KEY` + verified `RESEND_FROM_EMAIL`) is still used when not on `resend.dev` and Gmail fallback is off — best long-term once DNS can be pointed for domain verification (TXT/SPF/DKIM). Wix-hosted DNS can be limiting; Gmail SMTP works without changing the domain’s mail DNS.
-- `RESEND_REPLY_TO` should be the public contact inbox (e.g. swimtosurfemail@gmail.com).
+- Online checkout via Stripe (card / Apple Pay) is available.
+- Pay-later options include Venmo, cash, and in-person payment.
 

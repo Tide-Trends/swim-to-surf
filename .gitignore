@@ -10,3 +10,4 @@ next-env.d.ts
 scripts/email-blast/sent.log
 scripts/email-blast/sent-brevo.log
 scripts/email-blast/*.log
+.vercel

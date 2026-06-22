@@ -9,6 +9,7 @@ import { BookingTable } from "@/components/admin/booking-table";
 import { ScheduleView } from "@/components/admin/schedule-view";
 import { InstructorProfilesEditor } from "@/components/admin/instructor-profiles-editor";
 import { ContactMessagesTable } from "@/components/admin/contact-messages-table";
+import { AdminRescheduleModal } from "@/components/admin/admin-reschedule-modal";
 import { clearAdminSession, getAdminSession, type InstructorSlug } from "@/lib/instructor-content";
 
 type Tab = "bookings" | "schedule" | "instructors" | "messages";
@@ -17,7 +18,7 @@ export default function AdminPage() {
   const router = useRouter();
   const [authedUser, setAuthedUser] = useState<InstructorSlug | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>("bookings");
+  const [tab, setTab] = useState<Tab>("schedule");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filter, setFilter] = useState<"all" | "lukaah" | "estee">("all");
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -25,6 +26,7 @@ export default function AdminPage() {
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [messagesError, setMessagesError] = useState<string | null>(null);
   const [messagesRefreshing, setMessagesRefreshing] = useState(false);
+  const [rescheduleTarget, setRescheduleTarget] = useState<Booking | null>(null);
 
   useEffect(() => {
     const session = getAdminSession();
@@ -217,9 +219,12 @@ export default function AdminPage() {
               filter === "all" ? bookings : bookings.filter((b) => b.instructor === filter)
             }
             onCancel={cancelBooking}
+            onReschedule={setRescheduleTarget}
           />
         )}
-        {tab === "schedule" && <ScheduleView bookings={bookings} />}
+        {tab === "schedule" && (
+          <ScheduleView bookings={bookings} onReschedule={setRescheduleTarget} />
+        )}
         {tab === "instructors" && <InstructorProfilesEditor editor={authedUser} />}
 
         {tab === "messages" && (
@@ -256,6 +261,14 @@ export default function AdminPage() {
 
         {tab === "messages" && <ContactMessagesTable messages={contactMessages} />}
       </div>
+
+      {rescheduleTarget && (
+        <AdminRescheduleModal
+          booking={rescheduleTarget}
+          onClose={() => setRescheduleTarget(null)}
+          onSuccess={() => void fetchBookings()}
+        />
+      )}
     </section>
   );
 }

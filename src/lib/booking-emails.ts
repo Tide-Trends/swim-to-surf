@@ -551,3 +551,123 @@ export async function sendBookingEmails(args: {
 
   return { customerEmailSent, adminEmailSent };
 }
+
+export async function sendRescheduleEmails(args: {
+  booking: {
+    id: string;
+    swimmer_name: string;
+    parent_name: string;
+    parent_email: string;
+    instructor: "lukaah" | "estee";
+  };
+  scheduleText: string;
+  specificDays: string;
+}): Promise<{ customerEmailSent: boolean; adminEmailSent: boolean }> {
+  const { booking, scheduleText, specificDays } = args;
+  const instructorName = booking.instructor === "lukaah" ? "Lukaah" : "Estee";
+  const adminEmail = getAdminEmail(booking.instructor);
+  const confirmCode = booking.id.slice(0, 8).toUpperCase();
+  const customerTo = normalizeBookingEmail(booking.parent_email);
+  const origin = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://swimtosurf.co";
+
+  const useGmail = shouldUseGmailForBookingEmails();
+  const resend = resendApiKeyConfigured() ? new Resend(process.env.RESEND_API_KEY!) : null;
+  if (!useGmail && !resend) {
+    console.warn("[Reschedule email] No email transport configured.");
+    return { customerEmailSent: false, adminEmailSent: false };
+  }
+
+  const scheduleBlock = `
+    <div style="margin: 24px 0; padding: 20px; background: #E8F4FD; border-radius: 16px; border: 1px solid #B8DFF0;">
+      <p style="margin: 0 0 4px; font-size: 14px; color: #005f8a; font-weight: 700;">NEW SCHEDULE</p>
+      <p style="margin: 0 0 8px; font-size: 17px; color: #1D3557; font-weight: 600;">${escapeHtml(scheduleText)}</p>
+      <p style="margin: 0; font-size: 14px; color: #1D3557;">${escapeHtml(specificDays)}</p>
+    </div>`;
+
+  const adminHtml = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1D1D1F; max-width: 560px; margin: 0 auto;">
+      <div style="padding: 32px 0; text-align: center; border-bottom: 2px solid #0077B6;">
+        <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 8px; color: #0077B6;">Booking rescheduled</h1>
+        <p style="color: #1D1D1F; font-size: 15px; margin: 0; font-weight: 600;">${confirmCode} · ${escapeHtml(booking.swimmer_name)}</p>
+      </div>
+      <div style="padding: 24px 0;">
+        <p style="font-size: 15px; line-height: 1.6;">${escapeHtml(booking.swimmer_name)} with ${instructorName} was rescheduled by admin.</p>
+        ${scheduleBlock}
+        <p style="font-size: 14px; color: #555;">Guardian: ${escapeHtml(booking.parent_name)} · ${customerTo ? escapeHtml(customerTo) : "no email"}</p>
+      </div>
+    </div>`;
+
+  const customerHtml = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1D1D1F; max-width: 560px; margin: 0 auto;">
+      <div style="padding: 40px 0; text-align: center; border-bottom: 1px solid #E8E8ED;">
+        <h1 style="font-size: 28px; font-weight: 600; margin: 0 0 8px; color: #1D1D1F;">Schedule updated</h1>
+        <p style="color: #333; font-size: 16px; margin: 0;">Confirmation #${confirmCode}</p>
+      </div>
+      <div style="padding: 32px 0;">
+        <p style="font-size: 16px; line-height: 1.6;">Hi ${escapeHtml(booking.parent_name || booking.swimmer_name)},</p>
+        <p style="font-size: 16px; line-height: 1.6;">Your lesson for <strong>${escapeHtml(booking.swimmer_name)}</strong> with ${instructorName} has been moved to a new time:</p>
+        ${scheduleBlock}
+        ${getManageBookingLinkHtml(booking.id, origin)}
+      </div>
+      <p style="color: #555; font-size: 13px; margin-top: 24px; border-top: 1px solid #E8E8ED; padding-top: 16px; text-align: center;">
+        Swim to Surf · swimtosurfemail@gmail.com · 385-499-8036
+      </p>
+    </div>`;
+
+  const adminSubject = `Rescheduled: ${booking.swimmer_name} · ${instructorName}`;
+  const customerSubject = `Your lesson was rescheduled — Swim to Surf (${confirmCode})`;
+  const idempotencyKey = `sts-reschedule-${booking.id}-${specificDays.replace(/\s/g, "")}`;
+
+  let adminEmailSent = false;
+  let customerEmailSent = false;
+
+  if (useGmail) {
+    const transporter = getBookingGmailTransporter();
+    const gmailFrom = `"Swim to Surf" <${process.env.GMAIL_USER!.trim()}>`;
+    adminEmailSent = await smtpSendWithRetries(transporter, `admin reschedule → ${adminEmail}`, {
+      from: gmailFrom,
+      to: adminEmail,
+      replyTo: REPLY_TO,
+      subject: adminSubject,
+      html: adminHtml,
+    });
+    if (customerTo) {
+      customerEmailSent = await smtpSendWithRetries(transporter, `customer reschedule → ${customerTo}`, {
+        from: gmailFrom,
+        to: customerTo,
+        replyTo: REPLY_TO,
+        subject: customerSubject,
+        html: customerHtml,
+      });
+    }
+  } else if (resend) {
+    adminEmailSent = await resendSendWithRetries(
+      resend,
+      `admin reschedule → ${adminEmail}`,
+      {
+        from: FROM_EMAIL,
+        to: [adminEmail],
+        replyTo: REPLY_TO,
+        subject: adminSubject,
+        html: adminHtml,
+      },
+      `${idempotencyKey}-admin`
+    );
+    if (customerTo) {
+      customerEmailSent = await resendSendWithRetries(
+        resend,
+        `customer reschedule → ${customerTo}`,
+        {
+          from: FROM_EMAIL,
+          to: [customerTo],
+          replyTo: REPLY_TO,
+          subject: customerSubject,
+          html: customerHtml,
+        },
+        `${idempotencyKey}-customer`
+      );
+    }
+  }
+
+  return { customerEmailSent, adminEmailSent };
+}

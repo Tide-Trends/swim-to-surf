@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { FadeIn } from "@/components/ui/animate";
-import { PAYMENT_OPTIONS_COPY } from "@/lib/constants";
+import { PAYMENT_OPTIONS_COPY, SITE } from "@/lib/constants";
+import { PageHero } from "@/components/page-hero";
 import { FaqAccordion } from "./faq-accordion";
 
 export const metadata: Metadata = {
@@ -48,32 +49,45 @@ const faqs = [
   },
 ];
 
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: faq.answer,
+        },
+      })),
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: SITE.url },
+        { "@type": "ListItem", position: 2, name: "FAQ", item: `${SITE.url}/faq` },
+      ],
+    },
+  ],
+};
+
 export default function FaqPage() {
   return (
-    <div className="bg-[#F5F5F7] min-h-screen pb-32 pt-24 font-body">
-      <section className="bg-white text-[#1D1D1F] pt-24 pb-24 border-b border-black/5">
-        <div className="mx-auto max-w-4xl px-6 md:px-8 text-center">
-          <FadeIn>
-            <div className="mb-6 inline-flex items-center gap-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-              <span className="font-ui text-xs font-semibold text-[#86868B] uppercase tracking-[0.2em]">
-                FAQ
-              </span>
-            </div>
-            <h1 className="text-5xl md:text-7xl font-display font-medium tracking-tight mb-6">
-              Questions? We&rsquo;ve got answers.
-            </h1>
-            <p className="text-xl text-[#86868B] font-light max-w-2xl mx-auto">
-              Everything you need to know about scheduling, lessons, and policies.
-            </p>
-          </FadeIn>
-        </div>
-      </section>
+    <div className="min-h-screen bg-cream pb-20">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <PageHero
+        eyebrow="FAQ"
+        title="Questions? We've got answers."
+        description={`Scheduling, ages, payment, and policies at ${SITE.name}.`}
+        centered
+      />
 
-      <section className="pt-16 md:pt-24">
-        <div className="mx-auto max-w-4xl px-6 md:px-8">
+      <section className="section-pad !pt-10">
+        <div className="container-site max-w-3xl">
           <FadeIn delay={0.1}>
-            <div className="bg-white p-6 md:p-12 rounded-[2rem] border border-black/5 shadow-sm">
+            <div className="surface-card p-6 md:p-10">
               <FaqAccordion faqs={faqs} />
             </div>
           </FadeIn>

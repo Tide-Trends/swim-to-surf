@@ -2,82 +2,75 @@ import Link from "next/link";
 import { SITE, PAYMENT_OPTIONS_COPY } from "@/lib/constants";
 
 export function Footer() {
-  const currentYear = new Date().getFullYear();
+  const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-ocean-deep text-white py-16 md:py-24 overflow-hidden relative">
-      {/* Subtle top border/glow */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-sunshine/40 to-transparent" />
-      
-      <div className="container mx-auto px-6 max-w-5xl relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-8">
-          
-          <div className="md:col-span-2 flex flex-col items-start">
-            <h3 className="text-2xl font-display font-semibold mb-6 tracking-tight">
-              Swim to Surf.
-            </h3>
-            <p className="text-ocean-light/70 max-w-sm mb-4 leading-relaxed">
-              Empowering swimmers from 0 to 99 with private, one-on-one lessons in American Fork. Water safety and confidence taught with a smile.
+    <footer className="relative overflow-hidden border-t border-white/8 bg-navy text-white">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent"
+        aria-hidden
+      />
+      <div className="container-site section-pad !pb-12 !pt-16">
+        <div className="grid gap-12 md:grid-cols-[1.4fr_1fr_1fr]">
+          <div>
+            <p className="font-display text-[1.75rem] leading-tight">
+              Swim to <span className="hero-surf-word">Surf</span>
             </p>
-            <p className="text-ocean-light/55 max-w-sm mb-8 text-sm leading-relaxed">{PAYMENT_OPTIONS_COPY.short}</p>
-            <div className="flex flex-wrap gap-4">
-              <Link
-                href="/book"
-                className="btn-cta-primary inline-flex min-h-12 items-center justify-center rounded-full px-8 py-3 text-sm font-bold uppercase tracking-wider"
-              >
-                Book swim lessons
-              </Link>
-            </div>
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/60">
+              Private one-on-one swim lessons in American Fork. Water safety and confidence for every age.
+            </p>
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/45">{PAYMENT_OPTIONS_COPY.short}</p>
+            <Link href="/book" className="btn-cta-primary mt-8 inline-flex bg-water hover:bg-water/90">
+              Book a lesson
+            </Link>
           </div>
 
           <div>
-            <h4 className="text-white font-medium mb-6 tracking-wide text-sm uppercase opacity-60">Company</h4>
-            <ul className="space-y-4">
-              <li>
-                <Link href="/about" className="text-ocean-light/60 hover:text-white transition-colors text-sm">
-                  Our Story
-                </Link>
-              </li>
-              <li>
-                <Link href="/instructors" className="text-ocean-light/60 hover:text-white transition-colors text-sm">
-                  Instructors
-                </Link>
-              </li>
-              <li>
-                <Link href="/faq" className="text-ocean-light/60 hover:text-white transition-colors text-sm">
-                  FAQ
-                </Link>
-              </li>
+            <p className="eyebrow mb-4 text-white/40">Explore</p>
+            <ul className="space-y-3 text-sm">
+              {[
+                { href: "/about", label: "Our Story" },
+                { href: "/instructors", label: "Instructors" },
+                { href: "/faq", label: "FAQ" },
+                { href: "/book", label: "Book Lessons" },
+              ].map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} className="text-white/65 transition-colors hover:text-white">
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           <div>
-            <h4 className="text-white font-medium mb-6 tracking-wide text-sm uppercase opacity-60">Contact</h4>
-            <ul className="space-y-4">
+            <p className="eyebrow mb-4 text-white/40">Contact</p>
+            <ul className="space-y-3 text-sm">
               <li>
-                <Link href={`mailto:${SITE.email}`} className="text-ocean-light/60 hover:text-white transition-colors text-sm">
+                <Link href={`mailto:${SITE.email}`} className="text-white/65 hover:text-white">
                   {SITE.email}
                 </Link>
               </li>
               <li>
-                <Link href={`tel:${SITE.phone}`} className="text-ocean-light/60 hover:text-white transition-colors text-sm">
+                <Link href={`tel:${SITE.phone}`} className="text-white/65 hover:text-white">
                   {SITE.phone}
                 </Link>
               </li>
-              <li className="text-ocean-light/60 text-sm">
-                American Fork, UT
-              </li>
+              <li className="text-white/65">American Fork, UT</li>
             </ul>
           </div>
-
         </div>
 
-        <div className="mt-16 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center text-xs text-ocean-light/50">
-          <p>&copy; {currentYear} {SITE.name}. All rights reserved.</p>
-          <div className="flex space-x-6 mt-4 md:mt-0">
-            <Link href="/admin/login" className="hover:text-white transition-colors">Admin Login</Link>
-            <span className="opacity-40">|</span>
-            <span className="hover:text-white transition-colors cursor-pointer">Privacy Policy</span>
+        <div className="mt-14 flex flex-col gap-3 border-t border-white/8 pt-8 text-xs text-white/40 md:flex-row md:items-center md:justify-between">
+          <p>
+            &copy; {year} {SITE.name}. All rights reserved.
+          </p>
+          <div className="flex gap-4">
+            <Link href="/admin/login" className="hover:text-white/70">
+              Admin
+            </Link>
+            <span aria-hidden>·</span>
+            <span>Privacy</span>
           </div>
         </div>
       </div>

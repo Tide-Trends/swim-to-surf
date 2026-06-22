@@ -53,9 +53,9 @@ export function ContactForm() {
 
   if (status === "success") {
     return (
-      <div className="bg-success/10 border-2 border-success/30 rounded-2xl p-8 text-center">
-        <p className="font-display text-xl font-bold text-dark mb-2">Message sent!</p>
-        <p className="text-muted">We&rsquo;ll get back to you as soon as we can.</p>
+      <div className="rounded-2xl border border-success/20 bg-success/5 p-8 text-center">
+        <p className="font-display text-2xl text-navy">Message sent</p>
+        <p className="mt-2 text-muted">We&rsquo;ll get back to you as soon as we can.</p>
       </div>
     );
   }
@@ -66,13 +66,8 @@ export function ContactForm() {
       <Input label="Email" type="email" placeholder="your@email.com" error={errors.email?.message} {...register("email")} />
       <Input label="Phone (optional)" type="tel" placeholder="(385) 000-0000" {...register("phone")} />
       <Textarea label="Message" placeholder="Tell us what's on your mind..." error={errors.message?.message} {...register("message")} />
-      <Button
-        type="submit"
-        loading={status === "loading"}
-        size="lg"
-        className="w-full rounded-full py-6 text-lg font-bold uppercase tracking-wider"
-      >
-        Send Message
+      <Button type="submit" loading={status === "loading"} size="lg" className="w-full">
+        Send message
       </Button>
       {status === "error" && errorMessage && (
         <p className="text-center font-ui text-sm text-error">{errorMessage}</p>

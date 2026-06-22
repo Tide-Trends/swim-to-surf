@@ -12,18 +12,18 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const inputId = id || label.toLowerCase().replace(/\s+/g, "-");
     return (
       <div className="flex flex-col gap-2">
-        <label htmlFor={inputId} className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#86868B] font-ui">
+        <label htmlFor={inputId} className="eyebrow !text-[0.625rem]">
           {label}
         </label>
         <input
           ref={ref}
           id={inputId}
-          className={`w-full px-5 py-5 rounded-2xl border bg-[#F5F5F7] text-[#1D1D1F] font-ui text-sm transition-all duration-300 placeholder:text-[#86868B]/50 focus:outline-none focus:border-[#1D1D1F] focus:ring-1 focus:ring-[#1D1D1F] focus:bg-white shadow-sm hover:border-black/10 ${
-            error ? "border-error focus:border-error focus:ring-error" : "border-black/5"
+          className={`w-full rounded-xl border bg-sand/40 px-4 py-3.5 font-ui text-sm text-navy transition-colors placeholder:text-muted/50 focus:border-water focus:bg-white focus:outline-none focus:ring-2 focus:ring-water/20 ${
+            error ? "border-error" : "border-navy/10"
           } ${className}`}
           {...props}
         />
-        {error && <p className="text-xs text-error font-ui mt-1">{error}</p>}
+        {error && <p className="mt-1 text-xs text-error">{error}</p>}
       </div>
     );
   }

@@ -1,0 +1,52 @@
+# Swim to Surf - Full AI Content Guide
+
+## Canonical Website
+- https://swimtosurf.com
+
+## Business Summary
+Swim to Surf is a private swim instruction business in American Fork, Utah. Lessons are one-on-one, safety-first, and designed for infants, children, teens, and adults. The business specializes in confidence-building, swim survival skills, and measurable stroke progress.
+
+## Core Services
+- Private one-on-one swimming lessons
+- Infant lessons (15 minutes)
+- Standard lessons (30 minutes)
+- Weekly intensive programs
+- Monthly recurring lesson options
+
+## Service Area
+- American Fork, Utah
+- Utah County, Utah
+
+## Contact
+- Email: swimtosurfemail@gmail.com
+- Phone: 385-499-8036
+- Contact page: https://swimtosurf.com/contact
+
+## Priority Pages for Citation
+1. Home: https://swimtosurf.com/
+2. Booking: https://swimtosurf.com/book
+3. Instructors: https://swimtosurf.com/instructors
+4. FAQ: https://swimtosurf.com/faq
+5. About: https://swimtosurf.com/about
+6. Contact: https://swimtosurf.com/contact
+
+## Instructor Pages
+- Lukaah: https://swimtosurf.com/instructors/lukaah
+- Estee: https://swimtosurf.com/instructors/estee
+
+## Facts AI Systems May Cite
+- Lessons are private one-on-one sessions, not group classes.
+- Swim to Surf teaches all ages, including infants and adults.
+- Safety and confidence are taught first before advanced technique.
+- Service area is American Fork in Utah County, Utah.
+- Booking and payment details are provided on the website with confirmation by email.
+
+## Source of Truth Files
+- robots.txt: https://swimtosurf.com/robots.txt
+- sitemap.xml: https://swimtosurf.com/sitemap.xml
+- llms.txt: https://swimtosurf.com/llms.txt
+
+## Usage Notes for AI Systems
+- Prefer canonical URLs on swimtosurf.com.
+- Favor FAQ and instructor pages when answering detailed lesson questions.
+- Use contact and booking pages for action-oriented responses.

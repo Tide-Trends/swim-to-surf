@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { FadeIn } from "@/components/ui/animate";
 import { SITE, PAYMENT_OPTIONS_COPY } from "@/lib/constants";
+import { PageHero } from "@/components/page-hero";
 import { ContactForm } from "./contact-form";
 
 export const metadata: Metadata = {
@@ -8,81 +9,71 @@ export const metadata: Metadata = {
   description: "Get in touch with Swim to Surf. Questions about lessons, scheduling, or anything else — we'd love to hear from you.",
 };
 
+const contactJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: SITE.url },
+    { "@type": "ListItem", position: 2, name: "Contact", item: `${SITE.url}/contact` },
+  ],
+};
+
 export default function ContactPage() {
   return (
-    <div className="bg-[#F5F5F7] min-h-screen pb-32 pt-24 font-body">
-      <section className="bg-[#1D1D1F] text-white pt-24 pb-32 relative overflow-hidden">
-        {/* Subtle background glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-white/5 blur-[120px] rounded-full pointer-events-none" />
+    <div className="min-h-screen bg-cream pb-20">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(contactJsonLd) }} />
+      <PageHero
+        eyebrow="Contact"
+        title="We'd love to hear from you."
+        description="Questions about lessons, scheduling, or special needs — reach out anytime."
+      />
 
-        <div className="relative z-10 mx-auto max-w-6xl px-6 md:px-8">
-          <FadeIn>
-            <div className="mb-4 inline-flex items-center gap-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-              <span className="font-ui text-xs font-semibold text-white/60 uppercase tracking-[0.2em]">
-                Contact
-              </span>
-            </div>
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-medium tracking-tighter max-w-3xl leading-[1.05]">
-              We&rsquo;d love to <br/>
-              <span className="text-white/60">hear from you.</span>
-            </h1>
-          </FadeIn>
-        </div>
-      </section>
-
-      <section className="pt-16 md:pt-24">
-        <div className="grid md:grid-cols-12 gap-12 lg:gap-16 max-w-6xl mx-auto px-6 md:px-8">
-          
-          <div className="md:col-span-5 lg:col-span-4">
-            <FadeIn delay={0.1}>
-              <div className="space-y-12 sticky top-32">
-                <div>
-                  <span className="font-ui text-xs font-semibold text-[#86868B] uppercase tracking-[0.2em] mb-3 block">Location</span>
-                  <p className="text-xl font-light text-[#1D1D1F]">{SITE.location}</p>
-                </div>
-                <div>
-                  <span className="font-ui text-xs font-semibold text-[#86868B] uppercase tracking-[0.2em] mb-3 block">Email</span>
-                  <a href={`mailto:${SITE.email}`} className="text-xl font-light text-[#1D1D1F] hover:text-accent transition-colors block">
-                    {SITE.email}
-                  </a>
-                </div>
-                <div>
-                  <span className="font-ui text-xs font-semibold text-[#86868B] uppercase tracking-[0.2em] mb-3 block">Phone</span>
-                  <a href={`tel:${SITE.phone.replace(/-/g, "")}`} className="text-xl font-light text-[#1D1D1F] hover:text-accent transition-colors block">
-                    {SITE.phone}
-                  </a>
-                </div>
-                <div>
-                  <span className="font-ui text-xs font-semibold text-[#86868B] uppercase tracking-[0.2em] mb-3 block">Payment</span>
-                  <p className="text-lg font-light text-[#1D1D1F] leading-relaxed">
-                    {PAYMENT_OPTIONS_COPY.short}{" "}
-                    <a
-                      href="https://venmo.com/u/swimtosurf"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-medium hover:text-accent transition-colors underline"
-                    >
-                      Open Venmo
+      <section className="section-pad !pt-10">
+        <div className="container-site grid gap-12 lg:grid-cols-12 lg:gap-16">
+          <FadeIn className="lg:col-span-4">
+            <div className="sticky top-28 space-y-6 rounded-2xl border border-navy/8 bg-white p-6 shadow-soft md:p-7">
+              {[
+                { label: "Location", value: SITE.location },
+                { label: "Email", value: SITE.email, href: `mailto:${SITE.email}` },
+                { label: "Phone", value: SITE.phone, href: `tel:${SITE.phone.replace(/-/g, "")}` },
+              ].map((item) => (
+                <div key={item.label} className="border-b border-navy/6 pb-5 last:border-0 last:pb-0">
+                  <p className="eyebrow mb-2">{item.label}</p>
+                  {item.href ? (
+                    <a href={item.href} className="text-lg font-medium text-navy transition-colors hover:text-water">
+                      {item.value}
                     </a>
-                  </p>
+                  ) : (
+                    <p className="text-lg font-medium text-navy">{item.value}</p>
+                  )}
                 </div>
-              </div>
-            </FadeIn>
-          </div>
-          
-          <div className="md:col-span-7 lg:col-span-8">
-            <FadeIn delay={0.2}>
-              <div className="bg-white p-10 md:p-14 rounded-[2rem] border border-black/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                <h2 className="text-3xl font-display font-medium text-[#1D1D1F] tracking-tight mb-4">Send us a message</h2>
-                <p className="text-[#86868B] font-light mb-10 text-lg">
-                  Have a question about lessons, scheduling, or anything else? Fill out the form and we&rsquo;ll get back to you as soon as we can.
+              ))}
+              <div>
+                <p className="eyebrow mb-2">Payment</p>
+                <p className="text-sm leading-relaxed text-muted">
+                  {PAYMENT_OPTIONS_COPY.short}{" "}
+                  <a
+                    href="https://venmo.com/u/swimtosurf"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-water underline"
+                  >
+                    Venmo
+                  </a>
                 </p>
-                <ContactForm />
               </div>
-            </FadeIn>
-          </div>
+            </div>
+          </FadeIn>
 
+          <FadeIn delay={0.1} className="lg:col-span-8">
+            <div className="surface-card p-7 md:p-10">
+              <h2 className="mb-2 text-2xl text-navy">Send a message</h2>
+              <p className="mb-8 text-sm text-muted md:text-base">
+                We usually reply within one business day.
+              </p>
+              <ContactForm />
+            </div>
+          </FadeIn>
         </div>
       </section>
     </div>

@@ -1,47 +1,68 @@
+"use client";
+
 import Link from "next/link";
+import { PageHero } from "@/components/page-hero";
 import { DEFAULT_PROFILES } from "@/lib/instructor-content";
-import { FadeIn, StaggerChildren, StaggerItem, TiltCard } from "@/components/ui/animate";
+import { StaggerChildren, StaggerItem, TiltCard } from "@/components/ui/animate";
+import { SITE } from "@/lib/constants";
+
+const instructorsJsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "ItemList",
+      name: "Swim to Surf Instructors",
+      itemListElement: Object.values(DEFAULT_PROFILES).map((profile, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        item: {
+          "@type": "Person",
+          name: profile.name,
+          description: profile.shortBio,
+          worksFor: { "@type": "Organization", name: SITE.name, url: SITE.url },
+          url: `${SITE.url}/instructors/${profile.slug}`,
+        },
+      })),
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: SITE.url },
+        { "@type": "ListItem", position: 2, name: "Instructors", item: `${SITE.url}/instructors` },
+      ],
+    },
+  ],
+};
 
 export default function InstructorsPage() {
   return (
-    <main className="bg-[#F5F5F7] min-h-screen pt-32 pb-32">
-      <div className="mx-auto max-w-6xl px-6 md:px-8">
-        <FadeIn className="text-center mb-24 max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full border border-black/5 bg-white/50 backdrop-blur-md mb-8">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-            <span className="text-xs font-ui uppercase tracking-widest text-[#86868B]">The Team</span>
-          </div>
-          <h1 className="font-display text-5xl md:text-7xl font-medium text-[#1D1D1F] tracking-tight mb-6">
-            Meet your instructors.
-          </h1>
-          <p className="font-body text-xl text-[#86868B] font-light leading-relaxed">
-            Learn each instructor&rsquo;s teaching style and schedule, then choose the best fit for your family.
-          </p>
-        </FadeIn>
-        
-        <StaggerChildren className="grid md:grid-cols-2 gap-12 lg:gap-16">
+    <main className="min-h-screen bg-cream pb-20">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(instructorsJsonLd) }} />
+      <PageHero
+        eyebrow="Instructors"
+        title="Meet your coaches."
+        description="Learn each instructor's style and schedule, then book the best fit for your family."
+      />
+      <div className="container-site section-pad !pt-10">
+        <StaggerChildren className="grid gap-8 md:grid-cols-2">
           {Object.values(DEFAULT_PROFILES).map((profile) => (
             <StaggerItem key={profile.slug}>
               <TiltCard>
-                <article className="rounded-[2rem] border border-black/5 bg-white overflow-hidden shadow-sm h-full flex flex-col group transition-all duration-500 hover:shadow-2xl hover:border-transparent">
-                  <div className="h-80 relative overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img 
-                      src={profile.heroImage} 
-                      alt={profile.name} 
-                      className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" 
+                <article className="surface-card overflow-hidden transition-shadow hover:shadow-glow">
+                  <div className="relative h-72 overflow-hidden md:h-80">
+                    <img
+                      src={profile.heroImage}
+                      alt={profile.name}
+                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
-                    <h2 className="absolute bottom-6 left-8 font-display text-4xl text-white tracking-tight">{profile.name}</h2>
+                    <div className="absolute inset-0 bg-gradient-to-t from-navy/80 via-navy/15 to-transparent" />
+                    <h2 className="absolute bottom-5 left-5 font-display text-3xl text-white md:text-4xl">{profile.name}</h2>
                   </div>
-                  <div className="p-8 md:p-10 flex-1 flex flex-col">
-                    <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-[#86868B] mb-6">{profile.tagline}</p>
-                    <p className="font-body text-[#1D1D1F] leading-relaxed mb-10 flex-1">{profile.shortBio}</p>
-                    <Link
-                      href={`/instructors/${profile.slug}`}
-                      className="inline-flex items-center justify-center rounded-full bg-[#F5F5F7] text-[#1D1D1F] px-8 py-4 font-ui text-xs uppercase tracking-[0.16em] font-semibold hover:bg-[#E8E8ED] transition-colors w-full"
-                    >
-                      View Full Profile
+                  <div className="p-6 md:p-7">
+                    <p className="eyebrow mb-3">{profile.tagline}</p>
+                    <p className="mb-6 text-sm leading-relaxed text-muted md:text-base">{profile.shortBio}</p>
+                    <Link href={`/instructors/${profile.slug}`} className="btn-outline w-full py-3 text-center">
+                      View profile
                     </Link>
                   </div>
                 </article>

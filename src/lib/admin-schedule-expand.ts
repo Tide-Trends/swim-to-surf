@@ -1,10 +1,13 @@
-import { addDays, format } from "date-fns";
+import { addDays, format, parse } from "date-fns";
 import type { Booking } from "@/lib/database.types";
 import { getEsteeDatesForMonth } from "@/lib/constants";
 
 export type ExpandedLessonSlot = {
   ymd: string;
   timeHm: string;
+  /** Minutes from midnight for sorting and overlap checks */
+  startMinutes: number;
+  endMinutes: number;
   booking: Booking;
   /** Which Estee slot, if relevant */
   esteeSlot?: "primary" | "second";
@@ -13,6 +16,15 @@ export type ExpandedLessonSlot = {
 function normalizeHm(t: string): string {
   const s = t.trim();
   return s.length >= 5 ? s.slice(0, 5) : s;
+}
+
+function hmToMinutes(hm: string): number {
+  const parsed = parse(normalizeHm(hm), "HH:mm", new Date());
+  return parsed.getHours() * 60 + parsed.getMinutes();
+}
+
+function slotEndMinutes(startHm: string, durationMin: number): number {
+  return hmToMinutes(startHm) + durationMin;
 }
 
 function parseLocalYmd(ymd: string): Date {
@@ -31,9 +43,12 @@ export function expandBookingToLessonSlots(b: Booking): ExpandedLessonSlot[] {
     const out: ExpandedLessonSlot[] = [];
     for (let i = 0; i < 5; i++) {
       const d = addDays(start, i);
+      const timeHm = normalizeHm(b.lesson_time);
       out.push({
         ymd: format(d, "yyyy-MM-dd"),
-        timeHm: normalizeHm(b.lesson_time),
+        timeHm,
+        startMinutes: hmToMinutes(timeHm),
+        endMinutes: slotEndMinutes(timeHm, b.lesson_duration),
         booking: b,
       });
     }
@@ -50,22 +65,50 @@ export function expandBookingToLessonSlots(b: Booking): ExpandedLessonSlot[] {
 
     if (primary === "wednesday") {
       for (const ymd of wednesdays) {
-        out.push({ ymd, timeHm: tPrimary, booking: b, esteeSlot: "primary" });
+        out.push({
+          ymd,
+          timeHm: tPrimary,
+          startMinutes: hmToMinutes(tPrimary),
+          endMinutes: slotEndMinutes(tPrimary, b.lesson_duration),
+          booking: b,
+          esteeSlot: "primary",
+        });
       }
     } else if (primary === "thursday") {
       for (const ymd of thursdays) {
-        out.push({ ymd, timeHm: tPrimary, booking: b, esteeSlot: "primary" });
+        out.push({
+          ymd,
+          timeHm: tPrimary,
+          startMinutes: hmToMinutes(tPrimary),
+          endMinutes: slotEndMinutes(tPrimary, b.lesson_duration),
+          booking: b,
+          esteeSlot: "primary",
+        });
       }
     }
 
     if (secondary && tSecond) {
       if (secondary === "thursday") {
         for (const ymd of thursdays) {
-          out.push({ ymd, timeHm: tSecond, booking: b, esteeSlot: "second" });
+          out.push({
+            ymd,
+            timeHm: tSecond,
+            startMinutes: hmToMinutes(tSecond),
+            endMinutes: slotEndMinutes(tSecond, b.lesson_duration),
+            booking: b,
+            esteeSlot: "second",
+          });
         }
       } else if (secondary === "wednesday") {
         for (const ymd of wednesdays) {
-          out.push({ ymd, timeHm: tSecond, booking: b, esteeSlot: "second" });
+          out.push({
+            ymd,
+            timeHm: tSecond,
+            startMinutes: hmToMinutes(tSecond),
+            endMinutes: slotEndMinutes(tSecond, b.lesson_duration),
+            booking: b,
+            esteeSlot: "second",
+          });
         }
       }
     }
@@ -87,10 +130,38 @@ export function buildSlotsByDate(bookings: Booking[]): Map<string, ExpandedLesso
   }
   for (const [, list] of map) {
     list.sort((a, b) => {
-      const t = a.timeHm.localeCompare(b.timeHm);
-      if (t !== 0) return t;
+      if (a.startMinutes !== b.startMinutes) return a.startMinutes - b.startMinutes;
       return a.booking.swimmer_name.localeCompare(b.booking.swimmer_name);
     });
   }
   return map;
+}
+
+/** Indices of slots on the same day whose lesson windows overlap. */
+export function findDayConflictIndices(slots: ExpandedLessonSlot[]): Set<number> {
+  const conflictIndices = new Set<number>();
+  for (let i = 0; i < slots.length; i++) {
+    for (let j = i + 1; j < slots.length; j++) {
+      const a = slots[i];
+      const b = slots[j];
+      if (a.startMinutes < b.endMinutes && b.startMinutes < a.endMinutes) {
+        conflictIndices.add(i);
+        conflictIndices.add(j);
+      }
+    }
+  }
+  return conflictIndices;
+}
+
+export function formatPhoneDisplay(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+  return phone;
+}
+
+export function dayLessonStats(slots: ExpandedLessonSlot[]) {
+  const totalMinutes = slots.reduce((sum, s) => sum + s.booking.lesson_duration, 0);
+  return { count: slots.length, totalMinutes };
 }

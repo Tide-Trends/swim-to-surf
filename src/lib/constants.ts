@@ -2,6 +2,8 @@ import type { ScheduleSelection, SwimmerInfo } from "./booking-schema";
 
 export const SITE = {
   name: "Swim to Surf",
+  url: "https://swimtosurf.com",
+  indexNowKey: "swimtosurf-indexnow-key-2026",
   tagline: "Private Swimming Lessons in American Fork, Utah",
   email: "swimtosurfemail@gmail.com",
   phone: "385-499-8036",

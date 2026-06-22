@@ -5,167 +5,112 @@ import { HomePricing } from "@/components/home-pricing";
 import { Testimonials } from "@/components/testimonials";
 import { InstructorShowcase } from "@/components/instructor-showcase";
 import { FadeIn } from "@/components/ui/animate";
-import { WaterLineArt } from "@/components/ui/animated-backgrounds";
+
+const PILLARS = [
+  {
+    title: "Safety first",
+    body: "We teach critical water-safety survival skills before anything else — because confidence starts with knowing how to stay safe.",
+  },
+  {
+    title: "One-on-one only",
+    body: "Every session is private. Your swimmer gets full attention, moves at their own pace, and makes progress every time.",
+  },
+  {
+    title: "Built to last",
+    body: "We meet swimmers where they are and practice until skills stick — not until a level chart says to move on.",
+  },
+];
 
 export default function Home() {
   return (
     <>
       <Hero />
 
-      {/* Quick value strip (above the fold continuation) */}
-      <section className="bg-warm-white -mt-10 pb-10 md:pb-12 relative">
-        <div className="container mx-auto px-6 max-w-7xl">
-          <FadeIn className="mx-auto max-w-5xl">
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="glass rounded-[2rem] px-7 py-7 md:px-8 md:py-8">
-                <p className="font-ui text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">Safety</p>
-                <p className="mt-2 font-display text-2xl tracking-tight text-dark">Confidence first</p>
-                <p className="mt-3 text-sm text-muted leading-relaxed font-light">
-                  We teach survival skills and calm breathing before anything else.
-                </p>
-              </div>
-              <div className="glass rounded-[2rem] px-7 py-7 md:px-8 md:py-8">
-                <p className="font-ui text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">Private</p>
-                <p className="mt-2 font-display text-2xl tracking-tight text-dark">One swimmer. One coach.</p>
-                <p className="mt-3 text-sm text-muted leading-relaxed font-light">
-                  No crowded classes — your swimmer gets full attention every lesson.
-                </p>
-              </div>
-              <div className="glass rounded-[2rem] px-7 py-7 md:px-8 md:py-8">
-                <p className="font-ui text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">Simple</p>
-                <p className="mt-2 font-display text-2xl tracking-tight text-dark">Book in minutes</p>
-                <p className="mt-3 text-sm text-muted leading-relaxed font-light">
-                  Pick your week/month, choose times, and you&apos;re set.
-                </p>
-              </div>
-            </div>
-            <div className="mt-6 flex justify-center">
-              <Link
-                href="/book"
-                className="inline-flex items-center justify-center rounded-full border border-ocean-deep/20 bg-white px-7 py-3 font-ui text-xs font-bold uppercase tracking-[0.18em] text-ocean-deep hover:border-ocean-deep/30 hover:bg-ocean-surf/30 transition-colors"
-              >
-                Check availability
-              </Link>
-            </div>
-          </FadeIn>
-        </div>
+      <section className="border-b border-navy/8 bg-white py-12 md:py-14">
+        <FadeIn className="container-site text-center">
+          <p className="eyebrow mb-2">Utah County</p>
+          <p className="section-lead mx-auto max-w-2xl">
+            Families from American Fork, Lehi, Pleasant Grove, Lindon, Highland, Alpine, Cedar Hills, Saratoga
+            Springs, Orem, and Provo.
+          </p>
+          <Link href="/book" className="btn-outline link-arrow mt-7 inline-flex">
+            Check availability
+          </Link>
+        </FadeIn>
       </section>
 
-      {/* Philosophy Section */}
-      <section className="bg-warm-white pt-14 pb-20 md:pt-16 md:pb-28 overflow-hidden relative">
-        <WaterLineArt />
-        <div className="container mx-auto px-6 max-w-7xl relative z-10">
-          
-          <FadeIn className="text-center max-w-3xl mx-auto mb-10 md:mb-12">
-            <div className="inline-flex items-center gap-2 mb-6 justify-center">
-              <span className="w-1 h-1 rounded-full bg-sunshine" />
-              <span className="text-xs font-ui uppercase tracking-[0.2em] text-muted">Philosophy</span>
-            </div>
-            <h2 className="text-5xl md:text-7xl font-display tracking-tight mb-6 md:mb-8 leading-[1.05] text-dark">
-              Confidence <br />
-              <span className="text-ocean-mid">starts here.</span>
-            </h2>
-            <p className="text-xl md:text-2xl text-dark/70 font-light leading-relaxed">
-              We exist to build courageous swimmers—the kind who can one day grab a board and surf, or play fearlessly in any water.
+      <section className="section-pad border-b border-navy/8 bg-cream">
+        <div className="container-site">
+          <FadeIn className="mx-auto mb-12 max-w-2xl text-center md:mb-14">
+            <span className="accent-rule mx-auto mb-5" aria-hidden />
+            <p className="eyebrow mb-3">Philosophy</p>
+            <h2 className="section-title">Confidence starts in the water.</h2>
+            <p className="section-lead mt-4">
+              We build courageous swimmers — the kind who can play fearlessly in any pool, lake, or ocean.
             </p>
           </FadeIn>
 
           <HomeHighlights />
 
-          <div className="mt-20 grid gap-8 md:grid-cols-3 md:mt-24">
-            <div>
-              <div className="glass rounded-[2rem] p-10 hover:shadow-2xl hover:-translate-y-2 transition-all duration-700 relative overflow-hidden group h-full">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-ocean-light/30 blur-3xl group-hover:bg-sunshine/30 transition-colors" />
-                <div className="w-10 h-10 bg-ocean-mid text-white rounded-full flex items-center justify-center font-display text-lg mb-8 shadow-sm">
-                  1
-                </div>
-                <h3 className="text-2xl font-display mb-4 text-dark">Safety First</h3>
-                <p className="text-base text-muted leading-relaxed font-light">
-                  Drowning is a leading cause of death. We teach critical water-safety survival skills before anything else.
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <div className="glass rounded-[2rem] p-10 hover:shadow-2xl hover:-translate-y-2 transition-all duration-700 relative overflow-hidden group h-full">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-ocean-light/30 blur-3xl group-hover:bg-sunshine/30 transition-colors" />
-                <div className="w-10 h-10 bg-ocean-mid text-white rounded-full flex items-center justify-center font-display text-lg mb-8 shadow-sm">
-                  2
-                </div>
-                <h3 className="text-2xl font-display mb-4 text-dark">One-on-One</h3>
-                <p className="text-base text-muted leading-relaxed font-light">
-                  Group lessons rarely work. Every session is private, ensuring your swimmer gets undivided attention.
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <div className="glass rounded-[2rem] p-10 hover:shadow-2xl hover:-translate-y-2 transition-all duration-700 relative overflow-hidden group h-full">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-ocean-light/30 blur-3xl group-hover:bg-sunshine/30 transition-colors" />
-                <div className="w-10 h-10 bg-ocean-mid text-white rounded-full flex items-center justify-center font-display text-lg mb-8 shadow-sm">
-                  3
-                </div>
-                <h3 className="text-2xl font-display mb-4 text-dark">Mastery</h3>
-                <p className="text-base text-muted leading-relaxed font-light">
-                  We meet you where you are, building on existing skills until every technique is mastered.
-                </p>
-              </div>
-            </div>
+          <div className="mt-14 grid gap-8 md:mt-16 md:grid-cols-3 md:gap-10">
+            {PILLARS.map((item, i) => (
+              <FadeIn key={item.title} delay={i * 0.06}>
+                <article className="pillar-item h-full py-1">
+                  <p className="eyebrow mb-2 text-water">0{i + 1}</p>
+                  <h3 className="mb-3 text-xl text-navy md:text-[1.35rem]">{item.title}</h3>
+                  <p className="text-sm leading-relaxed text-muted md:text-base">{item.body}</p>
+                </article>
+              </FadeIn>
+            ))}
           </div>
         </div>
       </section>
 
       <HomePricing />
+      <Testimonials />
 
-      {/* Testimonials */}
-      <section className="bg-warm-white pt-12 pb-16 md:pt-14 md:pb-20 overflow-hidden relative">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-[#0077B6]/[0.06] to-transparent" />
-        <Testimonials />
-      </section>
-
-      {/* Meet Your Instructors */}
-      <section className="py-32 md:py-48 bg-sand">
-        <div className="container mx-auto px-6 max-w-7xl">
-          <div className="mb-24 flex flex-col md:flex-row md:items-end justify-between gap-12">
-            <FadeIn className="max-w-2xl">
-              <h2 className="text-5xl md:text-7xl font-display tracking-tight mb-8 text-dark">
-                In great <span className="text-ocean-mid">hands.</span>
-              </h2>
-              <p className="text-xl md:text-2xl text-muted font-light leading-relaxed">
-                Patience, expertise, and a genuine love for the water.
+      <section className="section-pad border-b border-navy/8 bg-sand/40">
+        <div className="container-site">
+          <div className="mb-12 flex flex-col gap-6 md:mb-14 md:flex-row md:items-end md:justify-between">
+            <FadeIn className="max-w-xl">
+              <span className="accent-rule mb-5" aria-hidden />
+              <p className="eyebrow mb-3">Instructors</p>
+              <h2 className="section-title">Meet your coaches.</h2>
+              <p className="section-lead mt-4">
+                Patient, experienced, and genuinely invested in every swimmer.
               </p>
             </FadeIn>
-            <FadeIn delay={0.2}>
-               <Link href="/instructors" className="text-sm font-ui uppercase tracking-[0.2em] font-semibold border-b border-ocean-mid/40 pb-2 hover:text-ocean-mid hover:border-ocean-mid transition-colors duration-500">
-                 Meet the team
-               </Link>
+            <FadeIn delay={0.1}>
+              <Link href="/instructors" className="btn-outline link-arrow">
+                View profiles
+              </Link>
             </FadeIn>
           </div>
-          
           <InstructorShowcase />
         </div>
       </section>
 
-      {/* Cinematic CTA */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden py-40" style={{ background: "linear-gradient(135deg, #0096C7 0%, #0077B6 50%, #00B4D8 100%)" }}>
-        <div className="absolute inset-0 z-0">
-          <WaterLineArt />
-        </div>
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-24 bg-gradient-to-b from-sand via-sand/80 to-transparent" />
-        
-        <div className="relative z-30 text-center px-6 max-w-4xl mx-auto">
-          <FadeIn>
-            <h2 className="text-7xl md:text-9xl font-display text-white tracking-tighter mb-12 font-light">
-              Dive <span className="text-sunshine">in.</span>
-            </h2>
-            <Link
-              href="/book"
-              className="btn-cta-primary inline-flex min-h-[3.75rem] min-w-[min(100%,280px)] items-center justify-center rounded-full px-12 py-5 font-ui text-base font-bold uppercase tracking-[0.18em] md:tracking-[0.2em]"
-            >
-              Book swim lessons
-            </Link>
-          </FadeIn>
-        </div>
+      <section className="cta-band relative overflow-hidden py-20 md:py-24">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-30"
+          style={{
+            backgroundImage: "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.06) 1px, transparent 0)",
+            backgroundSize: "32px 32px",
+          }}
+          aria-hidden
+        />
+        <FadeIn className="container-site relative text-center">
+          <h2 className="section-title text-white">Ready to get started?</h2>
+          <p className="section-lead mx-auto mt-4 max-w-lg text-white/75">
+            Pick your instructor, choose a time, and book in minutes.
+          </p>
+          <Link
+            href="/book"
+            className="btn-cta-primary mt-9 inline-flex bg-white px-10 text-navy shadow-lg hover:bg-cream hover:shadow-xl"
+          >
+            Book a lesson
+          </Link>
+        </FadeIn>
       </section>
     </>
   );

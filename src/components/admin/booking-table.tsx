@@ -4,13 +4,15 @@ import { format } from "date-fns";
 import type { Booking } from "@/lib/database.types";
 import { formatPrice } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
+import { ContactInfoToggle } from "@/components/admin/contact-info-toggle";
 
 interface Props {
   bookings: Booking[];
   onCancel: (id: string) => void;
+  onReschedule?: (booking: Booking) => void;
 }
 
-export function BookingTable({ bookings, onCancel }: Props) {
+export function BookingTable({ bookings, onCancel, onReschedule }: Props) {
   if (bookings.length === 0) {
     return (
       <div className="bg-white rounded-2xl border-2 border-sand p-12 text-center">
@@ -69,19 +71,21 @@ export function BookingTable({ bookings, onCancel }: Props) {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="text-xs">
-                    <div>{b.parent_name}</div>
-                    <a href={`mailto:${b.parent_email}`} className="text-primary hover:underline">
-                      {b.parent_email}
-                    </a>
-                  </div>
+                  <ContactInfoToggle booking={b} />
                 </td>
                 <td className="px-4 py-3">
-                  {b.status === "confirmed" && (
-                    <Button size="sm" variant="ghost" onClick={() => onCancel(b.id)}>
-                      Cancel
-                    </Button>
-                  )}
+                  <div className="flex flex-col gap-1">
+                    {b.status === "confirmed" && onReschedule && (
+                      <Button size="sm" variant="ghost" className="justify-start px-0" onClick={() => onReschedule(b)}>
+                        Reschedule
+                      </Button>
+                    )}
+                    {b.status === "confirmed" && (
+                      <Button size="sm" variant="ghost" className="justify-start px-0 text-error" onClick={() => onCancel(b.id)}>
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

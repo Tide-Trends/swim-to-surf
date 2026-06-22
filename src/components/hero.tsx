@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 
+const TRUST = ["Ages 0–99", "Private 1-on-1", "Safety-first", "American Fork, UT"];
+
 export function Hero() {
   const sectionRef = useRef<HTMLElement | null>(null);
   const { scrollYProgress } = useScroll({
@@ -12,90 +14,70 @@ export function Hero() {
     offset: ["start start", "end start"],
   });
 
-  const imageY = useTransform(scrollYProgress, [0, 1], [0, -60]);
-  const imageScale = useTransform(scrollYProgress, [0, 1], [1.02, 1.06]);
-  const imageOpacity = useTransform(scrollYProgress, [0, 1], [0.95, 1]);
+  const imageY = useTransform(scrollYProgress, [0, 1], [0, 64]);
+  const contentY = useTransform(scrollYProgress, [0, 1], [0, 24]);
+  const overlayOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0.85]);
 
   return (
-    <section
-      ref={sectionRef}
-      className="relative flex min-h-[100dvh] w-full flex-col overflow-hidden bg-[#b7ecff]"
-    >
-      {/* Photo with subtle parallax as you scroll */}
-      <motion.div
-        className="absolute inset-0"
-        style={{ y: imageY, scale: imageScale, opacity: imageOpacity }}
-      >
+    <section ref={sectionRef} className="relative min-h-[100svh] w-full overflow-hidden bg-navy">
+      <motion.div className="absolute inset-0" style={{ y: imageY }}>
         <Image
           src="/images/confidence-in-the-pool.png"
-          alt="A happy swimmer underwater in the pool during a lesson"
+          alt="A confident swimmer during a private lesson"
           fill
-          className="object-cover object-center brightness-110 contrast-95 saturate-110"
+          className="object-cover object-[center_35%] md:object-center"
           sizes="100vw"
           priority
         />
-        <div className="absolute inset-0 bg-[#0ea5e9]/6" aria-hidden />
-        <div
-          className="absolute inset-0 bg-gradient-to-t from-[#0b5f82]/18 via-[#0b5f82]/6 via-50% to-transparent"
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-r from-navy/94 via-navy/62 to-navy/25"
+          style={{ opacity: overlayOpacity }}
           aria-hidden
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-white/6 via-transparent to-transparent" aria-hidden />
+        <div className="absolute inset-0 bg-gradient-to-t from-navy/80 via-navy/10 to-navy/35" aria-hidden />
       </motion.div>
 
-      <div className="relative z-10 flex min-h-[100dvh] flex-col justify-center">
-        {/* Title + CTA band */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="px-4 py-10 sm:px-6 md:px-10 lg:px-16"
-        >
-          <div className="mx-auto max-w-3xl rounded-[1.75rem] border border-white/40 bg-white/18 px-5 py-6 shadow-[0_16px_40px_-22px_rgba(0,40,60,0.55)] backdrop-blur-[6px] sm:rounded-[2rem] sm:px-9 sm:py-7 md:px-10 md:py-8">
-            <div className="text-center text-[#021723]">
-              <p className="mb-4 font-ui text-[10px] font-semibold uppercase tracking-[0.22em] text-[#04324c] md:mb-5 md:text-[11px]">
-                Private lessons · American Fork, Utah
-              </p>
+      <div className="relative z-10 flex min-h-[100svh] items-end pb-20 pt-32 md:items-center md:pb-16 md:pt-28">
+        <motion.div className="container-site w-full" style={{ y: contentY }}>
+          <motion.div
+            initial={{ opacity: 0, y: 28 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+            className="max-w-2xl"
+          >
+            <span className="accent-rule mb-5" aria-hidden />
+            <p className="eyebrow mb-4 text-white/65">Private swim lessons · Utah County</p>
+            <h1 className="mb-5 text-[clamp(2.75rem,6.5vw,4.75rem)] leading-[1.02] tracking-tight text-white">
+              Swim to <span className="hero-surf-word">Surf</span>
+            </h1>
+            <p className="mb-8 max-w-xl text-lg leading-relaxed text-white/90 md:text-[1.35rem] md:leading-relaxed">
+              One-on-one lessons for infants, kids, and adults. Safety-first coaching that builds real confidence from
+              the first session.
+            </p>
 
-              <h1 className="mb-3 font-display text-[clamp(2.4rem,6.5vw,4.25rem)] font-light leading-[0.98] tracking-[-0.03em] text-[#021018] md:mb-4">
-                Swim to <span className="hero-surf-word font-normal text-[#0077B6]">Surf.</span>
-              </h1>
-
-              <p className="mx-auto mb-7 max-w-xl text-[15px] font-normal leading-relaxed text-[#021723] md:text-[17px] md:leading-relaxed">
-                Calm, one-on-one swim lessons that build real water confidence and joy from day one.
-              </p>
-
-              <div className="mx-auto mb-7 flex max-w-xl flex-wrap items-center justify-center gap-2">
-                {[
-                  "Ages 0–99",
-                  "Safety-first skills",
-                  "Private 1-on-1",
-                  "Utah County",
-                ].map((t) => (
-                  <span
-                    key={t}
-                    className="rounded-full border border-white/50 bg-white/16 px-3 py-1 font-ui text-[11px] font-semibold text-[#021723] backdrop-blur-[3px]"
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
-
-              <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-center sm:gap-4">
-                <Link
-                  href="/book"
-                  className="btn-cta-primary inline-flex min-h-[3.1rem] items-center justify-center rounded-full px-8 py-3.5 font-ui text-sm font-bold uppercase tracking-[0.16em] shadow-lg md:text-base"
+            <ul className="mb-10 flex flex-wrap gap-2">
+              {TRUST.map((item, i) => (
+                <motion.li
+                  key={item}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.35 + i * 0.06, duration: 0.4 }}
+                  className="rounded-full border border-white/15 bg-white/8 px-3.5 py-1.5 text-xs font-medium text-white/92 backdrop-blur-md"
                 >
-                  Book swim lessons
-                </Link>
-                <Link
-                  href="/about"
-                  className="border-b border-[#0077B6]/40 pb-1 text-center font-ui text-[11px] font-bold uppercase tracking-[0.2em] text-[#0b5f82] transition-colors hover:border-[#0077B6] hover:text-[#0077B6] sm:text-left"
-                >
-                  Our philosophy
-                </Link>
-              </div>
+                  {item}
+                </motion.li>
+              ))}
+            </ul>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Link href="/book" className="btn-cta-primary px-9 py-3.5 text-center">
+                Book a lesson
+              </Link>
+              <Link href="/about" className="btn-secondary px-9 py-3.5 text-center">
+                How we teach
+              </Link>
             </div>
-          </div>
+          </motion.div>
         </motion.div>
       </div>
     </section>

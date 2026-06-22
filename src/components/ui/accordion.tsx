@@ -13,22 +13,23 @@ export function AccordionItem({ title, children, defaultOpen = false }: Accordio
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="border-b border-black/5">
+    <div className="border-b border-navy/8">
       <button
+        type="button"
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between py-6 md:py-8 text-left cursor-pointer group"
+        className="group flex w-full cursor-pointer items-center justify-between gap-4 py-5 text-left md:py-6"
         aria-expanded={open}
       >
-        <h3 className="text-xl md:text-2xl font-display font-medium text-[#1D1D1F] tracking-tight pr-8 group-hover:text-black transition-colors duration-300">
+        <h3 className="pr-4 font-display text-lg text-navy transition-colors group-hover:text-water md:text-xl">
           {title}
         </h3>
-        <motion.div
-          animate={{ rotate: open ? 45 : 0 }}
-          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          className="w-10 h-10 rounded-full bg-[#F5F5F7] flex items-center justify-center text-[#1D1D1F] flex-shrink-0 group-hover:bg-[#E8E8ED] transition-colors"
+        <motion.span
+          animate={{ rotate: open ? 45 : 0, backgroundColor: open ? "rgba(8, 145, 178, 0.12)" : "rgba(240, 235, 227, 1)" }}
+          transition={{ duration: 0.25 }}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-lg text-navy"
         >
-          <span className="text-xl leading-none mt-[-2px]">+</span>
-        </motion.div>
+          +
+        </motion.span>
       </button>
       <AnimatePresence initial={false}>
         {open && (
@@ -36,12 +37,10 @@ export function AccordionItem({ title, children, defaultOpen = false }: Accordio
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.3 }}
             className="overflow-hidden"
           >
-            <div className="pb-8 text-[#86868B] text-lg leading-relaxed font-body max-w-3xl font-light">
-              {children}
-            </div>
+            <div className="max-w-3xl pb-6 text-sm leading-relaxed text-muted md:text-base">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>
