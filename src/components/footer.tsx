@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SITE, PAYMENT_OPTIONS_COPY } from "@/lib/constants";
+import { BookLink } from "@/components/booking/book-link";
 
 export function Footer() {
   const year = new Date().getFullYear();
@@ -20,9 +21,9 @@ export function Footer() {
               Private one-on-one swim lessons in American Fork. Water safety and confidence for every age.
             </p>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/45">{PAYMENT_OPTIONS_COPY.short}</p>
-            <Link href="/book" className="btn-cta-primary mt-8 inline-flex bg-water hover:bg-water/90">
+            <BookLink className="btn-cta-primary mt-8 inline-flex bg-water hover:bg-water/90">
               Book a lesson
-            </Link>
+            </BookLink>
           </div>
 
           <div>

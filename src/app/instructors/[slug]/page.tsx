@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { useParams } from "next/navigation";
+import { BookLink } from "@/components/booking/book-link";
 import { DEFAULT_PROFILES, getProfilesFromStorage, type InstructorSlug } from "@/lib/instructor-content";
 import { FadeIn } from "@/components/ui/animate";
 
@@ -87,18 +88,17 @@ export default function InstructorProfilePage() {
                   <p className="font-body text-[#1D1D1F] leading-relaxed">{profile.scheduleSummary}</p>
                 </div>
                 <div className="pt-6 flex flex-col gap-4">
-                  <Link
-                    href={`/book?instructor=${slug}`}
+                  <BookLink
+                    instructor={slug}
                     className="inline-flex items-center justify-center rounded-full bg-[#1D1D1F] text-white px-8 py-5 font-ui text-sm uppercase tracking-[0.16em] font-semibold hover:bg-black transition-colors shadow-lg shadow-black/10 hover:-translate-y-0.5 duration-300"
                   >
                     Book with {profile.name}
-                  </Link>
-                  <Link
-                    href="/book"
+                  </BookLink>
+                  <BookLink
                     className="inline-flex items-center justify-center rounded-full bg-white text-[#1D1D1F] px-8 py-5 font-ui text-xs uppercase tracking-[0.16em] font-semibold hover:bg-black/5 border border-black/5 transition-colors"
                   >
                     Compare Instructors
-                  </Link>
+                  </BookLink>
                 </div>
               </div>
             </FadeIn>

@@ -398,7 +398,8 @@ function LukaahScheduleStep({
           : "Each swimmer picks their own summer week and daily start time. Weeks can differ within the same family booking."}
       </p>
       <p className="rounded-xl border border-[#0077B6]/20 bg-[#E8F4FD]/80 px-4 py-3 font-ui text-xs leading-relaxed text-[#1D3557]">
-        Lukaah is away <strong className="font-semibold">July 27 – August 7</strong> — those weeks aren’t offered.
+        Lukaah is away <strong className="font-semibold">July 11–22</strong> and{" "}
+        <strong className="font-semibold">July 27 – August 7</strong> — those weeks aren&apos;t offered.
       </p>
 
       {swimmers.map((sw, i) => {

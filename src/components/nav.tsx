@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { BookLink } from "@/components/booking/book-link";
 
 const links = [
   { href: "/", label: "Home" },
@@ -80,8 +81,7 @@ export function Nav() {
                 </Link>
               );
             })}
-            <Link
-              href="/book"
+            <BookLink
               className={`ml-3 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition-all hover:-translate-y-px ${
                 solid
                   ? "bg-deep text-white hover:bg-navy hover:shadow-md"
@@ -89,7 +89,7 @@ export function Nav() {
               }`}
             >
               Book lesson
-            </Link>
+            </BookLink>
           </nav>
 
           <button
@@ -144,9 +144,9 @@ export function Nav() {
                   </Link>
                 ))}
               </div>
-              <Link href="/book" className="btn-cta-primary mt-8 w-full py-3.5 text-center">
+              <BookLink className="btn-cta-primary mt-8 w-full py-3.5 text-center">
                 Book a lesson
-              </Link>
+              </BookLink>
             </motion.nav>
           </motion.div>
         )}

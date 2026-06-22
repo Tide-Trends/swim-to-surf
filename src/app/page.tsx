@@ -4,6 +4,7 @@ import { HomeHighlights } from "@/components/home-highlights";
 import { HomePricing } from "@/components/home-pricing";
 import { Testimonials } from "@/components/testimonials";
 import { InstructorShowcase } from "@/components/instructor-showcase";
+import { BookLink } from "@/components/booking/book-link";
 import { FadeIn } from "@/components/ui/animate";
 
 const PILLARS = [
@@ -85,9 +86,9 @@ export default function Home() {
             <p className="section-lead mx-auto mt-4 max-w-md">
               Choose your instructor, pick a week or month, and confirm online in a few minutes.
             </p>
-            <Link href="/book" className="btn-cta-primary mt-8 inline-flex px-10">
+            <BookLink className="btn-cta-primary mt-8 inline-flex px-10">
               Book a lesson
-            </Link>
+            </BookLink>
           </div>
         </FadeIn>
       </section>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { TiltCard } from "./ui/animate";
+import { BookLink } from "@/components/booking/book-link";
 
 interface InstructorCardProps {
   name: string;
@@ -52,9 +53,12 @@ export function InstructorCard({
             {scheduleLabel}
           </p>
           <div className="flex flex-col gap-2.5">
-            <Link href={`/book?instructor=${name.toLowerCase()}`} className="btn-cta-primary w-full py-3 text-center">
+            <BookLink
+              instructor={slug}
+              className="btn-cta-primary w-full py-3 text-center"
+            >
               Book with {name}
-            </Link>
+            </BookLink>
             {slug && (
               <Link href={`/instructors/${slug}`} className="btn-outline w-full py-3 text-center">
                 View profile

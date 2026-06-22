@@ -45,7 +45,7 @@ export default function InstructorsPage() {
       />
       <div className="container-site section-pad !pt-10">
         <StaggerChildren className="grid gap-8 md:grid-cols-2">
-          {Object.values(DEFAULT_PROFILES).map((profile) => (
+          {([DEFAULT_PROFILES.estee, DEFAULT_PROFILES.lukaah] as const).map((profile) => (
             <StaggerItem key={profile.slug}>
               <TiltCard>
                 <article className="surface-card overflow-hidden transition-shadow hover:shadow-glow">

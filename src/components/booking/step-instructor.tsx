@@ -16,18 +16,7 @@ export function StepInstructor({ onSelect }: Props) {
       <div className="rounded-[1.5rem] border border-black/5 bg-[#F5F5F7] p-8 md:p-10">
         <h3 className="font-display text-2xl font-medium tracking-tight mb-6">How booking works</h3>
         <div className="grid md:grid-cols-2 gap-6 text-sm md:text-base">
-          <button 
-            type="button"
-            onClick={() => onSelect("lukaah")}
-            className="text-left rounded-2xl bg-white p-6 shadow-sm border border-black/5 hover:border-black/20 hover:shadow-md transition-all cursor-pointer"
-          >
-            <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-[#86868B] mb-3">With Lukaah</p>
-            <p className="font-body text-[#1D1D1F] leading-relaxed">
-              5 lessons per week (Mon–Fri), one time slot that repeats daily.
-            </p>
-            <p className="font-ui text-xs text-[#86868B] mt-2">From $75/week (infants) · $150/week (ages 4+)</p>
-          </button>
-          <button 
+          <button
             type="button"
             onClick={() => onSelect("estee")}
             className="text-left rounded-2xl bg-white p-6 shadow-sm border border-black/5 hover:border-black/20 hover:shadow-md transition-all cursor-pointer"
@@ -37,6 +26,17 @@ export function StepInstructor({ onSelect }: Props) {
               4 lessons per month (1 day/week), with the option to add a 2nd day for 8 total.
             </p>
             <p className="font-ui text-xs text-[#86868B] mt-2">From $60/month (infants) · $120/month (ages 4+)</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => onSelect("lukaah")}
+            className="text-left rounded-2xl bg-white p-6 shadow-sm border border-black/5 hover:border-black/20 hover:shadow-md transition-all cursor-pointer"
+          >
+            <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-[#86868B] mb-3">With Lukaah</p>
+            <p className="font-body text-[#1D1D1F] leading-relaxed">
+              5 lessons per week (Mon–Fri), one time slot that repeats daily.
+            </p>
+            <p className="font-ui text-xs text-[#86868B] mt-2">From $75/week (infants) · $150/week (ages 4+)</p>
           </button>
         </div>
       </div>

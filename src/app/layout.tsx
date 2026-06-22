@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Analytics } from "@vercel/analytics/next";
 import { Fraunces, DM_Sans } from "next/font/google";
 import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { ScrollToTop } from "@/components/scroll-to-top";
+import { BookingModalProvider } from "@/components/booking/booking-modal-provider";
 import { SITE } from "@/lib/constants";
 import "./globals.css";
 
@@ -188,9 +190,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen flex flex-col bg-cream text-navy antialiased">
         <SmoothScroll>
           <ScrollToTop />
-          <Nav />
-          <main className="flex-1">{children}</main>
-          <Footer />
+          <Suspense fallback={null}>
+            <BookingModalProvider>
+              <Nav />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </BookingModalProvider>
+          </Suspense>
         </SmoothScroll>
         <Analytics />
       </body>

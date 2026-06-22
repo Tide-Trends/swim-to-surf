@@ -129,7 +129,15 @@ function JustFinishedSwimmerCallout({
   );
 }
 
-export function BookingWizard() {
+export function BookingWizard({
+  embedded = false,
+  onClose,
+  initialInstructor,
+}: {
+  embedded?: boolean;
+  onClose?: () => void;
+  initialInstructor?: "lukaah" | "estee";
+} = {}) {
   const searchParams = useSearchParams();
 
   const [state, setState] = useState<BookingState>({
@@ -199,7 +207,7 @@ export function BookingWizard() {
                 customer: Boolean(finalData.customerEmailSent),
                 admin: Boolean(finalData.adminEmailSent),
               });
-              window.history.replaceState({}, "", "/book");
+              window.history.replaceState({}, "", embedded ? "/" : "/book");
               return;
             }
 
@@ -214,13 +222,13 @@ export function BookingWizard() {
               ? lastData.error
               : "We couldn’t confirm your payment yet. If checkout finished, you should get an email once it processes (often the same day), or contact us with your Stripe receipt."
           );
-          window.history.replaceState({}, "", "/book");
+          window.history.replaceState({}, "", embedded ? "/" : "/book");
         } catch {
           if (!cancelled) {
             alert(
               "Could not confirm your booking. If you were charged, save your Stripe receipt and contact us."
             );
-            window.history.replaceState({}, "", "/book");
+            window.history.replaceState({}, "", embedded ? "/" : "/book");
           }
         } finally {
           if (!cancelled) setSubmitting(false);
@@ -231,7 +239,7 @@ export function BookingWizard() {
       };
     }
 
-    const inst = searchParams.get("instructor");
+    const inst = initialInstructor ?? searchParams.get("instructor");
     if (inst === "lukaah" || inst === "estee") {
       setSeqSwimmers([]);
       setSeqSwimmerQueue([]);
@@ -239,7 +247,15 @@ export function BookingWizard() {
       setPostSchedulePrompt(false);
       setState((s) => ({ ...s, instructor: inst, step: 1, swimmers: null, swimmerSchedules: null }));
     }
-  }, [searchParams]);
+  }, [searchParams, initialInstructor]);
+
+  function scrollWizardTop() {
+    if (embedded) {
+      document.getElementById("booking-wizard-scroll")?.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
 
   function selectInstructor(id: "lukaah" | "estee") {
     setSeqSwimmers([]);
@@ -247,7 +263,7 @@ export function BookingWizard() {
     setSeqSchedules([]);
     setPostSchedulePrompt(false);
     setState({ step: 1, instructor: id, swimmers: null, swimmerSchedules: null });
-    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+    setTimeout(scrollWizardTop, 50);
   }
 
   function appendSwimmerForSchedule(swimmers: SwimmerInfo[]) {
@@ -257,7 +273,7 @@ export function BookingWizard() {
     setSeqSwimmerQueue(rest);
     setPostSchedulePrompt(false);
     setState((s) => ({ ...s, step: 2 }));
-    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+    setTimeout(scrollWizardTop, 50);
   }
 
   function onScheduleStepComplete(newSchedules: ScheduleSelection[]) {
@@ -272,7 +288,7 @@ export function BookingWizard() {
       setPostSchedulePrompt(true);
       return queue;
     });
-    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+    setTimeout(scrollWizardTop, 50);
   }
 
   function scheduleStepBack() {
@@ -290,31 +306,31 @@ export function BookingWizard() {
       return next;
     });
     setPostSchedulePrompt(false);
-    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+    setTimeout(scrollWizardTop, 50);
   }
 
   function swimmerStepBack() {
     if (seqSwimmers.length === 0) {
       setState((s) => ({ ...s, step: 0, instructor: null }));
-      setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+      setTimeout(scrollWizardTop, 50);
       return;
     }
     setPostSchedulePrompt(true);
     setState((s) => ({ ...s, step: 2 }));
-    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+    setTimeout(scrollWizardTop, 50);
   }
 
   function postScheduleStepBack() {
     setSeqSchedules((prev) => prev.slice(0, -1));
     setPostSchedulePrompt(false);
-    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+    setTimeout(scrollWizardTop, 50);
   }
 
   function addAnotherSwimmerFromPrompt() {
     setPostSchedulePrompt(false);
     setSeqSwimmerQueue([]);
     setState((s) => ({ ...s, step: 1 }));
-    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+    setTimeout(scrollWizardTop, 50);
   }
 
   function continueToReview() {
@@ -326,13 +342,13 @@ export function BookingWizard() {
       swimmers: seqSwimmers,
       swimmerSchedules: seqSchedules,
     }));
-    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+    setTimeout(scrollWizardTop, 50);
   }
 
   function confirmStepBack() {
     setPostSchedulePrompt(true);
     setState((s) => ({ ...s, step: 2 }));
-    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+    setTimeout(scrollWizardTop, 50);
   }
 
   async function confirmBooking(paymentMethod: "stripe" | "venmo") {
@@ -415,11 +431,18 @@ export function BookingWizard() {
   }
 
   return (
-    <div className="bg-[#F5F5F7] min-h-[100dvh] flex flex-col font-body">
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-black/5 shrink-0 px-4 py-4 md:px-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl md:text-2xl font-display font-medium tracking-tight">
+    <div
+      className={`flex flex-col font-body bg-[#F5F5F7] ${
+        embedded ? "min-h-0 h-full" : "min-h-[100dvh]"
+      }`}
+    >
+      <header className="sticky top-0 z-50 shrink-0 border-b border-black/5 bg-white/90 px-4 py-4 backdrop-blur-md md:px-6">
+        <div className="mx-auto max-w-4xl">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h1
+              id="booking-modal-title"
+              className="font-display text-xl font-medium tracking-tight md:text-2xl"
+            >
               <AnimatePresence mode="wait">
                 <motion.div
                   key={state.step}
@@ -436,10 +459,11 @@ export function BookingWizard() {
               </AnimatePresence>
             </h1>
             <button
-              onClick={() => (window.location.href = "/")}
-              className="text-sm font-ui uppercase tracking-widest text-black/70 hover:text-black"
+              type="button"
+              onClick={() => (onClose ? onClose() : (window.location.href = "/"))}
+              className="shrink-0 font-ui text-sm uppercase tracking-widest text-black/70 hover:text-black"
             >
-              Cancel
+              {embedded ? "Close" : "Cancel"}
             </button>
           </div>
 
@@ -460,8 +484,11 @@ export function BookingWizard() {
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-6 md:p-8 pb-32">
-        <div className="mx-auto max-w-4xl flex flex-col h-full">
+      <main
+        id="booking-wizard-scroll"
+        className={`flex-1 overflow-y-auto px-4 py-6 md:px-6 md:py-6 ${embedded ? "pb-6" : "pb-32"}`}
+      >
+        <div className="mx-auto flex h-full max-w-4xl flex-col">
           <AnimatePresence mode="wait">
             <motion.div
               key={state.step}
@@ -469,7 +496,7 @@ export function BookingWizard() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.3 }}
-              className="bg-white rounded-3xl border border-black/5 p-6 md:p-12 shadow-sm flex-1 flex flex-col mb-12"
+              className="mb-6 flex flex-1 flex-col rounded-3xl border border-black/5 bg-white p-5 shadow-sm md:mb-8 md:p-10"
             >
               {state.step === 0 && <StepInstructor onSelect={selectInstructor} />}
               {state.step === 1 && (
@@ -575,23 +602,25 @@ export function BookingWizard() {
             </motion.div>
           </AnimatePresence>
 
-          <div className="mx-auto w-full max-w-4xl pb-16 min-h-[26rem] md:min-h-[28rem]">
-            <p className="font-ui text-xs font-semibold uppercase tracking-widest text-[#86868B] mb-4">Quick answers</p>
-            <div className="space-y-4 min-h-[22rem] md:min-h-[24rem] w-full">
-              {quickFaqs.map((f) => (
-                <details
-                  key={f.q}
-                  className="group w-full rounded-2xl border border-black/10 bg-white px-4 py-4 md:px-5 md:py-4 open:shadow-sm"
-                >
-                  <summary className="cursor-pointer list-none font-ui text-sm font-semibold text-[#1D1D1F] marker:hidden [&::-webkit-details-marker]:hidden flex justify-between gap-4 items-start w-full text-left">
-                    <span className="min-w-0 flex-1 pr-2">{f.q}</span>
-                    <span className="text-[#86868B] text-xs shrink-0 pt-0.5 group-open:rotate-180 transition-transform">▼</span>
-                  </summary>
-                  <p className="mt-3 text-sm text-[#86868B] leading-relaxed max-w-none">{f.a}</p>
-                </details>
-              ))}
+          {!embedded && (
+            <div className="mx-auto w-full max-w-4xl pb-16 min-h-[26rem] md:min-h-[28rem]">
+              <p className="font-ui text-xs font-semibold uppercase tracking-widest text-[#86868B] mb-4">Quick answers</p>
+              <div className="space-y-4 min-h-[22rem] md:min-h-[24rem] w-full">
+                {quickFaqs.map((f) => (
+                  <details
+                    key={f.q}
+                    className="group w-full rounded-2xl border border-black/10 bg-white px-4 py-4 md:px-5 md:py-4 open:shadow-sm"
+                  >
+                    <summary className="cursor-pointer list-none font-ui text-sm font-semibold text-[#1D1D1F] marker:hidden [&::-webkit-details-marker]:hidden flex justify-between gap-4 items-start w-full text-left">
+                      <span className="min-w-0 flex-1 pr-2">{f.q}</span>
+                      <span className="text-[#86868B] text-xs shrink-0 pt-0.5 group-open:rotate-180 transition-transform">▼</span>
+                    </summary>
+                    <p className="mt-3 text-sm text-[#86868B] leading-relaxed max-w-none">{f.a}</p>
+                  </details>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </main>
     </div>

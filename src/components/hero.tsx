@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { BookLink } from "@/components/booking/book-link";
 import { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 
@@ -72,9 +73,9 @@ export function Hero() {
             </ul>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Link href="/book" className="btn-cta-primary px-9 py-3.5 text-center">
+              <BookLink className="btn-cta-primary px-9 py-3.5 text-center">
                 Book a lesson
-              </Link>
+              </BookLink>
               <Link href="/about" className="btn-secondary px-9 py-3.5 text-center">
                 How we teach
               </Link>

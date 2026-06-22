@@ -12,6 +12,10 @@ const BLACKOUT_RANGES = [
   { start: new Date("2026-07-27T12:00:00"), end: new Date("2026-08-07T12:00:00") },
 ] as const;
 
+/** Shown in the Lukaah schedule step when picking a summer week. */
+export const LUKAAH_AWAY_NOTICE =
+  "Lukaah is away July 11–22 and July 27 – August 7 — those weeks aren’t offered.";
+
 function parseLocalYmd(ymd: string): Date {
   return new Date(ymd.slice(0, 10) + "T12:00:00");
 }
