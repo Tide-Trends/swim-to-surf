@@ -16,33 +16,38 @@ export function ContactInfoToggle({
   const tel = booking.parent_phone.replace(/[^\d+]/g, "");
 
   return (
-    <div className={compact ? "mt-1" : "mt-2"}>
+    <div className={compact ? "mt-2" : "mt-2"}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`cursor-pointer font-ui text-primary hover:underline ${compact ? "text-[10px]" : "text-[11px] font-medium"}`}
+        className={`cursor-pointer rounded-md border border-navy/15 bg-sand/50 px-2.5 py-1 font-ui font-semibold text-deep hover:bg-sand ${
+          compact ? "text-xs" : "text-sm"
+        }`}
       >
-        {open ? "Hide contact info" : "Click for contact info"}
+        {open ? "Hide contact" : "Contact info"}
       </button>
       {open && (
         <div
-          className={`mt-1.5 rounded-md border border-black/10 bg-white/80 ${compact ? "p-2 text-[10px]" : "p-2.5 text-xs"} leading-relaxed`}
+          className={`mt-2 rounded-lg border border-navy/12 bg-sand/30 ${
+            compact ? "p-3 text-sm" : "p-3.5 text-sm"
+          }`}
         >
-          <div className="font-medium text-dark">{booking.parent_name}</div>
-          <div className="mt-0.5">
-            <a href={`tel:${tel}`} className="text-primary hover:underline">
+          <p className="font-semibold text-navy">{booking.parent_name}</p>
+          <p className="mt-1.5">
+            <a href={`tel:${tel}`} className="font-medium text-deep underline-offset-2 hover:underline">
               {phone}
             </a>
-          </div>
-          <div className="mt-0.5">
-            <a href={`mailto:${booking.parent_email}`} className="text-primary hover:underline break-all">
+          </p>
+          <p className="mt-1">
+            <a
+              href={`mailto:${booking.parent_email}`}
+              className="font-medium text-deep underline-offset-2 hover:underline break-all"
+            >
               {booking.parent_email}
             </a>
-          </div>
+          </p>
           {booking.notes && (
-            <p className="mt-1.5 text-amber-900/80 leading-snug" title={booking.notes}>
-              {booking.notes}
-            </p>
+            <p className="mt-2 rounded-md bg-amber-50 px-2.5 py-2 text-sm text-amber-950">{booking.notes}</p>
           )}
         </div>
       )}

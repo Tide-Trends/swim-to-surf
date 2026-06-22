@@ -10,46 +10,44 @@ interface Props {
 export function ContactMessagesTable({ messages }: Props) {
   if (messages.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border-2 border-sand p-12 text-center">
-        <p className="text-muted font-ui">No contact messages yet.</p>
+      <div className="admin-panel p-12 text-center">
+        <p className="font-ui text-body">No contact messages yet.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl border-2 border-sand overflow-hidden">
+    <div className="admin-panel overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full text-left font-ui text-sm">
-          <thead className="bg-secondary">
+        <table className="w-full min-w-[720px] text-left font-ui">
+          <thead className="border-b border-navy/10 bg-navy text-white">
             <tr>
-              <th className="px-4 py-3 font-semibold text-dark">Date</th>
-              <th className="px-4 py-3 font-semibold text-dark">From</th>
-              <th className="px-4 py-3 font-semibold text-dark">Contact</th>
-              <th className="px-4 py-3 font-semibold text-dark min-w-[240px]">Message</th>
+              <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide">Date</th>
+              <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide">From</th>
+              <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide">Contact</th>
+              <th className="min-w-[280px] px-5 py-3.5 text-xs font-semibold uppercase tracking-wide">Message</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-sand">
-            {messages.map((m) => (
-              <tr key={m.id} className="align-top">
-                <td className="px-4 py-3 whitespace-nowrap text-muted">
+          <tbody>
+            {messages.map((m, i) => (
+              <tr key={m.id} className={`border-b border-navy/8 align-top ${i % 2 === 0 ? "bg-white" : "bg-[#f8fafb]"}`}>
+                <td className="whitespace-nowrap px-5 py-4 text-sm text-body">
                   {format(new Date(m.created_at), "MMM d, yyyy h:mm a")}
                 </td>
-                <td className="px-4 py-3 font-medium text-dark">{m.name}</td>
-                <td className="px-4 py-3">
-                  <a href={`mailto:${m.email}`} className="text-primary hover:underline break-all">
+                <td className="px-5 py-4 font-semibold text-navy">{m.name}</td>
+                <td className="px-5 py-4 text-sm">
+                  <a href={`mailto:${m.email}`} className="font-medium text-deep underline-offset-2 hover:underline break-all">
                     {m.email}
                   </a>
                   {m.phone ? (
-                    <div className="text-xs text-muted mt-1">
+                    <div className="mt-1 text-body">
                       <a href={`tel:${m.phone.replace(/\s/g, "")}`} className="hover:underline">
                         {m.phone}
                       </a>
                     </div>
                   ) : null}
                 </td>
-                <td className="px-4 py-3 text-dark whitespace-pre-wrap break-words max-w-xl">
-                  {m.message}
-                </td>
+                <td className="max-w-xl whitespace-pre-wrap break-words px-5 py-4 text-sm text-body">{m.message}</td>
               </tr>
             ))}
           </tbody>

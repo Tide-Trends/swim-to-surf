@@ -170,6 +170,7 @@ export async function promotePaidCheckoutSession(
     swimmers: swimmersPayload,
     instructor,
     instructorName,
+    schedule: firstSch,
     scheduleText,
     specificDays,
     calendarLink,

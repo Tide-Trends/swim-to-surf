@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { getSupabase } from "@/lib/supabase";
+import { format } from "date-fns";
 import type { Booking, ContactMessage } from "@/lib/database.types";
 import { Button } from "@/components/ui/button";
 import { BookingTable } from "@/components/admin/booking-table";
@@ -12,7 +12,14 @@ import { ContactMessagesTable } from "@/components/admin/contact-messages-table"
 import { AdminRescheduleModal } from "@/components/admin/admin-reschedule-modal";
 import { clearAdminSession, getAdminSession, type InstructorSlug } from "@/lib/instructor-content";
 
-type Tab = "bookings" | "schedule" | "instructors" | "messages";
+type Tab = "schedule" | "bookings" | "messages" | "profiles";
+
+const TAB_LABELS: Record<Tab, string> = {
+  schedule: "Schedule",
+  bookings: "All bookings",
+  messages: "Messages",
+  profiles: "Profiles",
+};
 
 export default function AdminPage() {
   const router = useRouter();
@@ -39,11 +46,9 @@ export default function AdminPage() {
   }, [router]);
 
   const fetchBookings = useCallback(async () => {
-    const url = "/api/admin/bookings";
-
     try {
       setFetchError(null);
-      const res = await fetch(url, { cache: "no-store" });
+      const res = await fetch("/api/admin/bookings", { cache: "no-store" });
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
         const msg =
@@ -88,32 +93,28 @@ export default function AdminPage() {
     if (authedUser && tab === "messages") void fetchContactMessages();
   }, [authedUser, tab, fetchContactMessages]);
 
-  useEffect(() => {
-    if (!authedUser || tab !== "bookings") return;
-    const t = window.setInterval(() => {
-      void fetchBookings();
-    }, 25000);
-    return () => window.clearInterval(t);
-  }, [authedUser, tab, fetchBookings]);
-
-  useEffect(() => {
-    if (!authedUser || tab !== "messages") return;
-    const t = window.setInterval(() => {
-      void fetchContactMessages();
-    }, 25000);
-    return () => window.clearInterval(t);
-  }, [authedUser, tab, fetchContactMessages]);
+  const stats = useMemo(() => {
+    const confirmed = bookings.filter((b) => b.status === "confirmed");
+    const today = format(new Date(), "yyyy-MM-dd");
+    const todayCount = confirmed.filter((b) => {
+      if (b.week_start?.startsWith(today)) return true;
+      return false;
+    }).length;
+    return {
+      active: confirmed.length,
+      today: todayCount,
+      messages: contactMessages.length,
+    };
+  }, [bookings, contactMessages.length]);
 
   async function cancelBooking(id: string) {
     if (!confirm("Cancel this booking? The parent will be notified.")) return;
-    
     try {
       const res = await fetch("/api/cancel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
-      
       if (!res.ok) throw new Error("Failed to cancel");
       fetchBookings();
     } catch (err) {
@@ -127,139 +128,116 @@ export default function AdminPage() {
     router.push("/admin/login");
   }
 
+  async function refreshCurrentTab() {
+    if (tab === "messages") {
+      setMessagesRefreshing(true);
+      await fetchContactMessages();
+      setMessagesRefreshing(false);
+    } else {
+      setRefreshing(true);
+      await fetchBookings();
+      setRefreshing(false);
+    }
+  }
+
   if (loading) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center">
-        <p className="font-ui text-muted">Loading...</p>
+      <div className="admin-page flex min-h-[80vh] items-center justify-center">
+        <p className="font-ui text-body">Loading…</p>
       </div>
     );
   }
 
   if (!authedUser) return null;
 
+  const filteredBookings =
+    filter === "all" ? bookings : bookings.filter((b) => b.instructor === filter);
+
   return (
-    <section className="bg-warm-white min-h-[80vh] pt-28 pb-12">
+    <section className="admin-page pt-28 pb-12">
       <div className="mx-auto max-w-7xl px-6 md:px-8">
-        <div className="flex items-center justify-between mb-8">
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-display font-bold text-[#1D1D1F]">Dashboard</h1>
-            <p className="text-[#86868B] font-ui text-sm mt-1">
-              Signed in as {authedUser === "lukaah" ? "Lukaah" : "Estee"} ·{" "}
-              {bookings.filter((b) => b.status === "confirmed").length} active bookings
+            <h1 className="font-display text-3xl font-semibold text-navy">Admin</h1>
+            <p className="mt-1 font-ui text-sm text-body">
+              Signed in as {authedUser === "lukaah" ? "Lukaah" : "Estee"}
             </p>
           </div>
-          <Button variant="ghost" onClick={handleLogout}>
-            Sign Out
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={refreshing || messagesRefreshing} onClick={() => void refreshCurrentTab()}>
+              {refreshing || messagesRefreshing ? "Refreshing…" : "Refresh"}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              Sign out
+            </Button>
+          </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-secondary rounded-lg p-1 mb-8 w-fit flex-wrap">
-          {(["bookings", "schedule", "instructors", "messages"] as Tab[]).map((t) => (
+        <div className="mb-6 grid gap-3 sm:grid-cols-3">
+          <div className="admin-stat">
+            <p className="text-xs font-bold uppercase tracking-wide text-deep">Active bookings</p>
+            <p className="mt-1 font-display text-3xl text-navy">{stats.active}</p>
+          </div>
+          <div className="admin-stat">
+            <p className="text-xs font-bold uppercase tracking-wide text-deep">Messages</p>
+            <p className="mt-1 font-display text-3xl text-navy">{stats.messages}</p>
+          </div>
+          <div className="admin-stat">
+            <p className="text-xs font-bold uppercase tracking-wide text-deep">Today</p>
+            <p className="mt-1 font-ui text-sm text-body">Open Schedule → Day view for today&apos;s lessons</p>
+          </div>
+        </div>
+
+        <div className="admin-panel mb-6 flex flex-wrap gap-1 p-1.5">
+          {(Object.keys(TAB_LABELS) as Tab[]).map((t) => (
             <button
               key={t}
+              type="button"
               onClick={() => setTab(t)}
-              className={`px-5 py-2 rounded-md font-ui text-sm font-medium transition-colors capitalize cursor-pointer ${
-                tab === t ? "bg-white text-dark shadow-sm" : "text-muted hover:text-dark"
-              }`}
+              className={`admin-tab cursor-pointer ${tab === t ? "admin-tab-active" : ""}`}
             >
-              {t}
+              {TAB_LABELS[t]}
             </button>
           ))}
         </div>
 
-        {/* Filter */}
         {tab === "bookings" && (
-          <div className="mb-6 flex flex-wrap items-center gap-3">
-            <div className="flex flex-wrap gap-2">
-              {(["all", "lukaah", "estee"] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`cursor-pointer rounded-full border px-4 py-1.5 font-ui text-sm font-medium capitalize transition-colors ${
-                    filter === f
-                      ? "border-primary bg-primary text-white"
-                      : "border-black/10 bg-white text-dark hover:border-black/25 hover:bg-[#f8fafc]"
-                  }`}
-                >
-                  {f === "all" ? "All" : f}
-                </button>
-              ))}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="ml-auto border-2 border-[#1D1D1F] font-semibold"
-              disabled={refreshing}
-              onClick={async () => {
-                setRefreshing(true);
-                await fetchBookings();
-                setRefreshing(false);
-              }}
-            >
-              {refreshing ? "Refreshing…" : "Refresh"}
-            </Button>
+          <div className="mb-4 flex flex-wrap gap-2">
+            {(["all", "lukaah", "estee"] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setFilter(f)}
+                className={`cursor-pointer rounded-lg border px-4 py-2 font-ui text-sm font-semibold capitalize ${
+                  filter === f
+                    ? "border-navy bg-navy text-white"
+                    : "border-navy/12 bg-white text-body hover:border-navy/25"
+                }`}
+              >
+                {f === "all" ? "All instructors" : f}
+              </button>
+            ))}
           </div>
         )}
 
         {fetchError && tab === "bookings" && (
-          <div
-            className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
-            role="alert"
-          >
-            <strong className="font-semibold">Could not sync bookings.</strong> {fetchError} Confirm{" "}
-            <code className="rounded bg-red-100 px-1">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
-            <code className="rounded bg-red-100 px-1">SUPABASE_SERVICE_ROLE_KEY</code> on Vercel match your project.
-          </div>
-        )}
-
-        {tab === "bookings" && (
-          <BookingTable
-            bookings={
-              filter === "all" ? bookings : bookings.filter((b) => b.instructor === filter)
-            }
-            onCancel={cancelBooking}
-            onReschedule={setRescheduleTarget}
-          />
-        )}
-        {tab === "schedule" && (
-          <ScheduleView bookings={bookings} onReschedule={setRescheduleTarget} />
-        )}
-        {tab === "instructors" && <InstructorProfilesEditor editor={authedUser} />}
-
-        {tab === "messages" && (
-          <div className="mb-6 flex flex-wrap items-center gap-3">
-            <p className="font-ui text-sm text-muted">
-              {contactMessages.length} message{contactMessages.length === 1 ? "" : "s"}
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="ml-auto border-2 border-[#1D1D1F] font-semibold"
-              disabled={messagesRefreshing}
-              onClick={async () => {
-                setMessagesRefreshing(true);
-                await fetchContactMessages();
-                setMessagesRefreshing(false);
-              }}
-            >
-              {messagesRefreshing ? "Refreshing…" : "Refresh"}
-            </Button>
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
+            <strong className="font-semibold">Could not load bookings.</strong> {fetchError}
           </div>
         )}
 
         {messagesError && tab === "messages" && (
-          <div
-            className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
-            role="alert"
-          >
-            <strong className="font-semibold">Could not load messages.</strong> {messagesError} If you just added
-            the table, run <code className="rounded bg-red-100 px-1">005_contact_messages.sql</code> in the Supabase
-            SQL editor.
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
+            <strong className="font-semibold">Could not load messages.</strong> {messagesError}
           </div>
         )}
 
+        {tab === "schedule" && <ScheduleView bookings={bookings} onReschedule={setRescheduleTarget} />}
+        {tab === "bookings" && (
+          <BookingTable bookings={filteredBookings} onCancel={cancelBooking} onReschedule={setRescheduleTarget} />
+        )}
         {tab === "messages" && <ContactMessagesTable messages={contactMessages} />}
+        {tab === "profiles" && <InstructorProfilesEditor editor={authedUser} />}
       </div>
 
       {rescheduleTarget && (

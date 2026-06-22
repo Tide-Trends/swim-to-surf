@@ -26,20 +26,7 @@ export default function Home() {
     <>
       <Hero />
 
-      <section className="border-b border-navy/8 bg-white py-12 md:py-14">
-        <FadeIn className="container-site text-center">
-          <p className="eyebrow mb-2">Utah County</p>
-          <p className="section-lead mx-auto max-w-2xl">
-            Families from American Fork, Lehi, Pleasant Grove, Lindon, Highland, Alpine, Cedar Hills, Saratoga
-            Springs, Orem, and Provo.
-          </p>
-          <Link href="/book" className="btn-outline link-arrow mt-7 inline-flex">
-            Check availability
-          </Link>
-        </FadeIn>
-      </section>
-
-      <section className="section-pad border-b border-navy/8 bg-cream">
+      <section className="section-pad border-b border-navy/12 bg-white">
         <div className="container-site">
           <FadeIn className="mx-auto mb-12 max-w-2xl text-center md:mb-14">
             <span className="accent-rule mx-auto mb-5" aria-hidden />
@@ -58,7 +45,7 @@ export default function Home() {
                 <article className="pillar-item h-full py-1">
                   <p className="eyebrow mb-2 text-water">0{i + 1}</p>
                   <h3 className="mb-3 text-xl text-navy md:text-[1.35rem]">{item.title}</h3>
-                  <p className="text-sm leading-relaxed text-muted md:text-base">{item.body}</p>
+                  <p className="text-sm leading-relaxed text-body md:text-base">{item.body}</p>
                 </article>
               </FadeIn>
             ))}
@@ -69,7 +56,7 @@ export default function Home() {
       <HomePricing />
       <Testimonials />
 
-      <section className="section-pad border-b border-navy/8 bg-sand/40">
+      <section className="section-pad border-b border-navy/12 bg-cream">
         <div className="container-site">
           <div className="mb-12 flex flex-col gap-6 md:mb-14 md:flex-row md:items-end md:justify-between">
             <FadeIn className="max-w-xl">
@@ -90,26 +77,18 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="cta-band relative overflow-hidden py-20 md:py-24">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-30"
-          style={{
-            backgroundImage: "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.06) 1px, transparent 0)",
-            backgroundSize: "32px 32px",
-          }}
-          aria-hidden
-        />
-        <FadeIn className="container-site relative text-center">
-          <h2 className="section-title text-white">Ready to get started?</h2>
-          <p className="section-lead mx-auto mt-4 max-w-lg text-white/75">
-            Pick your instructor, choose a time, and book in minutes.
-          </p>
-          <Link
-            href="/book"
-            className="btn-cta-primary mt-9 inline-flex bg-white px-10 text-navy shadow-lg hover:bg-cream hover:shadow-xl"
-          >
-            Book a lesson
-          </Link>
+      <section className="border-t-4 border-gold bg-sand py-20 md:py-24">
+        <FadeIn className="container-site">
+          <div className="mx-auto max-w-2xl rounded-2xl border border-navy/10 bg-white px-8 py-12 text-center shadow-lift md:px-12 md:py-14">
+            <p className="eyebrow mb-3">Get started</p>
+            <h2 className="section-title text-navy">Book a private lesson.</h2>
+            <p className="section-lead mx-auto mt-4 max-w-md">
+              Choose your instructor, pick a week or month, and confirm online in a few minutes.
+            </p>
+            <Link href="/book" className="btn-cta-primary mt-8 inline-flex px-10">
+              Book a lesson
+            </Link>
+          </div>
         </FadeIn>
       </section>
     </>

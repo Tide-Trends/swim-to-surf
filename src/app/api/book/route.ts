@@ -450,6 +450,7 @@ export async function POST(req: Request) {
       swimmers: swimmersList as SwimmerPayload[],
       instructor,
       instructorName,
+      schedule: firstSch as ScheduleSelection,
       scheduleText,
       specificDays,
       calendarLink,

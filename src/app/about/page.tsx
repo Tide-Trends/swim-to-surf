@@ -44,7 +44,7 @@ export default function AboutPage() {
               The reason we dive in.
             </h2>
           </FadeIn>
-          <FadeIn delay={0.1} className="space-y-6 text-base leading-relaxed text-muted md:text-lg lg:col-span-7">
+          <FadeIn delay={0.1} className="space-y-6 text-base leading-relaxed text-body md:text-lg lg:col-span-7">
             <p className="text-navy">
               Swim to Surf started with a simple conviction: everyone deserves to feel safe and confident in the water.
             </p>
@@ -74,7 +74,7 @@ export default function AboutPage() {
                 <article className="pillar-item h-full py-1">
                   <p className="eyebrow mb-2 text-water">0{i + 1}</p>
                   <h3 className="mb-3 text-xl text-navy">{v.title}</h3>
-                  <p className="text-sm leading-relaxed text-muted md:text-base">{v.body}</p>
+                  <p className="text-sm leading-relaxed text-body md:text-base">{v.body}</p>
                 </article>
               </StaggerItem>
             ))}
@@ -97,7 +97,7 @@ export default function AboutPage() {
                 </div>
                 <h3 className="font-display text-2xl text-navy">{inst.name}</h3>
                 <p className="eyebrow mt-2">{inst.tagline}</p>
-                <p className="mx-auto mt-4 max-w-sm text-sm leading-relaxed text-muted">{inst.shortBio}</p>
+                <p className="mx-auto mt-4 max-w-sm text-sm leading-relaxed text-body">{inst.shortBio}</p>
                 <Link href={`/instructors/${inst.slug}`} className="btn-outline mt-6 inline-flex">
                   Meet {inst.name}
                 </Link>

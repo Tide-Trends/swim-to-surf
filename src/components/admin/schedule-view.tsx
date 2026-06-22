@@ -23,7 +23,6 @@ import {
   type ExpandedLessonSlot,
 } from "@/lib/admin-schedule-expand";
 import { ContactInfoToggle } from "@/components/admin/contact-info-toggle";
-import { Button } from "@/components/ui/button";
 
 type ViewMode = "day" | "week" | "month";
 type InstructorFilter = "all" | "lukaah" | "estee";
@@ -43,10 +42,10 @@ function slotKey(slot: ExpandedLessonSlot, index?: number): string {
 }
 
 function slotStatusClass(status: string, hasConflict: boolean): string {
-  if (hasConflict) return "border-l-4 border-l-red-500 bg-red-50 ring-1 ring-red-200";
-  if (status === "confirmed") return "border-l-4 border-l-success bg-success/5";
-  if (status === "pending_payment") return "border-l-4 border-l-amber-500 bg-amber-50";
-  return "border-l-4 border-l-muted bg-secondary/40";
+  if (hasConflict) return "admin-lesson admin-lesson-conflict";
+  if (status === "confirmed") return "admin-lesson admin-lesson-confirmed";
+  if (status === "pending_payment") return "admin-lesson admin-lesson-pending";
+  return "admin-lesson";
 }
 
 function endTimeLabel(slot: ExpandedLessonSlot): string {
@@ -72,36 +71,33 @@ function LessonCard({
   const b = slot.booking;
 
   return (
-    <div
-      className={`rounded-lg border border-black/10 shadow-sm ${slotStatusClass(b.status, hasConflict)} ${
-        compact ? "px-2 py-1.5" : "px-3 py-2.5"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-2">
+    <div className={`${slotStatusClass(b.status, hasConflict)} ${compact ? "p-3" : "p-4"}`}>
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className={`font-semibold text-dark truncate ${compact ? "text-xs" : "text-sm"}`}>
-            {slot.timeHm}–{endTimeLabel(slot).replace(/^0/, "")} · {b.swimmer_name}
+          <div className={`font-semibold text-navy ${compact ? "text-sm" : "text-base"}`}>
+            {slot.timeHm}–{endTimeLabel(slot).replace(/^0/, "")}
           </div>
-          <div className={`text-muted truncate ${compact ? "text-[10px] mt-0.5" : "mt-0.5 text-xs"}`}>
-            {b.parent_name} · {b.lesson_duration} min · {b.instructor}
+          <div className={`mt-0.5 font-medium text-navy ${compact ? "text-sm" : "text-base"}`}>
+            {b.swimmer_name}
           </div>
-          <ContactInfoToggle booking={b} compact={compact} />
-          {b.status === "confirmed" && onReschedule && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className={`mt-1 h-auto px-0 py-0 font-ui text-primary hover:bg-transparent hover:underline ${
-                compact ? "text-[10px]" : "text-[11px]"
-              }`}
-              onClick={() => onReschedule(b)}
-            >
-              Reschedule
-            </Button>
-          )}
+          <div className={`mt-1 text-body ${compact ? "text-xs" : "text-sm"}`}>
+            {b.parent_name} · {b.lesson_duration} min · <span className="capitalize">{b.instructor}</span>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <ContactInfoToggle booking={b} compact={compact} />
+            {b.status === "confirmed" && onReschedule && (
+              <button
+                type="button"
+                onClick={() => onReschedule(b)}
+                className="cursor-pointer rounded-md border border-navy/15 bg-white px-2.5 py-1 text-xs font-semibold text-deep hover:bg-sand md:text-sm"
+              >
+                Reschedule
+              </button>
+            )}
+          </div>
         </div>
         {hasConflict && (
-          <span className="shrink-0 rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-red-700">
+          <span className="shrink-0 rounded-md bg-red-100 px-2 py-1 text-xs font-bold uppercase text-red-800">
             Overlap
           </span>
         )}
@@ -147,58 +143,17 @@ export function ScheduleView({ bookings, onReschedule }: Props) {
     return count;
   }, [weekDays, slotsByDate]);
 
-  const todaySlots = slotsByDate.get(todayYmd) ?? [];
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="font-display text-xl font-bold text-dark">Schedule</h2>
-        <p className="text-muted font-ui text-sm mt-1">
-          Lesson timeline. Click for contact info or reschedule — parent gets an email on reschedule.
-        </p>
-      </div>
-
-      {todaySlots.length > 0 && (
-        <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <h3 className="font-ui text-sm font-bold text-dark">
-              Today · {format(new Date(), "EEEE, MMM d")} · {todaySlots.length} lesson
-              {todaySlots.length === 1 ? "" : "s"}
-            </h3>
-            <button
-              type="button"
-              onClick={() => {
-                setView("day");
-                setDayCursor(new Date());
-              }}
-              className="cursor-pointer rounded-md bg-primary px-3 py-1 font-ui text-xs font-semibold text-white hover:opacity-90"
-            >
-              Open day view
-            </button>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {todaySlots.map((slot, i) => (
-              <LessonCard
-                key={slotKey(slot, i)}
-                slot={slot}
-                hasConflict={findDayConflictIndices(todaySlots).has(i)}
-                compact
-                onReschedule={onReschedule}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex rounded-lg border border-black/10 bg-secondary p-1">
+    <div className="admin-panel overflow-hidden">
+      <div className="admin-toolbar">
+        <div className="flex rounded-lg border border-navy/12 bg-white p-1">
           {(["day", "week", "month"] as const).map((v) => (
             <button
               key={v}
               type="button"
               onClick={() => setView(v)}
-              className={`cursor-pointer rounded-md px-4 py-2 font-ui text-sm font-medium capitalize transition-colors ${
-                view === v ? "bg-white text-dark shadow-sm" : "text-muted hover:text-dark"
+              className={`cursor-pointer rounded-md px-4 py-2 font-ui text-sm font-semibold capitalize transition-colors ${
+                view === v ? "bg-navy text-white" : "text-body hover:text-navy"
               }`}
             >
               {v}
@@ -212,18 +167,19 @@ export function ScheduleView({ bookings, onReschedule }: Props) {
               key={f}
               type="button"
               onClick={() => setInstructor(f)}
-              className={`cursor-pointer rounded-full border px-3 py-1.5 font-ui text-xs font-medium capitalize transition-colors ${
+              className={`cursor-pointer rounded-lg border px-3 py-2 font-ui text-sm font-semibold capitalize transition-colors ${
                 instructor === f
-                  ? "border-primary bg-primary text-white"
-                  : "border-black/10 bg-white text-dark hover:border-black/25"
+                  ? "border-navy bg-navy text-white"
+                  : "border-navy/12 bg-white text-body hover:border-navy/25"
               }`}
             >
-              {f === "all" ? "All teachers" : f}
+              {f === "all" ? "All" : f}
             </button>
           ))}
         </div>
       </div>
 
+      <div className="space-y-5 p-5 md:p-6">
       {view === "day" && (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -251,8 +207,8 @@ export function ScheduleView({ bookings, onReschedule }: Props) {
               </button>
             </div>
             <div className="text-right">
-              <p className="font-display text-lg font-bold text-dark">{format(dayCursor, "EEEE, MMMM d, yyyy")}</p>
-              <p className="font-ui text-xs text-muted">
+              <p className="font-display text-xl font-semibold text-navy">{format(dayCursor, "EEEE, MMMM d, yyyy")}</p>
+              <p className="mt-1 font-ui text-sm text-body">
                 {dayStats.count} lesson{dayStats.count === 1 ? "" : "s"} · ~
                 {Math.round(dayStats.totalMinutes / 60 * 10) / 10}h teaching
                 {dayConflicts.size > 0 && (
@@ -263,7 +219,7 @@ export function ScheduleView({ bookings, onReschedule }: Props) {
           </div>
 
           {daySlots.length === 0 ? (
-            <div className="rounded-xl border-2 border-sand bg-white p-12 text-center font-ui text-sm text-muted">
+            <div className="rounded-xl border border-navy/12 bg-[#f8fafb] p-10 text-center font-ui text-body">
               No lessons scheduled for this day.
             </div>
           ) : (
@@ -272,7 +228,7 @@ export function ScheduleView({ bookings, onReschedule }: Props) {
                 const key = slotKey(slot, i);
                 return (
                   <div key={key} className="flex gap-4 pb-4">
-                    <div className="w-16 shrink-0 pt-2 text-right font-ui text-sm font-bold tabular-nums text-dark">
+                    <div className="w-20 shrink-0 pt-3 text-right font-ui text-base font-bold tabular-nums text-navy">
                       {slot.timeHm}
                     </div>
                     <div className="relative flex-1 pb-2">
@@ -318,7 +274,7 @@ export function ScheduleView({ bookings, onReschedule }: Props) {
               <p className="font-ui text-sm font-semibold text-dark">
                 {format(weekAnchor, "MMM d")} – {format(endOfWeek(weekAnchor, { weekStartsOn: 1 }), "MMM d, yyyy")}
               </p>
-              <p className="font-ui text-xs text-muted">{weekTotal} lessons this week</p>
+              <p className="font-ui text-sm text-body">{weekTotal} lessons this week</p>
             </div>
           </div>
 
@@ -413,7 +369,7 @@ export function ScheduleView({ bookings, onReschedule }: Props) {
               );
             })}
             {weekDays.every((day) => (slotsByDate.get(format(day, "yyyy-MM-dd")) ?? []).length === 0) && (
-              <div className="rounded-xl border-2 border-sand bg-white p-8 text-center font-ui text-sm text-muted">
+              <div className="rounded-xl border border-navy/12 bg-[#f8fafb] p-8 text-center font-ui text-body">
                 No lessons this week for this filter.
               </div>
             )}
@@ -504,6 +460,7 @@ export function ScheduleView({ bookings, onReschedule }: Props) {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

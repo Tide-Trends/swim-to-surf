@@ -11,7 +11,7 @@ export function HomeHighlights() {
       {items.map((item) => (
         <div key={item.label}>
           <p className="eyebrow text-[0.625rem]">{item.label}</p>
-          <p className="mt-1.5 text-sm font-semibold text-navy md:text-base">{item.value}</p>
+          <p className="mt-1 text-sm font-semibold text-navy">{item.value}</p>
         </div>
       ))}
     </div>

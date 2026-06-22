@@ -22,7 +22,7 @@ export function InstructorCard({
 }: InstructorCardProps) {
   return (
     <TiltCard>
-      <article className="surface-card group flex h-full flex-col overflow-hidden">
+      <article className="surface-card-interactive group flex h-full flex-col overflow-hidden">
         <div className="relative h-[22rem] overflow-hidden md:h-[24rem]">
           <img
             src={image}
@@ -39,7 +39,7 @@ export function InstructorCard({
         </div>
 
         <div className="flex flex-1 flex-col p-6 md:p-7">
-          <p className="mb-6 flex-1 text-sm leading-relaxed text-muted md:text-base">{bio}</p>
+          <p className="mb-6 flex-1 text-sm leading-relaxed text-body md:text-base">{bio}</p>
           <p className="mb-6 flex items-center gap-2.5 border-t border-navy/8 pt-5 text-sm text-navy">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sand text-water">
               <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>

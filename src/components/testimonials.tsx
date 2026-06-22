@@ -107,13 +107,13 @@ export function Testimonials() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-80px" }}
             transition={{ duration: 0.5, delay: i * 0.05 }}
-            className="surface-card relative snap-center w-[85vw] shrink-0 p-7 md:w-[26rem] md:p-8"
+            className="surface-card-interactive relative snap-center w-[85vw] shrink-0 p-7 md:w-[26rem] md:p-8"
           >
             <span className="font-display text-5xl leading-none text-gold/30" aria-hidden>
               &ldquo;
             </span>
             <div className="mb-4 flex gap-0.5 text-gold">★★★★★</div>
-            <p className="mb-6 text-sm leading-relaxed text-navy/85 md:text-base">&ldquo;{review.text}&rdquo;</p>
+            <p className="mb-6 text-sm leading-relaxed text-body md:text-base">&ldquo;{review.text}&rdquo;</p>
             <p className="border-t border-navy/8 pt-4 text-sm font-semibold text-navy">{review.name}</p>
           </motion.article>
         ))}

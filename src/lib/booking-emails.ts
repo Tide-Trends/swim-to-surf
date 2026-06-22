@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 import type { SendMailOptions, Transporter } from "nodemailer";
 import { getArrivalDetailsHtml, getManageBookingLinkHtml } from "@/lib/email-templates";
 import type { ScheduleSelection } from "@/lib/booking-schema";
+import { generateIcsContent } from "@/lib/calendar";
 import { formatLessonTimeHm, lessonLocalToUtcIso } from "@/lib/timezone";
 
 const LUKAAH_EMAIL = process.env.ADMIN_EMAIL || "lukaah.marlowe@gmail.com";
@@ -81,6 +82,12 @@ function logResendFailure(label: string, err: unknown) {
   console.error(`[Resend] ${label} failed:`, detail);
 }
 
+type EmailAttachment = {
+  filename: string;
+  content: string;
+  contentType?: string;
+};
+
 type ResendEmailPayload = {
   from: string;
   to: string[];
@@ -88,7 +95,46 @@ type ResendEmailPayload = {
   html: string;
   replyTo?: string | string[];
   bcc?: string | string[];
+  attachments?: EmailAttachment[];
 };
+
+function buildBookingIcsAttachment(
+  schedule: ScheduleSelection,
+  swimmerName: string,
+  instructorName: string,
+  duration: number,
+  bookingId: string
+): EmailAttachment {
+  const ics = generateIcsContent(schedule, swimmerName, instructorName, duration);
+  return {
+    filename: `swim-to-surf-${bookingId.slice(0, 8)}.ics`,
+    content: Buffer.from(ics, "utf-8").toString("base64"),
+    contentType: "text/calendar; charset=utf-8",
+  };
+}
+
+function smtpAttachmentsFromIcs(att: EmailAttachment) {
+  return [
+    {
+      filename: att.filename,
+      content: Buffer.from(att.content, "base64"),
+      contentType: att.contentType,
+    },
+  ];
+}
+
+function appleCalendarHtml(filename: string): string {
+  return `
+    <div style="margin: 24px 0; padding: 18px 20px; background: #f0ebe3; border-radius: 12px; border: 1px solid #d4a053;">
+      <p style="margin: 0 0 6px; font-size: 13px; font-weight: 700; color: #0a4a5c; text-transform: uppercase; letter-spacing: 0.06em;">
+        Apple Calendar
+      </p>
+      <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #243847;">
+        Open the attached <strong>${escapeHtml(filename)}</strong> file. On iPhone or Mac, tap the attachment and choose
+        <strong>Add to Calendar</strong> to import all lessons at once.
+      </p>
+    </div>`;
+}
 
 async function resendSendWithRetries(
   resend: Resend,
@@ -236,6 +282,7 @@ export async function sendBookingEmails(args: {
   swimmers: SwimmerPayload[];
   instructor: string;
   instructorName: string;
+  schedule: ScheduleSelection;
   scheduleText: string;
   specificDays: string;
   calendarLink: string;
@@ -250,6 +297,7 @@ export async function sendBookingEmails(args: {
     swimmers,
     instructor,
     instructorName,
+    schedule,
     scheduleText,
     specificDays,
     calendarLink,
@@ -290,16 +338,31 @@ export async function sendBookingEmails(args: {
       : '<p style="font-size: 16px; line-height: 1.6; color: #1D1D1F;"><strong>Pay later:</strong> Bring Venmo, cash, check, Apple Pay in person, or a card — we&rsquo;ll confirm at the pool. Venmo: @swimtosurf</p>';
 
   const calendarBtn = (label: string) => `
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 24px auto;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 16px auto 0;">
       <tr>
         <td bgcolor="#005f8a" style="background-color: #005f8a; border-radius: 999px;">
           <a href="${calendarLink}" target="_blank" rel="noopener noreferrer"
-            style="display: inline-block; padding: 16px 32px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; font-weight: 700; color: #ffffff !important; text-decoration: none; line-height: 1.2;">
+            style="display: inline-block; padding: 14px 28px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; font-weight: 700; color: #ffffff !important; text-decoration: none; line-height: 1.2;">
             ${label}
           </a>
         </td>
       </tr>
     </table>`;
+
+  const calendarSection = (icsFilename: string) => `
+    ${appleCalendarHtml(icsFilename)}
+    <p style="margin: 0 0 8px; font-size: 13px; font-weight: 600; color: #555; text-align: center;">Or use Google Calendar:</p>
+    ${calendarBtn("Add first lesson to Google Calendar")}
+  `;
+
+  const primarySwimmer = swimmers[0]!.swimmerName;
+  const icsAttachment = buildBookingIcsAttachment(
+    schedule,
+    primarySwimmer,
+    instructorName,
+    priceInfo.duration ?? 30,
+    bookingId
+  );
 
   const adminEmail = getAdminEmail(instructor);
   const payLabel =
@@ -355,7 +418,7 @@ export async function sendBookingEmails(args: {
                 </table>
               </div>
 
-              ${calendarBtn("Add to Google Calendar")}
+              ${calendarSection(icsAttachment.filename)}
 
               <p style="color: #555; font-size: 13px; margin-top: 24px; border-top: 1px solid #E8E8ED; padding-top: 16px; text-align: center;">
                 Swim to Surf · Booking ID(s): ${confirmCodes}
@@ -391,7 +454,7 @@ export async function sendBookingEmails(args: {
                   <p style="margin: 0; font-size: 14px; color: #1D3557;">${priceInfo.durationSummary || `${priceInfo.duration}-minute lessons`} · <strong>${priceFormatted}</strong> total</p>
                 </div>
 
-                ${calendarBtn("Add to Google Calendar")}
+                ${calendarSection(icsAttachment.filename)}
 
                 ${paymentBlurb}
               </div>
@@ -444,6 +507,7 @@ export async function sendBookingEmails(args: {
       replyTo: REPLY_TO,
       subject: adminSubject,
       html: adminHtml,
+      attachments: smtpAttachmentsFromIcs(icsAttachment),
     });
     if (customerTo) {
       const custBcc = bccOpsIfUseful(customerTo);
@@ -454,6 +518,7 @@ export async function sendBookingEmails(args: {
         replyTo: REPLY_TO,
         subject: customerSubject,
         html: customerHtml,
+        attachments: smtpAttachmentsFromIcs(icsAttachment),
       });
     } else {
       console.warn("No customer email — admin notification still attempted.");
@@ -495,6 +560,7 @@ export async function sendBookingEmails(args: {
       replyTo: REPLY_TO,
       subject: adminSubject,
       html: adminHtml,
+      attachments: [icsAttachment],
     },
     idempotencyAdmin
   );
@@ -511,6 +577,7 @@ export async function sendBookingEmails(args: {
         replyTo: REPLY_TO,
         subject: customerSubject,
         html: customerHtml,
+        attachments: [icsAttachment],
       },
       idempotencyCustomer
     );

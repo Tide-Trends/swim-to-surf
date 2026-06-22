@@ -40,7 +40,7 @@ export function AccordionItem({ title, children, defaultOpen = false }: Accordio
             transition={{ duration: 0.3 }}
             className="overflow-hidden"
           >
-            <div className="max-w-3xl pb-6 text-sm leading-relaxed text-muted md:text-base">{children}</div>
+            <div className="max-w-3xl pb-6 text-sm leading-relaxed text-body md:text-base">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>

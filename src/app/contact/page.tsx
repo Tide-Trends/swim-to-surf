@@ -50,7 +50,7 @@ export default function ContactPage() {
               ))}
               <div>
                 <p className="eyebrow mb-2">Payment</p>
-                <p className="text-sm leading-relaxed text-muted">
+                <p className="text-sm leading-relaxed text-body">
                   {PAYMENT_OPTIONS_COPY.short}{" "}
                   <a
                     href="https://venmo.com/u/swimtosurf"
@@ -68,7 +68,7 @@ export default function ContactPage() {
           <FadeIn delay={0.1} className="lg:col-span-8">
             <div className="surface-card p-7 md:p-10">
               <h2 className="mb-2 text-2xl text-navy">Send a message</h2>
-              <p className="mb-8 text-sm text-muted md:text-base">
+              <p className="mb-8 text-sm text-body md:text-base">
                 We usually reply within one business day.
               </p>
               <ContactForm />

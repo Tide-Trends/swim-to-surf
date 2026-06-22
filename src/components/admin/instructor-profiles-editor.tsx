@@ -48,21 +48,22 @@ export function InstructorProfilesEditor({ editor }: { editor: InstructorSlug })
   const profile = profiles[active];
 
   return (
-    <div className="bg-white rounded-2xl border border-sand/70 p-6 md:p-8">
+    <div className="admin-panel p-6 md:p-8">
       <div className="mb-7">
-        <h2 className="text-2xl font-display text-primary mb-2">Instructor Profile Content</h2>
-        <p className="text-sm text-muted font-ui">
-          Edit the public instructor pages and homepage snippets. Changes save instantly to this browser.
+        <h2 className="mb-2 font-display text-2xl text-navy">Instructor profiles</h2>
+        <p className="font-ui text-sm text-body">
+          Edit public instructor pages and homepage snippets. Saves to this browser only.
         </p>
       </div>
 
-      <div className="flex gap-2 mb-6">
+      <div className="mb-6 flex gap-2">
         {(["lukaah", "estee"] as const).map((slug) => (
           <button
             key={slug}
+            type="button"
             onClick={() => setActive(slug)}
-            className={`px-4 py-2 rounded-full text-xs uppercase tracking-[0.14em] font-ui ${
-              active === slug ? "bg-primary text-white" : "bg-secondary text-muted"
+            className={`rounded-lg px-4 py-2 font-ui text-sm font-semibold capitalize ${
+              active === slug ? "bg-navy text-white" : "border border-navy/12 bg-white text-body"
             }`}
           >
             {slug}

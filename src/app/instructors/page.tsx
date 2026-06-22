@@ -60,7 +60,7 @@ export default function InstructorsPage() {
                   </div>
                   <div className="p-6 md:p-7">
                     <p className="eyebrow mb-3">{profile.tagline}</p>
-                    <p className="mb-6 text-sm leading-relaxed text-muted md:text-base">{profile.shortBio}</p>
+                    <p className="mb-6 text-sm leading-relaxed text-body md:text-base">{profile.shortBio}</p>
                     <Link href={`/instructors/${profile.slug}`} className="btn-outline w-full py-3 text-center">
                       View profile
                     </Link>
