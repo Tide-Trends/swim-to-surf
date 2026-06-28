@@ -1,4 +1,5 @@
 import type { ScheduleSelection, SwimmerInfo } from "./booking-schema";
+import { applyEsteeMonthDateOverrides } from "./estee-availability";
 
 export const SITE = {
   name: "Swim to Surf",
@@ -82,13 +83,13 @@ export function getEsteeDatesForMonth(monthValue: string): { wednesdays: string[
     if (dow === 4) thursdays.push(`${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`);
   }
 
-  // For July, exclude the last week (last Wednesday and Thursday)
-  if (month === 6) { // July is month index 6
+  // For July (except 2026 — custom overrides below), exclude the last week
+  if (month === 6 && monthValue !== "2026-07") {
     if (wednesdays.length > 4) wednesdays.pop();
     if (thursdays.length > 4) thursdays.pop();
   }
 
-  return { wednesdays, thursdays };
+  return applyEsteeMonthDateOverrides(monthValue, wednesdays, thursdays);
 }
 
 /** 0–2 years → infant (15 min); 3+ → standard (30 min) when tier is "auto". */

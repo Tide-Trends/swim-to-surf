@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { generateSlotStartTimes, TimeSlotGrid } from "@/components/booking/time-slot-grid";
 import { lukaahWeekOverlapsBlackout } from "@/lib/lukaah-availability";
+import { ESTEE_JULY_2026_SCHEDULE_NOTE } from "@/lib/estee-availability";
 
 /** Clear selected state for week/month/day pickers (parent can see what they chose). */
 const selectedPickClasses =
@@ -760,6 +761,13 @@ function EsteeScheduleStep({
           ? "Choose their month, days, and times below."
           : "Each swimmer picks their own month, weekday pattern, and times. Months and patterns can differ within the same booking."}
       </p>
+
+      {(selectedMonths.includes("2026-07") ||
+        committedSchedules.some((s) => s.type === "monthly" && s.month === "2026-07")) && (
+        <p className="rounded-xl border border-[#0077B6]/20 bg-[#E8F4FD]/80 px-4 py-3 font-ui text-xs leading-relaxed text-[#1D3557]">
+          {ESTEE_JULY_2026_SCHEDULE_NOTE}
+        </p>
+      )}
 
       {swimmers.map((sw, i) => {
         const m = selectedMonths[i];

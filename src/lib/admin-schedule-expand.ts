@@ -1,6 +1,7 @@
 import { addDays, format, parse } from "date-fns";
 import type { Booking } from "@/lib/database.types";
 import { getEsteeDatesForMonth } from "@/lib/constants";
+import { getEsteeWednesdayMakeupYmd } from "@/lib/estee-availability";
 
 export type ExpandedLessonSlot = {
   ymd: string;
@@ -67,6 +68,17 @@ export function expandBookingToLessonSlots(b: Booking): ExpandedLessonSlot[] {
       for (const ymd of wednesdays) {
         out.push({
           ymd,
+          timeHm: tPrimary,
+          startMinutes: hmToMinutes(tPrimary),
+          endMinutes: slotEndMinutes(tPrimary, b.lesson_duration),
+          booking: b,
+          esteeSlot: "primary",
+        });
+      }
+      const makeupYmd = getEsteeWednesdayMakeupYmd(b.month);
+      if (makeupYmd && !wednesdays.includes(makeupYmd)) {
+        out.push({
+          ymd: makeupYmd,
           timeHm: tPrimary,
           startMinutes: hmToMinutes(tPrimary),
           endMinutes: slotEndMinutes(tPrimary, b.lesson_duration),
