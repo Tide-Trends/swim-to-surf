@@ -1,6 +1,5 @@
 import { differenceInCalendarDays, startOfDay } from "date-fns";
 import { getEsteeDatesForMonth } from "@/lib/constants";
-import { getEsteeWednesdayMakeupYmd } from "@/lib/estee-availability";
 
 type BookingLike = {
   instructor: "lukaah" | "estee";
@@ -25,11 +24,7 @@ export function getFirstLessonDate(booking: BookingLike): Date {
     const dow = booking.day_of_week ?? [];
     const days = dow.map((d) => d.toLowerCase());
     const dates: string[] = [];
-    if (days.includes("wednesday")) {
-      dates.push(...wednesdays);
-      const makeup = getEsteeWednesdayMakeupYmd(booking.month);
-      if (makeup && !wednesdays.includes(makeup)) dates.push(makeup);
-    }
+    if (days.includes("wednesday")) dates.push(...wednesdays);
     if (days.includes("thursday")) dates.push(...thursdays);
     if (dates.length === 0) throw new Error("No lesson days");
     dates.sort();
