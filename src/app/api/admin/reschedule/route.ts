@@ -22,9 +22,10 @@ export async function POST(req: Request) {
       };
       scheduleText?: string;
       specificDays?: string;
+      sendEmail?: boolean;
     };
 
-    const { id, newData, scheduleText, specificDays } = body;
+    const { id, newData, scheduleText, specificDays, sendEmail = true } = body;
     if (!id || !newData?.lesson_time || !scheduleText || !specificDays) {
       return NextResponse.json({ error: "Missing reschedule fields." }, { status: 400 });
     }
@@ -95,17 +96,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: msg }, { status: 400 });
     }
 
-    const emailResult = await sendRescheduleEmails({
-      booking: {
-        id: booking.id,
-        swimmer_name: booking.swimmer_name,
-        parent_name: booking.parent_name,
-        parent_email: booking.parent_email,
-        instructor: booking.instructor as "lukaah" | "estee",
-      },
-      scheduleText,
-      specificDays,
-    });
+    const emailResult = sendEmail
+      ? await sendRescheduleEmails({
+          booking: {
+            id: booking.id,
+            swimmer_name: booking.swimmer_name,
+            parent_name: booking.parent_name,
+            parent_email: booking.parent_email,
+            instructor: booking.instructor as "lukaah" | "estee",
+          },
+          scheduleText,
+          specificDays,
+        })
+      : { customerEmailSent: false, adminEmailSent: false, emailSkipped: true };
 
     return NextResponse.json({ success: true, ...emailResult });
   } catch (error) {

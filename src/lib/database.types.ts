@@ -22,6 +22,7 @@ export type Database = {
           status: string;
           stripe_checkout_session_id: string | null;
           payment_hold_expires_at: string | null;
+          reminder_sent: boolean;
           created_at: string;
         };
         Insert: {
@@ -44,6 +45,7 @@ export type Database = {
           status?: string;
           stripe_checkout_session_id?: string | null;
           payment_hold_expires_at?: string | null;
+          reminder_sent?: boolean;
           created_at?: string;
         };
         Update: {
@@ -66,6 +68,7 @@ export type Database = {
           status?: string;
           stripe_checkout_session_id?: string | null;
           payment_hold_expires_at?: string | null;
+          reminder_sent?: boolean;
           created_at?: string;
         };
         Relationships: [];
