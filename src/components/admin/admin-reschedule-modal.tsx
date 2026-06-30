@@ -24,6 +24,7 @@ export function AdminRescheduleModal({
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sendEmail, setSendEmail] = useState(true);
 
   async function handleReschedule(sel: ScheduleSelection) {
     setLoading(true);
@@ -61,15 +62,16 @@ export function AdminRescheduleModal({
       const res = await fetch("/api/admin/reschedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: booking.id, newData, scheduleText, specificDays }),
+        body: JSON.stringify({ id: booking.id, newData, scheduleText, specificDays, sendEmail }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(typeof data.error === "string" ? data.error : "Failed to reschedule");
       }
 
-      const emailNote =
-        data.customerEmailSent === false
+      const emailNote = !sendEmail
+        ? " No email was sent."
+        : data.customerEmailSent === false
           ? " Booking updated, but the confirmation email may not have sent — check logs."
           : " Confirmation email sent to the parent.";
       alert(`Rescheduled successfully.${emailNote}`);
@@ -96,7 +98,8 @@ export function AdminRescheduleModal({
               Reschedule {booking.swimmer_name}
             </h2>
             <p className="mt-1 font-ui text-sm text-muted">
-              Pick a new week or month and time. The parent and instructor will get an email.
+              Pick a new week or month and time.
+              {sendEmail ? " The parent and instructor will get an email." : " No email will be sent."}
             </p>
           </div>
           <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={loading}>
@@ -110,8 +113,23 @@ export function AdminRescheduleModal({
           </div>
         )}
 
+        <label className="mb-4 flex cursor-pointer items-start gap-3 rounded-lg border border-black/10 bg-black/[0.02] px-4 py-3">
+          <input
+            type="checkbox"
+            checked={sendEmail}
+            onChange={(e) => setSendEmail(e.target.checked)}
+            disabled={loading}
+            className="mt-0.5 h-5 w-5 cursor-pointer rounded border-2 border-black/20 accent-[#1D1D1F]"
+          />
+          <span className="font-ui text-sm text-dark">
+            Send reschedule email to parent and instructor
+          </span>
+        </label>
+
         {loading ? (
-          <p className="py-12 text-center font-ui text-muted">Saving and sending email…</p>
+          <p className="py-12 text-center font-ui text-muted">
+            {sendEmail ? "Saving and sending email…" : "Saving…"}
+          </p>
         ) : (
           <StepSchedule
             instructor={booking.instructor}
