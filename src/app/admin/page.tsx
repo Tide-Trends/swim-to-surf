@@ -232,7 +232,9 @@ export default function AdminPage() {
           </div>
         )}
 
-        {tab === "schedule" && <ScheduleView bookings={bookings} onReschedule={setRescheduleTarget} />}
+        {tab === "schedule" && (
+          <ScheduleView bookings={bookings} onReschedule={setRescheduleTarget} onCancel={cancelBooking} />
+        )}
         {tab === "bookings" && (
           <BookingTable bookings={filteredBookings} onCancel={cancelBooking} onReschedule={setRescheduleTarget} />
         )}

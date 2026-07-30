@@ -82,7 +82,7 @@ export function BookingTable({ bookings, onCancel, onReschedule }: Props) {
                           Reschedule
                         </Button>
                       )}
-                      <Button size="sm" variant="ghost" className="text-error hover:bg-red-50" onClick={() => onCancel(b.id)}>
+                      <Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => onCancel(b.id)}>
                         Cancel
                       </Button>
                     </div>

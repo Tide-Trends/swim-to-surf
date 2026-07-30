@@ -45,7 +45,7 @@ const faqs = [
   },
   {
     question: "How does booking with Estee work?",
-    answer: "Estee teaches Wednesdays (8:00 AM – 11:30 AM) and Thursdays (12:30 PM – 4:00 PM). You'll pick a day, choose a time slot, and that lesson repeats every week for the month — four lessons total. You can also add a second day each week for double the sessions.",
+    answer: "Estee teaches Wednesdays and Thursdays, 8:00 AM – 11:30 AM and 12:30 PM – 5:00 PM. You'll pick a day, choose a time slot, and that lesson repeats every week for the month — four lessons total. You can also add a second day each week for double the sessions.",
   },
 ];
 
