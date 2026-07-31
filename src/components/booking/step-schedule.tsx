@@ -905,7 +905,7 @@ function EsteeScheduleStep({
                           {day}
                         </span>
                         <span className={`text-xs font-ui ${active ? `${selectedPickSubtle} font-medium` : "text-[#86868B]"}`}>
-                          8:00 AM – 11:30 AM & 12:30 PM – 4:00 PM
+                          8:00 AM – 11:30 AM & 12:30 PM – 5:00 PM
                         </span>
                         <span className={`text-[10px] font-ui block mt-1 ${active ? selectedPickMuted : "text-[#86868B]/60"}`}>
                           {numDates} lessons this month
@@ -938,7 +938,7 @@ function EsteeScheduleStep({
                   </div>
                   <div>
                     <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-4">
-                      Afternoon (12:30 PM – 4:00 PM)
+                      Afternoon (12:30 PM – 5:00 PM)
                     </p>
                     <TimeSlotGrid
                       startHour={pmBlock.startHour}
@@ -990,7 +990,7 @@ function EsteeScheduleStep({
                     </div>
                     <div>
                       <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-4">
-                        Afternoon (12:30 PM – 4:00 PM)
+                        Afternoon (12:30 PM – 5:00 PM)
                       </p>
                       <TimeSlotGrid
                         startHour={pmBlock.startHour}

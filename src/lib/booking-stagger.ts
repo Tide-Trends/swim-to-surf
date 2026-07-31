@@ -36,7 +36,7 @@ function esteeBlockBounds(primaryHm: string): { start: number; end: number } {
   if (m < noon) {
     return { start: 8 * 60, end: 11 * 60 + 30 };
   }
-  return { start: 12 * 60 + 30, end: 16 * 60 };
+  return { start: 12 * 60 + 30, end: 17 * 60 };
 }
 
 function timeFitsBlock(hm: string, durationMinutes: number, block: { start: number; end: number }): boolean {

@@ -43,14 +43,14 @@ export const INSTRUCTORS = {
     schedule: {
       wednesday: {
         am: { startHour: 8, startMinute: 0, endHour: 11, endMinute: 30 },
-        pm: { startHour: 12, startMinute: 30, endHour: 16, endMinute: 0 },
+        pm: { startHour: 12, startMinute: 30, endHour: 17, endMinute: 0 },
       },
       thursday: {
         am: { startHour: 8, startMinute: 0, endHour: 11, endMinute: 30 },
-        pm: { startHour: 12, startMinute: 30, endHour: 16, endMinute: 0 },
+        pm: { startHour: 12, startMinute: 30, endHour: 17, endMinute: 0 },
       },
     },
-    scheduleLabel: "Wed & Thu, 8:00 AM – 11:30 AM & 12:30 PM – 4:00 PM",
+    scheduleLabel: "Wed & Thu, 8:00 AM – 11:30 AM & 12:30 PM – 5:00 PM",
     bookingType: "monthly" as const,
   },
 } as const;

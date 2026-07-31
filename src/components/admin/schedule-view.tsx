@@ -22,7 +22,7 @@ import {
   findDayConflictIndices,
   type ExpandedLessonSlot,
 } from "@/lib/admin-schedule-expand";
-import { ContactInfoToggle } from "@/components/admin/contact-info-toggle";
+import { ContactInfoToggle, adminActionBtnClass } from "@/components/admin/contact-info-toggle";
 
 type ViewMode = "day" | "week" | "month";
 type InstructorFilter = "all" | "lukaah" | "estee";
@@ -30,6 +30,7 @@ type InstructorFilter = "all" | "lukaah" | "estee";
 interface Props {
   bookings: Booking[];
   onReschedule?: (booking: Booking) => void;
+  onCancel?: (id: string) => void;
 }
 
 function filterBookings(bookings: Booking[], instructor: InstructorFilter): Booking[] {
@@ -62,11 +63,13 @@ function LessonCard({
   hasConflict,
   compact = false,
   onReschedule,
+  onCancel,
 }: {
   slot: ExpandedLessonSlot;
   hasConflict: boolean;
   compact?: boolean;
   onReschedule?: (booking: Booking) => void;
+  onCancel?: (id: string) => void;
 }) {
   const b = slot.booking;
 
@@ -86,12 +89,13 @@ function LessonCard({
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <ContactInfoToggle booking={b} compact={compact} />
             {b.status === "confirmed" && onReschedule && (
-              <button
-                type="button"
-                onClick={() => onReschedule(b)}
-                className="cursor-pointer rounded-md border border-navy/15 bg-white px-2.5 py-1 text-xs font-semibold text-deep hover:bg-sand md:text-sm"
-              >
+              <button type="button" onClick={() => onReschedule(b)} className={adminActionBtnClass(compact)}>
                 Reschedule
+              </button>
+            )}
+            {b.status === "confirmed" && onCancel && (
+              <button type="button" onClick={() => onCancel(b.id)} className={adminActionBtnClass(compact, "danger")}>
+                Cancel
               </button>
             )}
           </div>
@@ -106,7 +110,7 @@ function LessonCard({
   );
 }
 
-export function ScheduleView({ bookings, onReschedule }: Props) {
+export function ScheduleView({ bookings, onReschedule, onCancel }: Props) {
   const [view, setView] = useState<ViewMode>("day");
   const [instructor, setInstructor] = useState<InstructorFilter>("lukaah");
   const [dayCursor, setDayCursor] = useState(() => new Date());
@@ -234,7 +238,12 @@ export function ScheduleView({ bookings, onReschedule }: Props) {
                     <div className="relative flex-1 pb-2">
                       <div className="absolute -left-2 top-3 h-2 w-2 rounded-full bg-primary" />
                       <div className="absolute -left-[5px] top-5 bottom-0 w-px bg-sand" />
-                      <LessonCard slot={slot} hasConflict={dayConflicts.has(i)} onReschedule={onReschedule} />
+                      <LessonCard
+                        slot={slot}
+                        hasConflict={dayConflicts.has(i)}
+                        onReschedule={onReschedule}
+                        onCancel={onCancel}
+                      />
                     </div>
                   </div>
                 );
@@ -362,6 +371,7 @@ export function ScheduleView({ bookings, onReschedule }: Props) {
                         hasConflict={conflicts.has(i)}
                         compact
                         onReschedule={onReschedule}
+                        onCancel={onCancel}
                       />
                     ))}
                   </div>

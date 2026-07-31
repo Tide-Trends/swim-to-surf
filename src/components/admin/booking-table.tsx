@@ -3,8 +3,7 @@
 import { format } from "date-fns";
 import type { Booking } from "@/lib/database.types";
 import { formatPrice } from "@/lib/constants";
-import { Button } from "@/components/ui/button";
-import { ContactInfoToggle } from "@/components/admin/contact-info-toggle";
+import { ContactInfoToggle, adminActionBtnClass } from "@/components/admin/contact-info-toggle";
 
 interface Props {
   bookings: Booking[];
@@ -74,19 +73,19 @@ export function BookingTable({ bookings, onCancel, onReschedule }: Props) {
                   </span>
                 </td>
                 <td className="px-5 py-4">
-                  <ContactInfoToggle booking={b} />
-                  {b.status === "confirmed" && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {onReschedule && (
-                        <Button size="sm" variant="outline" onClick={() => onReschedule(b)}>
-                          Reschedule
-                        </Button>
-                      )}
-                      <Button size="sm" variant="ghost" className="text-error hover:bg-red-50" onClick={() => onCancel(b.id)}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <ContactInfoToggle booking={b} />
+                    {b.status === "confirmed" && onReschedule && (
+                      <button type="button" onClick={() => onReschedule(b)} className={adminActionBtnClass()}>
+                        Reschedule
+                      </button>
+                    )}
+                    {b.status === "confirmed" && (
+                      <button type="button" onClick={() => onCancel(b.id)} className={adminActionBtnClass(false, "danger")}>
                         Cancel
-                      </Button>
-                    </div>
-                  )}
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

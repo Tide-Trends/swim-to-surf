@@ -4,6 +4,15 @@ import { useState } from "react";
 import type { Booking } from "@/lib/database.types";
 import { formatPhoneDisplay } from "@/lib/admin-schedule-expand";
 
+/** Shared styles for admin lesson action chips (Contact / Reschedule / Cancel). */
+export function adminActionBtnClass(compact = false, tone: "default" | "danger" = "default") {
+  const size = compact ? "text-xs px-2.5 py-1" : "text-sm px-3 py-1.5";
+  if (tone === "danger") {
+    return `cursor-pointer rounded-md border border-red-200 bg-white font-ui font-semibold text-red-700 hover:bg-red-50 ${size}`;
+  }
+  return `cursor-pointer rounded-md border border-navy/15 bg-white font-ui font-semibold text-deep hover:bg-sand ${size}`;
+}
+
 export function ContactInfoToggle({
   booking,
   compact = false,
@@ -16,19 +25,18 @@ export function ContactInfoToggle({
   const tel = booking.parent_phone.replace(/[^\d+]/g, "");
 
   return (
-    <div className={compact ? "mt-2" : "mt-2"}>
+    <>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`cursor-pointer rounded-md border border-navy/15 bg-sand/50 px-2.5 py-1 font-ui font-semibold text-deep hover:bg-sand ${
-          compact ? "text-xs" : "text-sm"
-        }`}
+        className={adminActionBtnClass(compact)}
+        aria-expanded={open}
       >
         {open ? "Hide contact" : "Contact info"}
       </button>
       {open && (
         <div
-          className={`mt-2 rounded-lg border border-navy/12 bg-sand/30 ${
+          className={`basis-full w-full min-w-0 rounded-lg border border-navy/12 bg-sand/30 ${
             compact ? "p-3 text-sm" : "p-3.5 text-sm"
           }`}
         >
@@ -51,6 +59,6 @@ export function ContactInfoToggle({
           )}
         </div>
       )}
-    </div>
+    </>
   );
 }

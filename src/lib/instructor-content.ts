@@ -27,7 +27,7 @@ export const DEFAULT_PROFILES: Record<InstructorSlug, InstructorProfile> = {
       "Warm, patient, and highly adaptive. Estee tunes each lesson to the swimmer's comfort level and growth pace.",
     idealFor:
       "Families who want weekly rhythm through the month with optional twice-weekly acceleration.",
-    scheduleSummary: "Wednesday & Thursday, 8:00 AM–11:30 AM & 12:30 PM–4:00 PM",
+    scheduleSummary: "Wednesday & Thursday, 8:00 AM–11:30 AM & 12:30 PM–5:00 PM",
     heroImage: "/instructors/estee.jpeg",
     qualifications: [
       "Water Safety Instructor (WSI) certified.",
