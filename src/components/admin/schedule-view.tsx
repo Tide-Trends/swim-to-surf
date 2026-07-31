@@ -22,7 +22,7 @@ import {
   findDayConflictIndices,
   type ExpandedLessonSlot,
 } from "@/lib/admin-schedule-expand";
-import { ContactInfoToggle } from "@/components/admin/contact-info-toggle";
+import { ContactInfoToggle, adminActionBtnClass } from "@/components/admin/contact-info-toggle";
 
 type ViewMode = "day" | "week" | "month";
 type InstructorFilter = "all" | "lukaah" | "estee";
@@ -89,20 +89,12 @@ function LessonCard({
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <ContactInfoToggle booking={b} compact={compact} />
             {b.status === "confirmed" && onReschedule && (
-              <button
-                type="button"
-                onClick={() => onReschedule(b)}
-                className="cursor-pointer rounded-md border border-navy/15 bg-white px-2.5 py-1 text-xs font-semibold text-deep hover:bg-sand md:text-sm"
-              >
+              <button type="button" onClick={() => onReschedule(b)} className={adminActionBtnClass(compact)}>
                 Reschedule
               </button>
             )}
             {b.status === "confirmed" && onCancel && (
-              <button
-                type="button"
-                onClick={() => onCancel(b.id)}
-                className="cursor-pointer rounded-md border border-red-200 bg-white px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 md:text-sm"
-              >
+              <button type="button" onClick={() => onCancel(b.id)} className={adminActionBtnClass(compact, "danger")}>
                 Cancel
               </button>
             )}
