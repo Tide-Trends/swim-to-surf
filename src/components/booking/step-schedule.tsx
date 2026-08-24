@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { generateSlotStartTimes, TimeSlotGrid } from "@/components/booking/time-slot-grid";
 import { lukaahWeekOverlapsBlackout } from "@/lib/lukaah-availability";
-import { ESTEE_JULY_2026_SCHEDULE_NOTE } from "@/lib/estee-availability";
+import { ESTEE_JULY_2026_SCHEDULE_NOTE, ESTEE_SEPTEMBER_HOURS_NOTE, getEsteeScheduleBlocks } from "@/lib/estee-availability";
 
 /** Clear selected state for week/month/day pickers (parent can see what they chose). */
 const selectedPickClasses =
@@ -95,6 +95,7 @@ function getSummerMonths(): { value: string; label: string }[] {
     { value: `${year}-06`, label: `June ${year}` },
     { value: `${year}-07`, label: `July ${year}` },
     { value: `${year}-08`, label: `August ${year}` },
+    { value: `${year}-09`, label: `September ${year}` },
   ];
 }
 
@@ -531,10 +532,6 @@ function EsteeScheduleStep({
   const [rowsByMonth, setRowsByMonth] = useState<Record<string, BookingSlotRow[]>>({});
   const fetchedMonths = useRef<Set<string>>(new Set());
 
-  const schedule = INSTRUCTORS.estee.schedule;
-  const amBlock = schedule.wednesday.am;
-  const pmBlock = schedule.wednesday.pm;
-
   useEffect(() => {
     setSelectedMonths((p) => swimmers.map((_, i) => p[i] ?? null));
     setPrimaryDays((p) => swimmers.map((_, i) => p[i] ?? "wednesday"));
@@ -545,30 +542,38 @@ function EsteeScheduleStep({
 
   const perSwimmerEstee = useMemo(
     () =>
-      swimmers.map((sw) => {
+      swimmers.map((sw, i) => {
         const dur = lessonDurationMinutesForSwimmer("estee", sw);
+        const blocks = getEsteeScheduleBlocks(selectedMonths[i]);
         return {
           duration: dur,
-          candAm: generateSlotStartTimes(
-            amBlock.startHour,
-            amBlock.startMinute,
-            amBlock.endHour,
-            amBlock.endMinute,
-            dur,
-            15
-          ),
+          mode: blocks.mode,
+          dayLabel: blocks.dayLabel,
+          pmLabel: blocks.pmLabel,
+          amBlock: blocks.am,
+          pmBlock: blocks.pm,
+          candAm: blocks.am
+            ? generateSlotStartTimes(
+                blocks.am.startHour,
+                blocks.am.startMinute,
+                blocks.am.endHour,
+                blocks.am.endMinute,
+                dur,
+                15
+              )
+            : [],
           candPm: generateSlotStartTimes(
-            pmBlock.startHour,
-            pmBlock.startMinute,
-            pmBlock.endHour,
-            pmBlock.endMinute,
+            blocks.pm.startHour,
+            blocks.pm.startMinute,
+            blocks.pm.endHour,
+            blocks.pm.endMinute,
             dur,
             15
           ),
           monthlyUnitCents: getEsteePricingForTier(effectiveLessonTier(sw.swimmerAge, sw.lessonTier ?? "auto")).price,
         };
       }),
-    [swimmers, amBlock, pmBlock]
+    [swimmers, selectedMonths]
   );
 
   const fetchMonth = useCallback(async (month: string) => {
@@ -769,6 +774,13 @@ function EsteeScheduleStep({
         </p>
       )}
 
+      {(selectedMonths.some((mo) => mo?.endsWith("-09")) ||
+        committedSchedules.some((s) => s.type === "monthly" && s.month.endsWith("-09"))) && (
+        <p className="rounded-xl border border-[#0077B6]/20 bg-[#E8F4FD]/80 px-4 py-3 font-ui text-xs leading-relaxed text-[#1D3557]">
+          {ESTEE_SEPTEMBER_HOURS_NOTE}
+        </p>
+      )}
+
       {swimmers.map((sw, i) => {
         const m = selectedMonths[i];
         const monthDates = m ? getEsteeDatesForMonth(m) : null;
@@ -784,7 +796,7 @@ function EsteeScheduleStep({
 
             <div>
               <h4 className="font-display text-lg font-medium tracking-tight mb-4">Month</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {months.map((mo) => {
                   const active = m === mo.value;
                   const dates = getEsteeDatesForMonth(mo.value);
@@ -905,7 +917,7 @@ function EsteeScheduleStep({
                           {day}
                         </span>
                         <span className={`text-xs font-ui ${active ? `${selectedPickSubtle} font-medium` : "text-[#86868B]"}`}>
-                          8:00 AM – 11:30 AM & 12:30 PM – 5:00 PM
+                          {perSwimmerEstee[i]!.dayLabel}
                         </span>
                         <span className={`text-[10px] font-ui block mt-1 ${active ? selectedPickMuted : "text-[#86868B]/60"}`}>
                           {numDates} lessons this month
@@ -919,37 +931,42 @@ function EsteeScheduleStep({
                   <h4 className="font-display text-xl font-medium">
                     Times · <span className="capitalize">{pd}</span>
                   </h4>
+                  {perSwimmerEstee[i]!.amBlock && (
+                    <div>
+                      <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-4">
+                        Morning (8:00 AM – 11:30 AM)
+                      </p>
+                      <TimeSlotGrid
+                        startHour={perSwimmerEstee[i]!.amBlock!.startHour}
+                        startMinute={perSwimmerEstee[i]!.amBlock!.startMinute}
+                        endHour={perSwimmerEstee[i]!.amBlock!.endHour}
+                        endMinute={perSwimmerEstee[i]!.amBlock!.endMinute}
+                        duration={perSwimmerEstee[i]!.duration}
+                        selected={primaryTimes[i] ?? null}
+                        takenSlots={takenPrimaryForSwimmer(i, "am")}
+                        earlierSwimmerSlots={earlierOnPrimary}
+                        onSelect={(t) => setPrimaryAt(i, t)}
+                        showTimezoneHint={i === 0}
+                      />
+                    </div>
+                  )}
                   <div>
                     <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-4">
-                      Morning (8:00 AM – 11:30 AM)
+                      {perSwimmerEstee[i]!.mode === "continuous"
+                        ? perSwimmerEstee[i]!.pmLabel
+                        : `Afternoon (${perSwimmerEstee[i]!.pmLabel})`}
                     </p>
                     <TimeSlotGrid
-                      startHour={amBlock.startHour}
-                      startMinute={amBlock.startMinute}
-                      endHour={amBlock.endHour}
-                      endMinute={amBlock.endMinute}
-                      duration={perSwimmerEstee[i]!.duration}
-                      selected={primaryTimes[i] ?? null}
-                      takenSlots={takenPrimaryForSwimmer(i, "am")}
-                      earlierSwimmerSlots={earlierOnPrimary}
-                      onSelect={(t) => setPrimaryAt(i, t)}
-                      showTimezoneHint={i === 0}
-                    />
-                  </div>
-                  <div>
-                    <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-4">
-                      Afternoon (12:30 PM – 5:00 PM)
-                    </p>
-                    <TimeSlotGrid
-                      startHour={pmBlock.startHour}
-                      startMinute={pmBlock.startMinute}
-                      endHour={pmBlock.endHour}
-                      endMinute={pmBlock.endMinute}
+                      startHour={perSwimmerEstee[i]!.pmBlock.startHour}
+                      startMinute={perSwimmerEstee[i]!.pmBlock.startMinute}
+                      endHour={perSwimmerEstee[i]!.pmBlock.endHour}
+                      endMinute={perSwimmerEstee[i]!.pmBlock.endMinute}
                       duration={perSwimmerEstee[i]!.duration}
                       selected={primaryTimes[i] ?? null}
                       takenSlots={takenPrimaryForSwimmer(i, "pm")}
                       earlierSwimmerSlots={earlierOnPrimary}
                       onSelect={(t) => setPrimaryAt(i, t)}
+                      showTimezoneHint={i === 0 && !perSwimmerEstee[i]!.amBlock}
                     />
                   </div>
                 </div>
@@ -972,31 +989,35 @@ function EsteeScheduleStep({
                     <h4 className="font-display text-xl font-medium">
                       Second day · <span className="capitalize">{otherDay}</span>
                     </h4>
+                    {perSwimmerEstee[i]!.amBlock && (
+                      <div>
+                        <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-4">
+                          Morning (8:00 AM – 11:30 AM)
+                        </p>
+                        <TimeSlotGrid
+                          startHour={perSwimmerEstee[i]!.amBlock!.startHour}
+                          startMinute={perSwimmerEstee[i]!.amBlock!.startMinute}
+                          endHour={perSwimmerEstee[i]!.amBlock!.endHour}
+                          endMinute={perSwimmerEstee[i]!.amBlock!.endMinute}
+                          duration={perSwimmerEstee[i]!.duration}
+                          selected={secondTimes[i] ?? null}
+                          takenSlots={takenSecondForSwimmer(i, "am")}
+                          earlierSwimmerSlots={earlierOnSecond}
+                          onSelect={(t) => setSecondAt(i, t)}
+                        />
+                      </div>
+                    )}
                     <div>
                       <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-4">
-                        Morning (8:00 AM – 11:30 AM)
+                        {perSwimmerEstee[i]!.mode === "continuous"
+                          ? perSwimmerEstee[i]!.pmLabel
+                          : `Afternoon (${perSwimmerEstee[i]!.pmLabel})`}
                       </p>
                       <TimeSlotGrid
-                        startHour={amBlock.startHour}
-                        startMinute={amBlock.startMinute}
-                        endHour={amBlock.endHour}
-                        endMinute={amBlock.endMinute}
-                        duration={perSwimmerEstee[i]!.duration}
-                        selected={secondTimes[i] ?? null}
-                        takenSlots={takenSecondForSwimmer(i, "am")}
-                        earlierSwimmerSlots={earlierOnSecond}
-                        onSelect={(t) => setSecondAt(i, t)}
-                      />
-                    </div>
-                    <div>
-                      <p className="font-ui text-xs uppercase tracking-[0.2em] font-semibold text-ocean-deep mb-4">
-                        Afternoon (12:30 PM – 5:00 PM)
-                      </p>
-                      <TimeSlotGrid
-                        startHour={pmBlock.startHour}
-                        startMinute={pmBlock.startMinute}
-                        endHour={pmBlock.endHour}
-                        endMinute={pmBlock.endMinute}
+                        startHour={perSwimmerEstee[i]!.pmBlock.startHour}
+                        startMinute={perSwimmerEstee[i]!.pmBlock.startMinute}
+                        endHour={perSwimmerEstee[i]!.pmBlock.endHour}
+                        endMinute={perSwimmerEstee[i]!.pmBlock.endMinute}
                         duration={perSwimmerEstee[i]!.duration}
                         selected={secondTimes[i] ?? null}
                         takenSlots={takenSecondForSwimmer(i, "pm")}

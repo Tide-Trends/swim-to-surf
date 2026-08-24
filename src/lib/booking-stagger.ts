@@ -1,5 +1,6 @@
 import type { ScheduleSelection } from "@/lib/booking-schema";
 import { hmToMinutes, normalizeHm } from "@/lib/booking-slots";
+import { getEsteeBlockBoundsForTime } from "@/lib/estee-availability";
 
 /** Wrap minutes into 0–1439 for same-calendar-day display. */
 export function minutesToHm(total: number): string {
@@ -29,16 +30,6 @@ export function lukaahStaggerFits(baseHm: string, durationMinutes: number, count
   return true;
 }
 
-/** Infer Estee AM vs PM block from chosen start (matches INSTRUCTORS.estee.schedule). */
-function esteeBlockBounds(primaryHm: string): { start: number; end: number } {
-  const m = hmToMinutes(primaryHm);
-  const noon = 12 * 60;
-  if (m < noon) {
-    return { start: 8 * 60, end: 11 * 60 + 30 };
-  }
-  return { start: 12 * 60 + 30, end: 17 * 60 };
-}
-
 function timeFitsBlock(hm: string, durationMinutes: number, block: { start: number; end: number }): boolean {
   const t = hmToMinutes(hm);
   if (t < 0) return false;
@@ -65,13 +56,13 @@ export function esteeStaggerFits(
   durationMinutes: number,
   count: number
 ): boolean {
-  const pBlock = esteeBlockBounds(proposed.primaryTime);
+  const pBlock = getEsteeBlockBoundsForTime(proposed.primaryTime, proposed.month);
   for (let i = 0; i < count; i++) {
     const t = staggeredTimeFromBase(proposed.primaryTime, durationMinutes, i);
     if (!timeFitsBlock(t, durationMinutes, pBlock)) return false;
   }
   if (proposed.secondDay && proposed.secondDayTime) {
-    const sBlock = esteeBlockBounds(proposed.secondDayTime);
+    const sBlock = getEsteeBlockBoundsForTime(proposed.secondDayTime, proposed.month);
     for (let i = 0; i < count; i++) {
       const t = staggeredTimeFromBase(proposed.secondDayTime, durationMinutes, i);
       if (!timeFitsBlock(t, durationMinutes, sBlock)) return false;
