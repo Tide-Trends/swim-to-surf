@@ -1,6 +1,7 @@
 import type { ScheduleSelection } from "@/lib/booking-schema";
+import type { AvailabilitySettings } from "@/lib/availability-settings";
+import { defaultAvailabilitySettings, getEsteeBlockBoundsFromSettings } from "@/lib/availability-settings";
 import { hmToMinutes, normalizeHm } from "@/lib/booking-slots";
-import { getEsteeBlockBoundsForTime } from "@/lib/estee-availability";
 
 /** Wrap minutes into 0–1439 for same-calendar-day display. */
 export function minutesToHm(total: number): string {
@@ -54,15 +55,17 @@ export function esteeScheduleForChild(
 export function esteeStaggerFits(
   proposed: Extract<ScheduleSelection, { type: "monthly" }>,
   durationMinutes: number,
-  count: number
+  count: number,
+  settings?: AvailabilitySettings | null
 ): boolean {
-  const pBlock = getEsteeBlockBoundsForTime(proposed.primaryTime, proposed.month);
+  const cfg = settings ?? defaultAvailabilitySettings();
+  const pBlock = getEsteeBlockBoundsFromSettings(cfg, proposed.primaryTime, proposed.month);
   for (let i = 0; i < count; i++) {
     const t = staggeredTimeFromBase(proposed.primaryTime, durationMinutes, i);
     if (!timeFitsBlock(t, durationMinutes, pBlock)) return false;
   }
   if (proposed.secondDay && proposed.secondDayTime) {
-    const sBlock = getEsteeBlockBoundsForTime(proposed.secondDayTime, proposed.month);
+    const sBlock = getEsteeBlockBoundsFromSettings(cfg, proposed.secondDayTime, proposed.month);
     for (let i = 0; i < count; i++) {
       const t = staggeredTimeFromBase(proposed.secondDayTime, durationMinutes, i);
       if (!timeFitsBlock(t, durationMinutes, sBlock)) return false;

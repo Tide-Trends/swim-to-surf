@@ -25,6 +25,7 @@ import {
 } from "@/lib/booking-emails";
 import { expireStripeCheckoutSession } from "@/lib/stripe-checkout-confirm";
 import { lukaahWeekOverlapsBlackout } from "@/lib/lukaah-availability";
+import { loadAvailabilitySettings } from "@/lib/availability-settings-server";
 
 export async function POST(req: Request) {
   try {
@@ -85,6 +86,7 @@ export async function POST(req: Request) {
       );
     }
 
+    const availability = await loadAvailabilitySettings();
     const firstSch = schedulesList[0]!;
     for (const sch of schedulesList) {
       if (instructor === "lukaah" && sch.type !== "weekly") {
@@ -93,12 +95,18 @@ export async function POST(req: Request) {
       if (instructor === "estee" && sch.type !== "monthly") {
         return NextResponse.json({ error: "Invalid schedule type for Estee." }, { status: 400 });
       }
-      if (sch.type === "weekly" && lukaahWeekOverlapsBlackout(sch.weekStart)) {
+      if (sch.type === "weekly" && lukaahWeekOverlapsBlackout(sch.weekStart, availability.lukaah.blackouts)) {
         return NextResponse.json(
           {
             error:
               "That summer week is unavailable (instructor away). Please choose a different week.",
           },
+          { status: 400 }
+        );
+      }
+      if (sch.type === "monthly" && !availability.estee.months[sch.month]?.open) {
+        return NextResponse.json(
+          { error: "That month is not open for booking. Please choose another month." },
           { status: 400 }
         );
       }
