@@ -22,8 +22,13 @@ import { formatLessonTimeHm, timezoneBookingHint } from "@/lib/timezone";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { generateSlotStartTimes, TimeSlotGrid } from "@/components/booking/time-slot-grid";
-import { lukaahWeekOverlapsBlackout } from "@/lib/lukaah-availability";
-import { ESTEE_JULY_2026_SCHEDULE_NOTE, ESTEE_SEPTEMBER_HOURS_NOTE, getEsteeScheduleBlocks } from "@/lib/estee-availability";
+import { lukaahAwayNotice, lukaahWeekOverlapsBlackout } from "@/lib/lukaah-availability";
+import { ESTEE_JULY_2026_SCHEDULE_NOTE, getEsteeScheduleBlocksFromSettings } from "@/lib/estee-availability";
+import {
+  defaultAvailabilitySettings,
+  listOpenEsteeMonths,
+  type AvailabilitySettings,
+} from "@/lib/availability-settings";
 
 /** Clear selected state for week/month/day pickers (parent can see what they chose). */
 const selectedPickClasses =
@@ -34,6 +39,35 @@ const selectedPickMuted = "text-white/75";
 function normalizeHm(t: string): string {
   const s = t.trim();
   return s.length >= 5 ? s.slice(0, 5) : s;
+}
+
+function getWeeksForSeason(seasonStart: string, seasonEnd: string): { start: Date; label: string }[] {
+  let current = new Date(`${seasonStart.slice(0, 10)}T12:00:00`);
+  // Align to Monday of that week
+  const dow = current.getDay();
+  const toMonday = dow === 0 ? -6 : 1 - dow;
+  current = addDays(current, toMonday);
+  const end = new Date(`${seasonEnd.slice(0, 10)}T12:00:00`);
+  const weeks: { start: Date; label: string }[] = [];
+  while (current <= end) {
+    const endFriday = addDays(current, 4);
+    weeks.push({
+      start: current,
+      label: `${format(current, "MMM d")} – ${format(endFriday, "MMM d, yyyy")}`,
+    });
+    current = addWeeks(current, 1);
+  }
+  return weeks;
+}
+
+async function fetchAvailabilitySettings(): Promise<AvailabilitySettings> {
+  try {
+    const res = await fetch("/api/availability", { cache: "no-store" });
+    if (!res.ok) return defaultAvailabilitySettings();
+    return (await res.json()) as AvailabilitySettings;
+  } catch {
+    return defaultAvailabilitySettings();
+  }
 }
 
 /** Times already chosen by earlier swimmers on this booking (same week) — for amber highlight. */
@@ -72,31 +106,6 @@ export interface StepScheduleProps {
   committedSchedules?: ScheduleSelection[];
   onSelect: (schedules: ScheduleSelection[]) => void;
   onBack: () => void;
-}
-
-function getSummerWeeks(): { start: Date; label: string }[] {
-  const year = new Date().getFullYear() < 2026 ? 2026 : new Date().getFullYear();
-  let current = new Date(`${year}-06-01T12:00:00Z`);
-  const weeks: { start: Date; label: string }[] = [];
-  while (current <= new Date(`${year}-08-10T12:00:00Z`)) {
-    const endFriday = addDays(current, 4);
-    weeks.push({
-      start: current,
-      label: `${format(current, "MMM d")} – ${format(endFriday, "MMM d, yyyy")}`,
-    });
-    current = addWeeks(current, 1);
-  }
-  return weeks;
-}
-
-function getSummerMonths(): { value: string; label: string; emphasize?: boolean }[] {
-  const year = new Date().getFullYear() < 2026 ? 2026 : new Date().getFullYear();
-  return [
-    { value: `${year}-06`, label: `June ${year}` },
-    { value: `${year}-07`, label: `July ${year}` },
-    { value: `${year}-08`, label: `August ${year}` },
-    { value: `${year}-09`, label: `September ${year}`, emphasize: true },
-  ];
 }
 
 export function StepSchedule({
@@ -266,10 +275,28 @@ function LukaahScheduleStep({
   onSelect: (schedules: ScheduleSelection[]) => void;
   onBack: () => void;
 }) {
+  const [settings, setSettings] = useState<AvailabilitySettings>(() => defaultAvailabilitySettings());
+  const [settingsReady, setSettingsReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchAvailabilitySettings().then((s) => {
+      if (!cancelled) {
+        setSettings(s);
+        setSettingsReady(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const weeks = useMemo(
     () =>
-      getSummerWeeks().filter((w) => !lukaahWeekOverlapsBlackout(format(w.start, "yyyy-MM-dd"))),
-    []
+      getWeeksForSeason(settings.lukaah.seasonStart, settings.lukaah.seasonEnd).filter(
+        (w) => !lukaahWeekOverlapsBlackout(format(w.start, "yyyy-MM-dd"), settings.lukaah.blackouts)
+      ),
+    [settings]
   );
   const [selectedWeeks, setSelectedWeeks] = useState<(string | null)[]>(() => swimmers.map(() => null));
   const [selectedTimes, setSelectedTimes] = useState<(string | null)[]>(() => swimmers.map(() => null));
@@ -400,9 +427,18 @@ function LukaahScheduleStep({
           : "Each swimmer picks their own summer week and daily start time. Weeks can differ within the same family booking."}
       </p>
       <p className="rounded-xl border border-[#0077B6]/20 bg-[#E8F4FD]/80 px-4 py-3 font-ui text-xs leading-relaxed text-[#1D3557]">
-        Lukaah is away <strong className="font-semibold">July 11–22</strong> and{" "}
-        <strong className="font-semibold">July 27 – August 7</strong> — those weeks aren&apos;t offered.
+        {lukaahAwayNotice(settings.lukaah.blackouts)}
       </p>
+
+      {!settingsReady && (
+        <p className="font-ui text-sm text-[#86868B]">Loading open weeks…</p>
+      )}
+
+      {settingsReady && weeks.length === 0 && (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 font-ui text-sm text-amber-950">
+          No weeks are open right now. An instructor can open more under Admin → Availability.
+        </p>
+      )}
 
       {swimmers.map((sw, i) => {
         const wk = selectedWeeks[i];
@@ -523,7 +559,9 @@ function EsteeScheduleStep({
   onSelect: (schedules: ScheduleSelection[]) => void;
   onBack: () => void;
 }) {
-  const months = getSummerMonths();
+  const [settings, setSettings] = useState<AvailabilitySettings>(() => defaultAvailabilitySettings());
+  const [settingsReady, setSettingsReady] = useState(false);
+  const months = listOpenEsteeMonths(settings);
   const [selectedMonths, setSelectedMonths] = useState<(string | null)[]>(() => swimmers.map(() => null));
   const [primaryDays, setPrimaryDays] = useState<("wednesday" | "thursday")[]>(() => swimmers.map(() => "wednesday"));
   const [secondDays, setSecondDays] = useState<boolean[]>(() => swimmers.map(() => false));
@@ -531,6 +569,19 @@ function EsteeScheduleStep({
   const [secondTimes, setSecondTimes] = useState<(string | null)[]>(() => swimmers.map(() => null));
   const [rowsByMonth, setRowsByMonth] = useState<Record<string, BookingSlotRow[]>>({});
   const fetchedMonths = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchAvailabilitySettings().then((s) => {
+      if (!cancelled) {
+        setSettings(s);
+        setSettingsReady(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     setSelectedMonths((p) => swimmers.map((_, i) => p[i] ?? null));
@@ -544,7 +595,7 @@ function EsteeScheduleStep({
     () =>
       swimmers.map((sw, i) => {
         const dur = lessonDurationMinutesForSwimmer("estee", sw);
-        const blocks = getEsteeScheduleBlocks(selectedMonths[i]);
+        const blocks = getEsteeScheduleBlocksFromSettings(settings, selectedMonths[i]);
         return {
           duration: dur,
           mode: blocks.mode,
@@ -573,7 +624,7 @@ function EsteeScheduleStep({
           monthlyUnitCents: getEsteePricingForTier(effectiveLessonTier(sw.swimmerAge, sw.lessonTier ?? "auto")).price,
         };
       }),
-    [swimmers, selectedMonths]
+    [swimmers, selectedMonths, settings]
   );
 
   const fetchMonth = useCallback(async (month: string) => {
@@ -770,20 +821,39 @@ function EsteeScheduleStep({
       {(selectedMonths.includes("2026-07") ||
         committedSchedules.some((s) => s.type === "monthly" && s.month === "2026-07")) && (
         <p className="rounded-xl border border-[#0077B6]/20 bg-[#E8F4FD]/80 px-4 py-3 font-ui text-xs leading-relaxed text-[#1D3557]">
-          {ESTEE_JULY_2026_SCHEDULE_NOTE}
+          {settings.estee.months["2026-07"]?.note || ESTEE_JULY_2026_SCHEDULE_NOTE}
         </p>
       )}
 
-      {(selectedMonths.some((mo) => mo?.endsWith("-09")) ||
-        committedSchedules.some((s) => s.type === "monthly" && s.month.endsWith("-09"))) && (
-        <p className="rounded-xl border border-[#0077B6]/20 bg-[#E8F4FD]/80 px-4 py-3 font-ui text-xs leading-relaxed text-[#1D3557]">
-          {ESTEE_SEPTEMBER_HOURS_NOTE}
+      {Array.from(
+        new Set(
+          [
+            ...selectedMonths.filter(Boolean),
+            ...committedSchedules.filter((s) => s.type === "monthly").map((s) => s.month),
+          ] as string[]
+        )
+      )
+        .filter((mo) => mo !== "2026-07" && settings.estee.months[mo]?.note)
+        .map((mo) => (
+          <p
+            key={mo}
+            className="rounded-xl border border-[#0077B6]/20 bg-[#E8F4FD]/80 px-4 py-3 font-ui text-xs leading-relaxed text-[#1D3557]"
+          >
+            {settings.estee.months[mo]!.note}
+          </p>
+        ))}
+
+      {!settingsReady && <p className="font-ui text-sm text-[#86868B]">Loading open months…</p>}
+
+      {settingsReady && months.length === 0 && (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 font-ui text-sm text-amber-950">
+          No months are open right now. An instructor can open more under Admin → Availability.
         </p>
       )}
 
       {swimmers.map((sw, i) => {
         const m = selectedMonths[i];
-        const monthDates = m ? getEsteeDatesForMonth(m) : null;
+        const monthDates = m ? getEsteeDatesForMonth(m, settings) : null;
         const pd = primaryDays[i] ?? "wednesday";
         const otherDay = pd === "wednesday" ? "thursday" : "wednesday";
         const sd = secondDays[i] ?? false;
@@ -799,7 +869,7 @@ function EsteeScheduleStep({
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {months.map((mo) => {
                   const active = m === mo.value;
-                  const dates = getEsteeDatesForMonth(mo.value);
+                  const dates = getEsteeDatesForMonth(mo.value, settings);
                   const inactiveEmphasized = !active && mo.emphasize;
                   return (
                     <button

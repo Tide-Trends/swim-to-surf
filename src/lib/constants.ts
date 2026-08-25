@@ -1,4 +1,5 @@
 import type { ScheduleSelection, SwimmerInfo } from "./booking-schema";
+import type { AvailabilitySettings } from "./availability-settings";
 import { applyEsteeMonthDateOverrides } from "./estee-availability";
 
 export const SITE = {
@@ -66,7 +67,10 @@ export const PRICING = {
 
 // Specific dates for each month - Estee's W/Th schedule
 // July: exclude last week (July 30-31)
-export function getEsteeDatesForMonth(monthValue: string): { wednesdays: string[]; thursdays: string[] } {
+export function getEsteeDatesForMonth(
+  monthValue: string,
+  settings?: AvailabilitySettings | null
+): { wednesdays: string[]; thursdays: string[] } {
   const [yearStr, monthStr] = monthValue.split("-");
   const year = Number(yearStr);
   const month = Number(monthStr) - 1; // 0-indexed
@@ -89,7 +93,7 @@ export function getEsteeDatesForMonth(monthValue: string): { wednesdays: string[
     if (thursdays.length > 4) thursdays.pop();
   }
 
-  return applyEsteeMonthDateOverrides(monthValue, wednesdays, thursdays);
+  return applyEsteeMonthDateOverrides(monthValue, wednesdays, thursdays, settings);
 }
 
 /** 0–2 years → infant (15 min); 3+ → standard (30 min) when tier is "auto". */

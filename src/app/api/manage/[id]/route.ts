@@ -3,6 +3,7 @@ import { Resend } from "resend";
 import { getSupabaseServerClient } from "@/lib/supabase-server";
 import { canSelfServeManageBooking } from "@/lib/booking-first-lesson";
 import { lukaahWeekOverlapsBlackout } from "@/lib/lukaah-availability";
+import { loadAvailabilitySettings } from "@/lib/availability-settings-server";
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "Swim to Surf <onboarding@resend.dev>";
 
@@ -98,11 +99,14 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
           { status: 503 }
         );
       }
-      if (booking.instructor === "lukaah" && newData.week_start && lukaahWeekOverlapsBlackout(newData.week_start)) {
-        return NextResponse.json(
-          { error: "That summer week is unavailable. Please pick a different week." },
-          { status: 400 }
-        );
+      if (booking.instructor === "lukaah" && newData.week_start) {
+        const availability = await loadAvailabilitySettings();
+        if (lukaahWeekOverlapsBlackout(newData.week_start, availability.lukaah.blackouts)) {
+          return NextResponse.json(
+            { error: "That summer week is unavailable. Please pick a different week." },
+            { status: 400 }
+          );
+        }
       }
 
       // Validate slot availability

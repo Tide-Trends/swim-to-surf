@@ -10,14 +10,16 @@ import { ScheduleView } from "@/components/admin/schedule-view";
 import { InstructorProfilesEditor } from "@/components/admin/instructor-profiles-editor";
 import { ContactMessagesTable } from "@/components/admin/contact-messages-table";
 import { AdminRescheduleModal } from "@/components/admin/admin-reschedule-modal";
+import { AvailabilityEditor } from "@/components/admin/availability-editor";
 import { clearAdminSession, getAdminSession, type InstructorSlug } from "@/lib/instructor-content";
 
-type Tab = "schedule" | "bookings" | "messages" | "profiles";
+type Tab = "schedule" | "bookings" | "messages" | "availability" | "profiles";
 
 const TAB_LABELS: Record<Tab, string> = {
   schedule: "Schedule",
   bookings: "All bookings",
   messages: "Messages",
+  availability: "Availability",
   profiles: "Profiles",
 };
 
@@ -239,6 +241,7 @@ export default function AdminPage() {
           <BookingTable bookings={filteredBookings} onCancel={cancelBooking} onReschedule={setRescheduleTarget} />
         )}
         {tab === "messages" && <ContactMessagesTable messages={contactMessages} />}
+        {tab === "availability" && <AvailabilityEditor />}
         {tab === "profiles" && <InstructorProfilesEditor editor={authedUser} />}
       </div>
 

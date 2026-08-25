@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { lukaahWeekOverlapsBlackout } from "@/lib/lukaah-availability";
+import { loadAvailabilitySettings } from "@/lib/availability-settings-server";
 import { sendRescheduleEmails } from "@/lib/booking-emails";
 
 export async function POST(req: Request) {
@@ -43,7 +44,8 @@ export async function POST(req: Request) {
       if (!newData.week_start) {
         return NextResponse.json({ error: "week_start is required for Lukaah." }, { status: 400 });
       }
-      if (lukaahWeekOverlapsBlackout(newData.week_start)) {
+      const availability = await loadAvailabilitySettings();
+      if (lukaahWeekOverlapsBlackout(newData.week_start, availability.lukaah.blackouts)) {
         return NextResponse.json({ error: "That week is unavailable (instructor away)." }, { status: 400 });
       }
     } else if (!newData.month) {
