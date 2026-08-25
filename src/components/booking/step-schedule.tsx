@@ -89,13 +89,13 @@ function getSummerWeeks(): { start: Date; label: string }[] {
   return weeks;
 }
 
-function getSummerMonths(): { value: string; label: string }[] {
+function getSummerMonths(): { value: string; label: string; emphasize?: boolean }[] {
   const year = new Date().getFullYear() < 2026 ? 2026 : new Date().getFullYear();
   return [
     { value: `${year}-06`, label: `June ${year}` },
     { value: `${year}-07`, label: `July ${year}` },
     { value: `${year}-08`, label: `August ${year}` },
-    { value: `${year}-09`, label: `September ${year}` },
+    { value: `${year}-09`, label: `September ${year}`, emphasize: true },
   ];
 }
 
@@ -800,6 +800,7 @@ function EsteeScheduleStep({
                 {months.map((mo) => {
                   const active = m === mo.value;
                   const dates = getEsteeDatesForMonth(mo.value);
+                  const inactiveEmphasized = !active && mo.emphasize;
                   return (
                     <button
                       key={`${i}-${mo.value}`}
@@ -808,11 +809,32 @@ function EsteeScheduleStep({
                       className={`px-5 py-4 rounded-[1.5rem] border text-center transition-all duration-300 cursor-pointer ${
                         active
                           ? `${selectedPickClasses} font-semibold`
-                          : "border-black/5 bg-white hover:border-black/10 hover:shadow-md text-[#86868B]"
+                          : inactiveEmphasized
+                            ? "border-[#0077B6]/45 bg-[#E8F4FD] text-[#0a4a5c] shadow-sm ring-1 ring-[#0077B6]/20 hover:border-[#0077B6]/70 hover:shadow-md"
+                            : "border-black/5 bg-white hover:border-black/10 hover:shadow-md text-[#86868B]"
                       }`}
                     >
-                      <div className={`font-ui text-sm font-medium ${active ? "text-white" : ""}`}>{mo.label}</div>
-                      <div className={`font-ui text-[10px] mt-1 ${active ? selectedPickMuted : "text-[#86868B]/60"}`}>
+                      <div
+                        className={`font-ui text-sm ${
+                          active ? "font-medium text-white" : inactiveEmphasized ? "font-bold text-[#0a4a5c]" : "font-medium"
+                        }`}
+                      >
+                        {mo.label}
+                      </div>
+                      {inactiveEmphasized && (
+                        <div className="mt-1 inline-block rounded-full bg-[#0077B6] px-2 py-0.5 font-ui text-[10px] font-bold uppercase tracking-wide text-white">
+                          Open
+                        </div>
+                      )}
+                      <div
+                        className={`font-ui text-[10px] mt-1 ${
+                          active
+                            ? selectedPickMuted
+                            : inactiveEmphasized
+                              ? "font-semibold text-[#0a4a5c]/80"
+                              : "text-[#86868B]/60"
+                        }`}
+                      >
                         {dates.wednesdays.length} Wed &middot; {dates.thursdays.length} Thu
                       </div>
                     </button>
